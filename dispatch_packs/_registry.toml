@@ -1,0 +1,23 @@
+# Pack registry - maps pack names to files.
+# Briefs reference packs by name in their includes: field.
+# The wrapper resolves names against this registry.
+
+[packs.dispatch-protocol]
+path = "dispatch-protocol.md"
+description = "Full dispatch matrix, executor selection, budgets"
+
+[packs.branch-safety]
+path = "branch-safety.md"
+description = "Multi-session branch safety protocol with examples"
+
+[packs.brief-format]
+path = "brief-format.md"
+description = "Brief schema, includes: protocol, and YAML frontmatter reference"
+
+[packs.nested-dispatch]
+path = "nested-dispatch.md"
+description = "Nested dispatch deep dive: permissions, budget cascade, depth caps"
+
+[packs.orchestrator-protocol]
+path = "orchestrator-protocol.md"
+description = "How the orchestrator model should use the dispatch system"

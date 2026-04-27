@@ -1,0 +1,165 @@
+# dispatch_matrix.toml - The single source of truth for executor configuration.
+#
+# This file defines every executor, its capabilities, allowed modes,
+# cost caps, routing heuristics, and nested-dispatch permissions.
+#
+# Copy this file to dispatch_matrix.toml and customize for your setup.
+# The CLI reads this file at startup to derive executor choices.
+
+schema_version = 1
+
+# ============================================================
+# Executors
+# ============================================================
+# Each executor is a model+provider combination with a thin wrapper.
+# Required fields: wrapper, provider, allowed_modes
+# Optional: model_id, default_thinking_tokens, thinking_hard_ceiling,
+#           context_window, max_turns, stall_threshold_seconds,
+#           hard_wall_block_breakout_top, hard_wall_block_task_top
+
+[executors.opus]
+wrapper = "opus.sh"
+provider = "anthropic"
+model_id = "claude-opus-4-6"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["top", "review"]
+default_thinking_tokens = 4000
+thinking_hard_ceiling = 16000
+context_window = 200000
+stall_threshold_seconds = 600
+
+[executors.sonnet]
+wrapper = "sonnet.sh"
+provider = "anthropic"
+model_id = "claude-sonnet-4-6"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["top", "review", "engineer"]
+default_thinking_tokens = 4000
+thinking_hard_ceiling = 16000
+context_window = 200000
+stall_threshold_seconds = 600
+
+[executors.haiku]
+wrapper = "haiku.sh"
+provider = "anthropic"
+model_id = "claude-haiku-4-5-20251001"
+allowed_modes = ["task"]
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 2000
+context_window = 200000
+max_turns = 50
+stall_threshold_seconds = 300
+# Haiku is a leaf executor: cannot dispatch sub-workers
+hard_wall_block_breakout_top = true
+
+[executors.kimi]
+wrapper = "moonshot.sh"
+provider = "moonshot"
+model_id = "kimi-k2.6"
+allowed_modes = ["breakout", "task"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0        # thinking disabled for mechanical work
+thinking_hard_ceiling = 8000
+context_window = 256000            # Kimi's large context window advantage
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.kimi-think]
+wrapper = "moonshot.sh"
+provider = "moonshot"
+model_id = "kimi-k2.6"
+allowed_modes = ["breakout", "task"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 4000     # thinking enabled for hard problems
+thinking_hard_ceiling = 8000
+context_window = 256000
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.deepseek]
+wrapper = "deepseek.sh"
+provider = "deepseek"
+model_id = "deepseek-chat"
+allowed_modes = ["breakout", "task"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 4000
+thinking_hard_ceiling = 8000
+context_window = 128000
+max_turns = 25
+stall_threshold_seconds = 300
+
+# Uncomment to add a local Ollama executor:
+# [executors.ollama-local]
+# wrapper = "ollama.sh"
+# provider = "ollama"
+# model_id = "llama3:8b"
+# allowed_modes = ["task"]
+# allowed_seats_in_breakout = ["leaf"]
+# default_thinking_tokens = 0
+# context_window = 8000
+# max_turns = 5
+# stall_threshold_seconds = 120
+
+# ============================================================
+# Auto-routing heuristics
+# ============================================================
+# Consulted by the auto-router when no explicit executor is set.
+# Keys are signal names, values are executor preferences.
+
+[auto_route]
+# Long-context tasks (>50K tokens): prefer large-window executor
+long_context_executor = "kimi"
+long_context_threshold_tokens = 50000
+
+# Mechanical/trivial tasks: prefer cheap executor
+trivial_executor = "haiku"
+trivial_threshold_tokens = 5000
+
+# Hard coding problems: prefer reasoning-capable executor
+hard_coding_breakout_executor = "opus"
+hard_coding_task_executor = "sonnet"
+
+# Default fallbacks by mode
+default_breakout = "sonnet"
+default_task = "sonnet"
+default_consult = "opus"
+
+# ============================================================
+# Nested dispatch configuration
+# ============================================================
+
+[nested_dispatch]
+# Maximum nesting depth. Design target: 3. Start at 1 for safety.
+# Ramp gradually with cost monitoring between steps.
+max_depth = 1
+
+# Feature flag: set DISPATCH_NESTED=1 env var to enable.
+# When off, --parent-id and --depth flags are silently ignored.
+
+[nested_dispatch.permissions]
+# Format: parent.child = true|false
+# Missing entries are treated as denied.
+# Self-dispatch is always denied regardless of matrix entries.
+
+# Opus can dispatch anything except itself and minimax
+opus.sonnet = true
+opus.haiku = true
+opus.kimi = true
+opus.deepseek = true
+
+# Sonnet can dispatch cheaper executors
+sonnet.haiku = true
+sonnet.kimi = true
+sonnet.deepseek = true
+
+# Kimi can dispatch leaf executors only
+kimi.haiku = true
+
+# DeepSeek can dispatch leaf + peer-tier
+deepseek.haiku = true
+deepseek.kimi = true
+
+# Haiku cannot dispatch (leaf executor)
+# MiniMax cannot dispatch (hallucination risk)
+# Self-dispatch always denied (loop risk)
