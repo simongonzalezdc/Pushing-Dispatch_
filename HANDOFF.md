@@ -74,7 +74,7 @@ gh repo create pushing-dispatch --private --source=. --push
 2. **License choice** -- MIT is used (handoff recommended Apache 2.0; MIT was specified in the brief). Confirm preference.
 3. **Repo name** -- "pushing-dispatch" recommended. Confirm before creating GitHub remote.
 4. **API endpoint URLs** -- moonshot.ai/anthropic and deepseek.com/anthropic are publicly documented. Verify they're current.
-5. **Model IDs** -- claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5-20251001, kimi-k2.6, deepseek-chat. Verify these are the IDs you want in the public example.
+5. **Model IDs** -- claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5-20251001, kimi-k2.6, deepseek-v4-flash. Verified against live matrix 2026-04-27.
 6. **Issue templates** -- review the three seeded issues for relevance.
 7. **CLAUDE.md size** -- 53 lines, well under the 150-line cap recommended in the handoff.
 

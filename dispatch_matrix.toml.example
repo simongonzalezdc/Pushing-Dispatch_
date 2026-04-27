@@ -25,7 +25,7 @@ allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["top", "review"]
 default_thinking_tokens = 4000
 thinking_hard_ceiling = 16000
-context_window = 200000
+context_window = 1000000  # Opus 4.7 1M-context plan. Falls back to 200K on standard tier.
 stall_threshold_seconds = 600
 
 [executors.sonnet]
@@ -36,7 +36,7 @@ allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["top", "review", "engineer"]
 default_thinking_tokens = 4000
 thinking_hard_ceiling = 16000
-context_window = 200000
+context_window = 200000  # Bump to 1000000 if you have the context-1m-2025-08-07 beta header enabled.
 stall_threshold_seconds = 600
 
 [executors.haiku]
@@ -80,12 +80,12 @@ stall_threshold_seconds = 300
 [executors.deepseek]
 wrapper = "deepseek.sh"
 provider = "deepseek"
-model_id = "deepseek-chat"
+model_id = "deepseek-v4-flash"      # V4-flash: cheap mechanical work. Swap to deepseek-v4-pro for harder tasks.
 allowed_modes = ["breakout", "task"]
 allowed_seats_in_breakout = ["engineer"]
 default_thinking_tokens = 4000
 thinking_hard_ceiling = 8000
-context_window = 128000
+context_window = 1000000             # DeepSeek V4 1M context window
 max_turns = 25
 stall_threshold_seconds = 300
 

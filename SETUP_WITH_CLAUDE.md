@@ -26,7 +26,7 @@ Output style: short paragraphs, one decision per turn, end each turn with a clea
 Run `bin/check-prereqs.sh` if the repo is already cloned, otherwise check manually:
 
 - `python3 --version` -- need 3.11+
-- `bash --version` -- need 4+
+- `bash --version` -- need 4+. **On macOS** the system `/bin/bash` is 3.2; if version is 3.x, instruct the user to `brew install bash` and ensure Homebrew's bash is ahead of `/bin/bash` in `PATH`.
 - `git --version` -- any recent
 - `claude --version` -- the Anthropic Claude Code CLI must be installed
 

@@ -20,8 +20,8 @@ except ImportError:
 # Default pricing per 1M tokens (USD). Override via dispatch_pricing.toml.
 DEFAULT_PRICING = {
     "anthropic": {"input": 3.00, "output": 15.00},
-    "moonshot": {"input": 1.00, "output": 3.00},
-    "deepseek": {"input": 0.50, "output": 2.00},
+    "moonshot": {"input": 0.95, "output": 4.00},
+    "deepseek": {"input": 0.14, "output": 0.28},
     "minimax": {"input": 0.80, "output": 2.40},
     "ollama": {"input": 0.00, "output": 0.00},
 }

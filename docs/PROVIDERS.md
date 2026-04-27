@@ -18,7 +18,10 @@ claude login
 
 **Bare mode:** Off (`CE_BARE_MODE=0`). Anthropic providers use normal Claude Code mode because subscription OAuth requires it. Workers auto-load the project CLAUDE.md (which should be skeletonized to stay small).
 
-**Context window:** 200K tokens (all tiers)
+**Context window:**
+- Opus 4.7: 1M tokens (1M-context plan) or 200K (standard tier)
+- Sonnet 4.6: 200K standard, 1M with the `context-1m-2025-08-07` beta header
+- Haiku 4.5: 200K
 
 **Thinking tokens:**
 - Opus: default 4000, ceiling 16000
@@ -44,13 +47,18 @@ export MOONSHOT_API_KEY="sk-..."
 
 **Bare mode:** On (`CE_BARE_MODE=1`). Workers see only baseline + brief + packs.
 
-**Context window:** 256K tokens (the largest available, ideal for long-context tasks)
+**Context window:** 256K tokens. Useful when you do not have access to Anthropic's 1M-context tier.
 
 **Thinking tokens:**
 - `kimi`: 0 (thinking disabled, for mechanical work)
 - `kimi-think`: 4000 default, 8000 ceiling (for hard problems)
 
-**Cost model:** Metered. Approximately $1.00/M input, $3.00/M output (verify current pricing at platform.moonshot.cn).
+**Cost model:** Metered. As of 2026-04-27 (verify at platform.moonshot.cn):
+- Cache miss input: ~$0.95/M
+- Cache hit input: ~$0.16/M (6x cheaper)
+- Output: ~$4.00/M
+
+API key path is metered regardless of any web subscription.
 
 **Routing guidance:**
 - Long-context tasks (>50K tokens): prefer `kimi`
@@ -76,15 +84,21 @@ export DEEPSEEK_API_KEY="sk-..."
 
 **Bare mode:** On (`CE_BARE_MODE=1`)
 
-**Context window:** 128K tokens
+**Context window:** 1M tokens (DeepSeek V4)
+
+**Default model:** `deepseek-v4-flash` (cheap, mechanical work). Swap to `deepseek-v4-pro` in the matrix for harder reasoning.
 
 **Thinking tokens:** Default 4000, ceiling 8000
 
-**Cost model:** Metered. Approximately $0.50/M input, $2.00/M output (verify at platform.deepseek.com).
+**Cost model:** Metered. As of 2026-04-27 (verify at platform.deepseek.com):
+- V4-flash: ~$0.14/M input, ~$0.28/M output
+- V4-pro (75% promo through 2026-05-05): ~$0.435/M input, ~$0.87/M output. Post-promo: multiply by 4.
+- V4-pro cache hit: ~$0.0036/M input
 
 **Routing guidance:**
-- Pure-code tasks with strong type/test signals: prefer `deepseek`
+- Pure-code tasks with strong type/test signals: prefer `deepseek` (v4-flash)
 - Good alternative to Sonnet for mechanical coding
+- Long-context summarization: V4's 1M window competes with Kimi's 256K
 
 **Caveats:**
 - Same `--bare` limitations as Kimi (no hooks, no rules engine)
@@ -103,7 +117,7 @@ Requirements for a new provider:
 
 | Feature | Anthropic | Moonshot | DeepSeek |
 |---------|-----------|----------|----------|
-| Context window | 200K | 256K | 128K |
+| Context window | 200K, 1M (Opus, Sonnet w/ beta) | 256K | 1M (V4) |
 | Bare mode | No (OAuth) | Yes | Yes |
 | Hooks fire | Yes | No | No |
 | CLAUDE.md loads | Yes (skeleton) | No | No |

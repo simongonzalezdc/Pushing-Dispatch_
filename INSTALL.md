@@ -5,7 +5,14 @@
 ### Required
 
 - **Python 3.11+** -- the dispatch framework uses `tomllib` (stdlib in 3.11+)
-- **Bash 4+** -- provider wrappers use bash 4 features (associative arrays, `${var,,}`)
+- **Bash 4+** -- provider wrappers use bash 4 features (associative arrays, `${var,,}`).
+  - **macOS gotcha:** macOS ships Bash 3.2 (Apple stopped updating it for licensing reasons). Install a current bash via Homebrew:
+    ```bash
+    brew install bash
+    # Verify (will be at /opt/homebrew/bin/bash on Apple Silicon, /usr/local/bin/bash on Intel):
+    /opt/homebrew/bin/bash --version
+    ```
+    Wrappers use `#!/usr/bin/env bash`, so they pick up whichever `bash` is first in `PATH`. Make sure Homebrew's bash is ahead of `/bin/bash`.
 - **Git** -- worktree-based isolation requires git
 - **Claude Code CLI** (`claude`) -- the harness that runs all providers
   - Install: `npm install -g @anthropic-ai/claude-code`

@@ -24,7 +24,7 @@ export CE_BARE_MODE=1
 DEEPSEEK_KEY=$(ce_load_api_key "pushing-dispatch" "deepseek_api_key" "DEEPSEEK_API_KEY")
 export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_KEY"
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
-export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-deepseek-chat}"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-deepseek-v4-flash}"
 
 # DeepSeek defaults
 export CE_THINKING_TOKENS="${CE_THINKING_TOKENS:-4000}"
