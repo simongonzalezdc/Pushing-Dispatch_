@@ -1,4 +1,4 @@
-# ai-dispatch
+# Pushing Dispatch_
 
 Multi-model dispatch for AI coding agents. One harness, many models.
 
@@ -42,8 +42,8 @@ Kill propagation walks the tree bottom-up. No auto-retry on failure. Ever.
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/YOUR_ORG/ai-dispatch.git
-cd ai-dispatch
+git clone https://github.com/YOUR_ORG/pushing-dispatch.git
+cd pushing-dispatch
 cp dispatch_matrix.toml.example dispatch_matrix.toml
 
 # 2. Check prerequisites
@@ -87,7 +87,7 @@ See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provide
 ## Repo Structure
 
 ```
-ai-dispatch/
+pushing-dispatch/
   cli.py                          # Main CLI entry point
   breakout.py                     # Worktree session manager
   skeleton_lint.py                # CLAUDE.md line-count enforcement
@@ -143,6 +143,20 @@ This repo includes orientation files for AI coding agents:
 
 Judgment stays in one place (the orchestrator seat). Execution fans out to the cheapest model that can handle each subtask. The brief is the contract. The matrix is the source of truth. Everything else is plumbing.
 
+## Quick start with Claude Code
+
+The fastest setup path: open a fresh Claude Code session, paste this:
+
+```
+Read SETUP_WITH_CLAUDE.md from https://github.com/PUSHINGSQUARES/Pushing-Dispatch_ and walk me through setup end to end.
+```
+
+The session will check your prereqs, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.
+
 ## License
 
 [MIT](LICENSE)
+
+## Made by
+
+[Pushing Squares](https://github.com/PUSHINGSQUARES) -- workflow engineering for creative tooling.

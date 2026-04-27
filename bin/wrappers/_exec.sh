@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# _exec.sh - Shared execution library for ai-dispatch wrappers.
+# _exec.sh - Shared execution library for pushing-dispatch wrappers.
 #
 # Every provider wrapper (anthropic.sh, moonshot.sh, deepseek.sh, etc.)
 # sources this file and calls ce_run_claude. This library handles:
@@ -17,7 +17,7 @@ set -euo pipefail
 # --- Paths ---
 CE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CE_REPO_ROOT="$(cd "$CE_SCRIPT_DIR/../.." && pwd)"
-CE_DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/ai-dispatch}"
+CE_DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/pushing-dispatch}"
 CE_PACKS_DIR="${DISPATCH_PACKS_DIR:-$CE_REPO_ROOT/dispatch_packs}"
 CE_PROMPT_TEMPLATE="$CE_SCRIPT_DIR/executor_prompt.md"
 

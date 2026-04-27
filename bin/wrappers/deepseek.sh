@@ -7,7 +7,7 @@
 # DeepSeek excels at pure-code tasks with strong type/test signals.
 #
 # API key: set DEEPSEEK_API_KEY env var, or store in macOS Keychain
-#          (service=ai-dispatch, account=deepseek_api_key)
+#          (service=pushing-dispatch, account=deepseek_api_key)
 #
 # Usage: deepseek.sh --task-file brief.md --cwd /path --worker-id w-xxxx-slug
 
@@ -21,7 +21,7 @@ export CE_TOOL_NAME="deepseek"
 export CE_BARE_MODE=1
 
 # Load API key
-DEEPSEEK_KEY=$(ce_load_api_key "ai-dispatch" "deepseek_api_key" "DEEPSEEK_API_KEY")
+DEEPSEEK_KEY=$(ce_load_api_key "pushing-dispatch" "deepseek_api_key" "DEEPSEEK_API_KEY")
 export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_KEY"
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-deepseek-chat}"

@@ -15,7 +15,7 @@ source "$SCRIPT_DIR/_exec.sh"
 # Provider config
 export CE_TOOL_NAME="opus"
 export CE_BARE_MODE=0
-export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-opus-4-6}"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-opus-4-7}"
 
 # Opus supports higher thinking token budgets
 export CE_THINKING_TOKENS="${CE_THINKING_TOKENS:-4000}"

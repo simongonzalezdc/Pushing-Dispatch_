@@ -1,5 +1,5 @@
 """
-dispatch_lib - Core library for the ai-dispatch framework.
+dispatch_lib - Core library for the pushing-dispatch framework.
 
 Provides executor routing, budget tracking, status management,
 nested dispatch permissions, and stream parsing.

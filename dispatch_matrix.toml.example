@@ -20,7 +20,7 @@ schema_version = 1
 [executors.opus]
 wrapper = "opus.sh"
 provider = "anthropic"
-model_id = "claude-opus-4-6"
+model_id = "claude-opus-4-7"
 allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["top", "review"]
 default_thinking_tokens = 4000

@@ -1,6 +1,6 @@
-# ai-dispatch -- Agent Orientation
+# Pushing Dispatch_ -- Agent Orientation
 
-You are working in the `ai-dispatch` repo: a multi-model dispatch framework for AI coding agents.
+You are working in the `pushing-dispatch` repo: a multi-model dispatch framework for AI coding agents.
 
 ## Architecture
 

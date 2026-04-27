@@ -1,4 +1,4 @@
-# Contributing to ai-dispatch
+# Contributing to pushing-dispatch
 
 ## Getting Started
 

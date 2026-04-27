@@ -1,4 +1,4 @@
-# Handoff: ai-dispatch Public Repo Build
+# Handoff: pushing-dispatch Public Repo Build
 
 ## What Was Built
 
@@ -65,16 +65,16 @@ All blacklist terms were searched across all `.md`, `.py`, `.sh`, `.toml` files.
 Suggested push command:
 ```bash
 cd "/Volumes/T5 EVO/Advisor_Development_X_Dispatch"
-gh repo create ai-dispatch --private --source=. --push
+gh repo create pushing-dispatch --private --source=. --push
 ```
 
 ## Items to Sanity-Check Before Public Flip
 
 1. **README tone and accuracy** -- does it represent the project correctly?
 2. **License choice** -- MIT is used (handoff recommended Apache 2.0; MIT was specified in the brief). Confirm preference.
-3. **Repo name** -- "ai-dispatch" recommended. Confirm before creating GitHub remote.
+3. **Repo name** -- "pushing-dispatch" recommended. Confirm before creating GitHub remote.
 4. **API endpoint URLs** -- moonshot.ai/anthropic and deepseek.com/anthropic are publicly documented. Verify they're current.
-5. **Model IDs** -- claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5-20251001, kimi-k2.6, deepseek-chat. Verify these are the IDs you want in the public example.
+5. **Model IDs** -- claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5-20251001, kimi-k2.6, deepseek-chat. Verify these are the IDs you want in the public example.
 6. **Issue templates** -- review the three seeded issues for relevance.
 7. **CLAUDE.md size** -- 53 lines, well under the 150-line cap recommended in the handoff.
 

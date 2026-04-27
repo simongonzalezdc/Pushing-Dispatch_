@@ -8,7 +8,7 @@
 # Kimi excels at long-context tasks (256K window) and mechanical refactors.
 #
 # API key: set MOONSHOT_API_KEY env var, or store in macOS Keychain
-#          (service=ai-dispatch, account=moonshot_api_key)
+#          (service=pushing-dispatch, account=moonshot_api_key)
 #
 # Usage: moonshot.sh --task-file brief.md --cwd /path --worker-id w-xxxx-slug
 
@@ -22,7 +22,7 @@ export CE_TOOL_NAME="kimi"
 export CE_BARE_MODE=1  # Third-party: full Hybrid C (brief-only)
 
 # Load API key
-MOONSHOT_KEY=$(ce_load_api_key "ai-dispatch" "moonshot_api_key" "MOONSHOT_API_KEY")
+MOONSHOT_KEY=$(ce_load_api_key "pushing-dispatch" "moonshot_api_key" "MOONSHOT_API_KEY")
 export ANTHROPIC_AUTH_TOKEN="$MOONSHOT_KEY"
 export ANTHROPIC_BASE_URL="https://api.moonshot.ai/anthropic"
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-kimi-k2.6}"

@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/ai-dispatch}"
+DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/pushing-dispatch}"
 SESSION_ID="${DISPATCH_SESSION_ID:-${CLAUDE_SESSION_ID:-unknown}}"
 MARKER_FILE="$DISPATCH_ROOT/auto_poll_active_${SESSION_ID}"
 STALE_MINUTES=30

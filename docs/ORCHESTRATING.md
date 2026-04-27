@@ -1,6 +1,6 @@
-# Orchestrating with ai-dispatch
+# Orchestrating with pushing-dispatch
 
-This is the complete guide for an orchestrator model (or human operator) using ai-dispatch to manage worker agents. Treat it as a runbook.
+This is the complete guide for an orchestrator model (or human operator) using pushing-dispatch to manage worker agents. Treat it as a runbook.
 
 ## 1. Authoring a Brief with a Custom System Prompt
 

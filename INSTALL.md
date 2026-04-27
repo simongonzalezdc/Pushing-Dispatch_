@@ -32,8 +32,8 @@ This script verifies all required tools are present and reports missing optional
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_ORG/ai-dispatch.git
-cd ai-dispatch
+git clone https://github.com/YOUR_ORG/pushing-dispatch.git
+cd pushing-dispatch
 ```
 
 ### 2. Configure the dispatch matrix
@@ -61,10 +61,10 @@ claude login
 export MOONSHOT_API_KEY="sk-..."
 
 # Option B: macOS Keychain
-security add-generic-password -s "ai-dispatch" -a "moonshot_api_key" -w "sk-..."
+security add-generic-password -s "pushing-dispatch" -a "moonshot_api_key" -w "sk-..."
 
 # Option C: pass (password store)
-pass insert ai-dispatch/moonshot_api_key
+pass insert pushing-dispatch/moonshot_api_key
 ```
 
 **DeepSeek:**
@@ -78,8 +78,8 @@ export DEEPSEEK_API_KEY="sk-..."
 
 The wrapper checks in this order:
 1. Environment variable (e.g., `MOONSHOT_API_KEY`)
-2. macOS Keychain (service=`ai-dispatch`, account=`<provider>_api_key`)
-3. `pass` password store (`ai-dispatch/<provider>_api_key`)
+2. macOS Keychain (service=`pushing-dispatch`, account=`<provider>_api_key`)
+3. `pass` password store (`pushing-dispatch/<provider>_api_key`)
 
 ### 4. Run the smoke test
 
@@ -98,11 +98,11 @@ Add the auto-poll hook to your Claude Code settings:
   "hooks": {
     "SessionStart": [{
       "type": "command",
-      "command": "bash /path/to/ai-dispatch/hooks/auto_poll.sh"
+      "command": "bash /path/to/pushing-dispatch/hooks/auto_poll.sh"
     }],
     "UserPromptSubmit": [{
       "type": "command",
-      "command": "bash /path/to/ai-dispatch/hooks/auto_poll.sh"
+      "command": "bash /path/to/pushing-dispatch/hooks/auto_poll.sh"
     }]
   }
 }
@@ -112,7 +112,7 @@ This automatically starts polling when you have active workers, and stops when t
 
 ### 6. (Optional) Set DISPATCH_ROOT
 
-By default, dispatch artifacts (status files, logs, budget ledger) live in `~/.local/share/ai-dispatch/`. Override with:
+By default, dispatch artifacts (status files, logs, budget ledger) live in `~/.local/share/pushing-dispatch/`. Override with:
 
 ```bash
 export DISPATCH_ROOT="/path/to/your/dispatch/data"

@@ -47,12 +47,12 @@
 
 ### API key not found
 
-**Symptom:** `Error: API key not found for ai-dispatch/moonshot_api_key`
+**Symptom:** `Error: API key not found for pushing-dispatch/moonshot_api_key`
 
 **Fix:** Set the API key via one of:
 - Environment variable: `export MOONSHOT_API_KEY="sk-..."`
-- macOS Keychain: `security add-generic-password -s "ai-dispatch" -a "moonshot_api_key" -w "sk-..."`
-- pass: `pass insert ai-dispatch/moonshot_api_key`
+- macOS Keychain: `security add-generic-password -s "pushing-dispatch" -a "moonshot_api_key" -w "sk-..."`
+- pass: `pass insert pushing-dispatch/moonshot_api_key`
 
 ### Worktree already exists
 

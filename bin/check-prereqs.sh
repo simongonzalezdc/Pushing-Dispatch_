@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-prereqs.sh - Verify environment prerequisites for ai-dispatch.
+# check-prereqs.sh - Verify environment prerequisites for pushing-dispatch.
 #
 # Checks for required and optional tools, reports what's missing.
 # Exit 0 if all required prereqs met, exit 1 if any required tool is missing.
@@ -95,7 +95,7 @@ check_api_key() {
     fi
 }
 
-echo "ai-dispatch prerequisite check"
+echo "pushing-dispatch prerequisite check"
 echo "=============================="
 echo ""
 

@@ -1,6 +1,6 @@
 # Customization Guide
 
-Recipes for adapting ai-dispatch to your workflow.
+Recipes for adapting pushing-dispatch to your workflow.
 
 ## Adding a New Provider
 
@@ -19,7 +19,7 @@ export CE_TOOL_NAME="newprovider"
 export CE_BARE_MODE=1  # Third-party: brief-only context
 
 # Load API key
-KEY=$(ce_load_api_key "ai-dispatch" "newprovider_api_key" "NEWPROVIDER_API_KEY")
+KEY=$(ce_load_api_key "pushing-dispatch" "newprovider_api_key" "NEWPROVIDER_API_KEY")
 export ANTHROPIC_AUTH_TOKEN="$KEY"
 export ANTHROPIC_BASE_URL="https://api.newprovider.com/anthropic"
 export ANTHROPIC_MODEL="newprovider-model-v1"
@@ -224,7 +224,7 @@ $DISPATCH_ROOT/
   auto_poll_active_*  # Polling markers
 ```
 
-Default: `~/.local/share/ai-dispatch/`
+Default: `~/.local/share/pushing-dispatch/`
 
 Override: `export DISPATCH_ROOT=/path/to/your/dir`
 

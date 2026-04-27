@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ai-dispatch CLI - Multi-model dispatch for AI coding agents.
+pushing-dispatch CLI - Multi-model dispatch for AI coding agents.
 
 Usage:
     python cli.py task start --executor sonnet --task-file brief.md --cwd /path/to/project
@@ -462,7 +462,7 @@ def main():
     executor_names = _executor_choices(matrix) if matrix else None
 
     parser = argparse.ArgumentParser(
-        prog="ai-dispatch",
+        prog="pushing-dispatch",
         description="Multi-model dispatch for AI coding agents",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

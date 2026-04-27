@@ -11,9 +11,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLI="$REPO_ROOT/cli.py"
-DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/ai-dispatch}"
+DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/pushing-dispatch}"
 
-echo "ai-dispatch smoke test"
+echo "pushing-dispatch smoke test"
 echo "======================"
 
 # Check for dispatch matrix

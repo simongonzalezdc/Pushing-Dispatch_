@@ -1,8 +1,8 @@
 """
-Path conventions for ai-dispatch artifacts.
+Path conventions for pushing-dispatch artifacts.
 
 All dispatch artifacts (status files, logs, budget ledger) live under
-DISPATCH_ROOT. Default: ~/.local/share/ai-dispatch/
+DISPATCH_ROOT. Default: ~/.local/share/pushing-dispatch/
 Override via DISPATCH_ROOT env var.
 """
 
@@ -12,7 +12,7 @@ from pathlib import Path
 
 def dispatch_root() -> Path:
     """Return the root directory for dispatch artifacts."""
-    return Path(os.environ.get("DISPATCH_ROOT", os.path.expanduser("~/.local/share/ai-dispatch")))
+    return Path(os.environ.get("DISPATCH_ROOT", os.path.expanduser("~/.local/share/pushing-dispatch")))
 
 
 def status_dir() -> Path:
