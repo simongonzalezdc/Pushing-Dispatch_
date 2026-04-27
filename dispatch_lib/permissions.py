@@ -8,6 +8,7 @@ Missing entries are treated as denied.
 Hard rules (always enforced, cannot be overridden by matrix):
   - Self-dispatch denied (loop prevention)
   - Leaf executors cannot dispatch (haiku, minimax, ollama-local)
+  - Metered -> high-cost-subscription dispatch denied (cost-asymmetric)
 """
 
 from pathlib import Path
@@ -24,8 +25,42 @@ except ImportError:
 # Executors that may never dispatch sub-workers
 LEAF_EXECUTORS = {"haiku", "minimax", "ollama-local", "gemini"}
 
-# Executors with high subscription cost (metered parents should not spawn these)
-HIGH_COST_SUBSCRIPTION = {"opus", "sonnet"}
+# Provider cost tiers: metered providers charge per-token (budget-capped),
+# subscription providers have flat-rate access (unbounded per-call cost).
+METERED_PROVIDERS = frozenset({"minimax", "moonshot", "deepseek", "ollama"})
+SUBSCRIPTION_PROVIDERS = frozenset({"anthropic", "google"})
+
+# High-cost subscription executors blocked from metered parents.
+# Haiku is anthropic (subscription) but cheap/bounded -- explicitly allowed
+# by the permissions table (kimi->haiku, deepseek->haiku). Only Opus and
+# Sonnet represent the "unbounded subscription cost" concern.
+HIGH_COST_SUBSCRIPTION = frozenset({"opus", "sonnet"})
+
+# Executor -> provider mapping. Mirrors dispatch_matrix.toml for fast lookup
+# without a full matrix parse in the hot path.
+_EXECUTOR_PROVIDERS = {
+    "opus":       "anthropic",
+    "sonnet":     "anthropic",
+    "haiku":      "anthropic",
+    "minimax":    "minimax",
+    "kimi":       "moonshot",
+    "kimi-think": "moonshot",
+    "deepseek":   "deepseek",
+    "gemini":     "google",
+    "ollama-local": "ollama",
+}
+
+
+def _is_metered(executor: str) -> bool:
+    """True if the executor's provider uses metered (per-token) billing."""
+    provider = _EXECUTOR_PROVIDERS.get(executor, "")
+    return provider in METERED_PROVIDERS
+
+
+def _is_subscription(executor: str) -> bool:
+    """True if the executor's provider uses subscription (flat-rate) billing."""
+    provider = _EXECUTOR_PROVIDERS.get(executor, "")
+    return provider in SUBSCRIPTION_PROVIDERS
 
 
 def check_nested_permission(
@@ -35,15 +70,34 @@ def check_nested_permission(
 ) -> tuple[bool, str]:
     """Check if parent_executor is allowed to dispatch child_executor.
 
+    Applies hard rules first (self-dispatch, leaf, cost-asymmetric),
+    then consults the [nested_dispatch.permissions] matrix table.
+
     Returns: (allowed: bool, reason: str)
     """
-    # Hard rule: self-dispatch always denied
+    # Hard rule 1: self-dispatch always denied
     if parent_executor == child_executor:
-        return False, f"Self-dispatch denied: {parent_executor} cannot spawn {parent_executor} (loop risk)"
+        return False, (f"Self-dispatch denied: {parent_executor} cannot spawn "
+                       f"{parent_executor} (loop risk)")
 
-    # Hard rule: leaf executors cannot dispatch
+    # Hard rule 2: leaf executors cannot dispatch
     if parent_executor in LEAF_EXECUTORS:
-        return False, f"Leaf executor {parent_executor} cannot dispatch sub-workers"
+        return False, (f"Leaf executor {parent_executor} cannot dispatch "
+                       f"sub-workers (leaf tier: no nested dispatch allowed)")
+
+    # Hard rule 3: metered -> high-cost-subscription cost-asymmetric block.
+    # Blocks metered parents (kimi, deepseek, minimax) from spawning Opus or
+    # Sonnet. Haiku is anthropic (subscription) but cheap/bounded -- explicitly
+    # allowed by the permissions matrix. Only Opus and Sonnet represent the
+    # "unbounded subscription cost" concern.
+    if _is_metered(parent_executor) and child_executor in HIGH_COST_SUBSCRIPTION:
+        parent_provider = _EXECUTOR_PROVIDERS.get(parent_executor, "?")
+        child_provider = _EXECUTOR_PROVIDERS.get(child_executor, "?")
+        return False, (f"metered->high-cost-subscription dispatch denied: "
+                       f"{parent_executor} ({parent_provider}) cannot spawn "
+                       f"{child_executor} ({child_provider}) -- cost-asymmetric: "
+                       f"metered parent budget cannot account for "
+                       f"Opus/Sonnet subscription costs")
 
     # Load matrix permissions
     permissions = _load_permissions(matrix_path)
@@ -52,7 +106,8 @@ def check_nested_permission(
     if permissions.get(key, False):
         return True, "Allowed by permissions matrix"
 
-    return False, f"Permission denied: {parent_executor} -> {child_executor} not in permissions matrix"
+    return False, (f"Permission denied: {parent_executor} -> {child_executor} "
+                   f"not in permissions matrix")
 
 
 def _load_permissions(matrix_path: str = None) -> dict:

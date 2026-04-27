@@ -78,6 +78,20 @@ gh repo create pushing-dispatch --private --source=. --push
 6. **Issue templates** -- review the three seeded issues for relevance.
 7. **CLAUDE.md size** -- 53 lines, well under the 150-line cap recommended in the handoff.
 
+## Parity restoration (2026-04-27)
+
+Five deltas ported from the private dispatch codebase to restore missing capabilities:
+
+1. **Delta 1 -- Wrapper exit-code protocol** (`bin/wrappers/_exec.sh`): The wrapper now decodes worker `Status:` tokens into documented exit codes: `0` (DONE/DONE_WITH_CONCERNS), `2` (NEEDS_GUIDANCE), `3` (BLOCKED), `4` (claude non-zero). Falls back to `0` when no status token is found on a clean exit.
+
+2. **Delta 2 -- Checkpoint capability** (`dispatch_lib/checkpoint.py`, `cli.py`): Full phased breakout state machine restored. Supports `CHECKPOINT: pause-for-review` and `CHECKPOINT: auto-continue` directives in briefs. CLI subcommands: `checkpoint list` (shows awaiting checkpoints) and `checkpoint continue` (re-dispatches paused worker).
+
+3. **Delta 3 -- Answer subcommand** (`cli.py`): `cli.py answer <worker-id> --answer <text>` (or `--answer-file`) re-dispatches a worker with the operator's answer appended to the original brief. Archives the old question file and creates a registry resolution event.
+
+4. **Delta 4 -- Cost-tier guard** (`dispatch_lib/permissions.py`): Restored `_is_metered()` / `_is_subscription()` helpers and the hard rule blocking metered parents (kimi, deepseek, minimax) from spawning high-cost subscription children (opus, sonnet). Haiku is explicitly allowed as cheap/bounded.
+
+5. **Delta 5 -- kimi.sh wrapper alias** (`bin/wrappers/kimi.sh`, `dispatch_matrix.toml.example`): Added `kimi.sh` as a thin shim that `exec`s `moonshot.sh`. Matrix example updated to use `wrapper = "kimi.sh"` for kimi and kimi-think executors so wrapper name and executor key align.
+
 ## Commit History
 
 4 commits on `main`:

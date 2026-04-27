@@ -408,6 +408,231 @@ def cmd_validate_matrix(args):
         print("Matrix is valid.")
 
 
+def cmd_answer(args):
+    """Re-dispatch a worker with the operator's answer baked into the brief."""
+    ensure_dirs()
+    status = read_status(args.worker_id)
+    if not status:
+        print(f"Error: no worker '{args.worker_id}'", file=sys.stderr)
+        sys.exit(2)
+
+    if args.answer_file:
+        answer_text = Path(args.answer_file).read_text()
+    elif args.answer:
+        answer_text = args.answer
+    else:
+        print("Error: --answer or --answer-file required", file=sys.stderr)
+        sys.exit(2)
+
+    orig_task_file = Path(status.get("brief_path", ""))
+    if not orig_task_file.exists():
+        print(f"Error: original task file missing: {orig_task_file}", file=sys.stderr)
+        sys.exit(2)
+
+    orig_task = orig_task_file.read_text()
+
+    # Build the revised task with the answer appended.
+    import re as _re
+    base_label = status.get("worker_id", "re")
+    rev_match = _re.match(r"^(.*)-r(\d+)$", base_label)
+    if rev_match:
+        new_label = f"{rev_match.group(1)}-r{int(rev_match.group(2)) + 1}"
+    else:
+        new_label = f"{base_label}-r1"
+
+    new_task = (
+        orig_task.rstrip()
+        + "\n\n## Operator answer to your question\n\n"
+        + answer_text.rstrip()
+        + "\n"
+    )
+    task_archive = dispatch_root() / "tasks"
+    task_archive.mkdir(parents=True, exist_ok=True)
+    import uuid as _uuid
+    new_task_file = task_archive / f"{new_label}-{_uuid.uuid4().hex[:4]}.task.md"
+    new_task_file.write_text(new_task)
+
+    # Archive the old question file if present.
+    qpath = question_path(args.worker_id)
+    if qpath.exists():
+        resolved = question_dir() / "_resolved"
+        resolved.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime("%Y%m%dT%H%M%S", time.gmtime())
+        dest = resolved / f"{args.worker_id}-{ts}.md"
+        qpath.rename(dest)
+
+    # Registry entry for resolution.
+    _append_registry({
+        "kind": "bg-event",
+        "event": "resolved",
+        "worker_id": args.worker_id,
+        "status": "resolved",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+
+    # Re-dispatch with same executor.
+    executor = status.get("executor", "sonnet")
+    cwd = status.get("cwd") or os.getcwd()
+    matrix = _load_matrix()
+    executors_map = _build_executors(matrix) if matrix else {}
+    wrapper = executors_map.get(executor, f"{executor}.sh")
+    wrapper_path = Path(__file__).parent / "bin" / "wrappers" / wrapper
+
+    worker_id = _generate_worker_id(new_label)
+    cmd = [
+        str(wrapper_path),
+        "--worker-id", worker_id,
+        "--cwd", cwd,
+        "--mode", status.get("mode", "task"),
+        "--task-file", str(new_task_file),
+    ]
+
+    env = os.environ.copy()
+    env["DISPATCH_WORKER_ID"] = worker_id
+
+    proc = subprocess.Popen(
+        cmd, env=env, start_new_session=True,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+    init_status(
+        worker_id=worker_id,
+        mode=status.get("mode", "task"),
+        executor=executor,
+        pid=proc.pid,
+        brief_path=str(new_task_file),
+        log_file=str(log_path(worker_id)),
+        parent_id=args.worker_id,
+        depth=status.get("depth", 0),
+        session_id=os.environ.get("DISPATCH_SESSION_ID"),
+    )
+
+    _append_registry({
+        "kind": "bg-event",
+        "event": "worker_started",
+        "worker_id": worker_id,
+        "mode": status.get("mode", "task"),
+        "executor": executor,
+        "pid": proc.pid,
+        "parent_id": args.worker_id,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+
+    print(worker_id)
+
+
+def cmd_checkpoint(args):
+    """Checkpoint subcommand dispatcher."""
+    if args.checkpoint_command == "list":
+        cmd_checkpoint_list(args)
+    elif args.checkpoint_command == "continue":
+        cmd_checkpoint_continue(args)
+
+
+def cmd_checkpoint_list(args):
+    """List awaiting checkpoints."""
+    from dispatch_lib import checkpoint as _ck
+    items = _ck.list_awaiting_checkpoints()
+    if args.json:
+        payload = [
+            {
+                "worker_id": c.worker_id,
+                "slug": c.slug,
+                "phase": c.phase,
+                "commit_sha": c.commit_sha,
+                "timestamp": c.timestamp,
+                "path": str(c.path),
+            }
+            for c in items
+        ]
+        print(json.dumps(payload, indent=2))
+        return
+    if not items:
+        print("(no awaiting checkpoints)")
+        return
+    print(f"{'WORKER_ID':<24} {'SLUG':<28} {'PHASE':<12} {'COMMIT':<10} TIMESTAMP")
+    for c in items:
+        print(
+            f"{c.worker_id:<24} {c.slug:<28} {c.phase:<12} "
+            f"{c.commit_sha[:10]:<10} {c.timestamp}"
+        )
+
+
+def cmd_checkpoint_continue(args):
+    """Resume a paused worker by re-dispatching in the same worktree."""
+    from dispatch_lib import checkpoint as _ck
+
+    ck = _ck.find_checkpoint_by_worker(args.worker_id)
+    if ck is None:
+        print(f"Error: no awaiting checkpoint for worker_id {args.worker_id!r}",
+              file=sys.stderr)
+        sys.exit(2)
+
+    # Default worktree path follows the breakout convention.
+    worktree = Path(args.worktree) if args.worktree else None
+    if worktree and not worktree.is_dir():
+        print(f"Error: worktree not found: {worktree}", file=sys.stderr)
+        sys.exit(2)
+
+    # Resolve brief path.
+    resume_brief_path = Path(args.task_file).resolve() if args.task_file else None
+    if resume_brief_path and not resume_brief_path.exists():
+        print(f"Error: brief not found: {resume_brief_path}", file=sys.stderr)
+        sys.exit(2)
+    if resume_brief_path is None:
+        print("Error: --task-file required for checkpoint continue", file=sys.stderr)
+        sys.exit(2)
+
+    matrix = _load_matrix()
+    executor = args.executor or "sonnet"
+    executors_map = _build_executors(matrix) if matrix else {}
+    wrapper = executors_map.get(executor, f"{executor}.sh")
+    wrapper_path = Path(__file__).parent / "bin" / "wrappers" / wrapper
+
+    _ck.archive_checkpoint(ck)
+
+    new_label = f"{ck.slug}-resume"
+    worker_id = _generate_worker_id(new_label)
+    cwd = str(worktree) if worktree else os.getcwd()
+
+    cmd = [
+        str(wrapper_path),
+        "--worker-id", worker_id,
+        "--cwd", cwd,
+        "--mode", "breakout",
+        "--task-file", str(resume_brief_path),
+    ]
+
+    env = os.environ.copy()
+    env["DISPATCH_WORKER_ID"] = worker_id
+
+    proc = subprocess.Popen(
+        cmd, env=env, start_new_session=True,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+    init_status(
+        worker_id=worker_id,
+        mode="breakout",
+        executor=executor,
+        pid=proc.pid,
+        brief_path=str(resume_brief_path),
+        log_file=str(log_path(worker_id)),
+    )
+
+    _append_registry({
+        "kind": "bg-event",
+        "event": "worker_started",
+        "worker_id": worker_id,
+        "mode": "breakout",
+        "executor": executor,
+        "pid": proc.pid,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+
+    print(worker_id)
+
+
 def cmd_compact(args):
     """Compact the session registry (remove old terminal entries)."""
     path = registry_path()
@@ -504,6 +729,26 @@ def main():
     # questions
     subparsers.add_parser("questions", help="List pending questions")
 
+    # answer
+    answer_parser = subparsers.add_parser("answer", help="Re-dispatch worker with operator answer baked in")
+    answer_parser.add_argument("worker_id", help="Worker ID to answer")
+    answer_grp = answer_parser.add_mutually_exclusive_group(required=True)
+    answer_grp.add_argument("--answer", help="Inline answer text")
+    answer_grp.add_argument("--answer-file", help="Path to answer file")
+
+    # checkpoint
+    checkpoint_parser = subparsers.add_parser("checkpoint", help="List or resume advisor-reviewed phased breakouts")
+    checkpoint_sub = checkpoint_parser.add_subparsers(dest="checkpoint_command", required=True)
+
+    ck_list = checkpoint_sub.add_parser("list", help="Show workers awaiting advisor review")
+    ck_list.add_argument("--json", action="store_true", help="JSON output")
+
+    ck_cont = checkpoint_sub.add_parser("continue", help="Re-dispatch a paused worker")
+    ck_cont.add_argument("worker_id", help="Worker ID to resume")
+    ck_cont.add_argument("--worktree", help="Override worktree path")
+    ck_cont.add_argument("--executor", help="Executor for resumption (default: sonnet)")
+    ck_cont.add_argument("--task-file", help="Resumption brief path")
+
     # validate-matrix
     vm_parser = subparsers.add_parser("validate-matrix", help="Validate matrix TOML")
     vm_parser.add_argument("matrix_path", help="Path to dispatch_matrix.toml")
@@ -529,6 +774,10 @@ def main():
         cmd_completions(args)
     elif args.command == "questions":
         cmd_questions(args)
+    elif args.command == "answer":
+        cmd_answer(args)
+    elif args.command == "checkpoint":
+        cmd_checkpoint(args)
     elif args.command == "validate-matrix":
         cmd_validate_matrix(args)
     elif args.command == "compact":

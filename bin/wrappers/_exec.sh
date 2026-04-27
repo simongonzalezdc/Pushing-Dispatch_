@@ -230,20 +230,36 @@ ce_run_claude() {
     # Clean up temp files
     rm -f "$prompt_file" "$CE_ASSEMBLED_BRIEF"
 
-    # Map exit codes to dispatch status
-    case $exit_code in
-        0)
-            echo "Worker $CE_WORKER_ID completed successfully."
-            ;;
-        1)
-            echo "Worker $CE_WORKER_ID exited with error." >&2
-            ;;
-        *)
-            echo "Worker $CE_WORKER_ID exited with code $exit_code." >&2
-            ;;
-    esac
+    # Extract final text from stream for status-token scanning.
+    local final_text=""
+    if [[ -f "$log_file" ]]; then
+        final_text="$(tail -200 "$log_file")"
+    fi
 
-    return $exit_code
+    # Map worker Status: tokens to documented exit codes.
+    # Mapping:
+    #   Status: DONE / DONE_WITH_CONCERNS  -> 0
+    #   Status: NEEDS_GUIDANCE             -> 2
+    #   Status: BLOCKED                    -> 3
+    #   claude non-zero (no status token)  -> 4 (distinct from wrapper errors which use 1)
+    #   no explicit status + clean exit    -> 0
+    if [[ $exit_code -ne 0 ]]; then
+        echo "Worker $CE_WORKER_ID: claude exited with code $exit_code." >&2
+        return 4
+    fi
+    if echo "$final_text" | grep -Eq '^[[:space:]*_`#>-]*Status:[[:space:]]*\*?\*?DONE(_WITH_CONCERNS)?\b'; then
+        echo "Worker $CE_WORKER_ID completed successfully."
+        return 0
+    elif echo "$final_text" | grep -Eq '^[[:space:]*_`#>-]*Status:[[:space:]]*\*?\*?NEEDS_GUIDANCE\b'; then
+        echo "Worker $CE_WORKER_ID needs guidance." >&2
+        return 2
+    elif echo "$final_text" | grep -Eq '^[[:space:]*_`#>-]*Status:[[:space:]]*\*?\*?BLOCKED\b'; then
+        echo "Worker $CE_WORKER_ID is blocked." >&2
+        return 3
+    else
+        echo "Worker $CE_WORKER_ID completed (no explicit status token)."
+        return 0
+    fi
 }
 
 # --- API key loading helpers ---
