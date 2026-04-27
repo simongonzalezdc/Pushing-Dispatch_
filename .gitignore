@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Dispatch artifacts (user-specific, not committed)
+dispatch_matrix.toml
+dispatch_pricing.toml
+
+# OS files
+.DS_Store
+._*
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets
+.env
+*.key
+
+# Temporary files
+*.tmp
