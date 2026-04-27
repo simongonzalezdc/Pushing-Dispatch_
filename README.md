@@ -159,4 +159,6 @@ The session will check your prereqs, help you pick providers, generate your matr
 
 ## Made by
 
-[Pushing Squares](https://github.com/PUSHINGSQUARES) -- workflow engineering for creative tooling.
+[Pushing Squares](https://pushingsquares.com) -- workflow engineering for creative tooling.
+
+GitHub: [@PUSHINGSQUARES](https://github.com/PUSHINGSQUARES)
