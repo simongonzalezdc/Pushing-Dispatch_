@@ -21,9 +21,6 @@ source "$SCRIPT_DIR/_exec.sh"
 export CE_TOOL_NAME="kimi"
 export CE_BARE_MODE=1  # Third-party: full Hybrid C (brief-only)
 
-# Load API key
-MOONSHOT_KEY=$(ce_load_api_key "pushing-dispatch" "moonshot_api_key" "MOONSHOT_API_KEY")
-export ANTHROPIC_AUTH_TOKEN="$MOONSHOT_KEY"
 export ANTHROPIC_BASE_URL="https://api.moonshot.ai/anthropic"
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-kimi-k2.6}"
 
@@ -32,4 +29,9 @@ export CE_THINKING_TOKENS="${CE_THINKING_TOKENS:-0}"
 export CE_MAX_TURNS="${CE_MAX_TURNS:-25}"
 
 ce_parse_args "$@"
+if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+    export ANTHROPIC_AUTH_TOKEN="dry-run"
+else
+    export ANTHROPIC_AUTH_TOKEN="$(ce_load_api_key "pushing-dispatch" "moonshot_api_key" "MOONSHOT_API_KEY")"
+fi
 ce_run_claude

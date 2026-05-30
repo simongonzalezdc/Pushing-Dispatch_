@@ -10,6 +10,9 @@ build/
 dispatch_matrix.toml
 dispatch_pricing.toml
 
+# OMC / runtime state
+.omc/
+
 # OS files
 .DS_Store
 ._*

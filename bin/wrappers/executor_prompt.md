@@ -7,6 +7,11 @@ You are an executor implementing a specific task. Work precisely and efficiently
 {{READ_ONLY}}
 
 ## Task
+
+The task is the inline brief below. Do not read the question file before doing
+the task; that path is only for writing a question if you genuinely need operator
+guidance.
+
 {{TASK}}
 
 ## How to ask a question

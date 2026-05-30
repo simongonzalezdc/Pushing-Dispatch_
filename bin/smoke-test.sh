@@ -24,24 +24,11 @@ if [[ ! -f "$MATRIX" ]]; then
     exit 1
 fi
 
-# Determine cheapest available executor
-EXECUTOR=""
-if [[ -n "${ANTHROPIC_API_KEY:-}" ]] || command -v claude &>/dev/null; then
-    EXECUTOR="haiku"
-elif [[ -n "${MOONSHOT_API_KEY:-}" ]]; then
-    EXECUTOR="kimi"
-elif [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then
-    EXECUTOR="deepseek"
-else
-    echo "No API keys configured. Set at least one of:"
-    echo "  ANTHROPIC_API_KEY, MOONSHOT_API_KEY, or DEEPSEEK_API_KEY"
-    exit 1
-fi
-
+EXECUTOR="${PUSHING_DISPATCH_SMOKE_EXECUTOR:-auto}"
 echo "Using executor: $EXECUTOR"
 
 # Create a trivial brief
-BRIEF_FILE=$(mktemp "${TMPDIR:-/tmp}/smoke-brief-XXXXXX.md")
+BRIEF_FILE=$(mktemp "${TMPDIR:-/tmp}/smoke-brief-XXXXXX")
 cat > "$BRIEF_FILE" << 'BRIEF'
 ---
 title: Smoke test
