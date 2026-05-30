@@ -66,7 +66,8 @@ The routing rule is installed in:
 
 - `~/.agents/rules/UNIVERSAL.md`
 - `~/.codex/AGENTS.md`
-- `~/.claude/CLAUDE.md`
+- `~/.claude/CLAUDE.md` (+ `~/.claude/settings.json` allow-lists `Bash(pushing-dispatch:*)` and `Bash(dispatch:*)` so calls never prompt)
+- `~/.pi/agent/AGENTS.md`
 - `~/.kimi/rules/kimi-rules.md`
 - `~/.kilocode/rules/KiloApex.md`
 
