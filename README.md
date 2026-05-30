@@ -46,7 +46,8 @@ git clone https://github.com/YOUR_ORG/pushing-dispatch.git
 cd pushing-dispatch
 cp dispatch_matrix.toml.example dispatch_matrix.toml
 
-# 2. Check prerequisites
+# 2. Install global routing commands and check prerequisites
+bash bin/install-global-routing.sh
 bash bin/check-prereqs.sh
 
 # 3. Set API keys (at minimum, one provider)
@@ -59,17 +60,17 @@ export DEEPSEEK_API_KEY="sk-..."
 cat > /tmp/my-brief.md << 'EOF'
 ---
 title: Fix lint warnings
-executor: sonnet
 ---
 Fix all ESLint warnings in src/utils.js
 EOF
 
-# 5. Dispatch
-python cli.py task start --executor sonnet --task-file /tmp/my-brief.md --cwd /path/to/project
+# 5. Ask Dispatch which executor is best/cost-efficient, or let it auto-pick
+pushing-dispatch route --mode task --task-file /tmp/my-brief.md
+pushing-dispatch task start --executor auto --task-file /tmp/my-brief.md --cwd /path/to/project
 
 # 6. Check status
-python cli.py list --active
-python cli.py status <worker-id>
+pushing-dispatch list --active
+pushing-dispatch status <worker-id>
 ```
 
 ## Supported Providers
@@ -79,8 +80,15 @@ python cli.py status <worker-id>
 | Anthropic (Claude Opus) | `opus` | Native | 200K |
 | Anthropic (Claude Sonnet) | `sonnet` | Native | 200K |
 | Anthropic (Claude Haiku) | `haiku` | Native | 200K |
-| Moonshot (Kimi K2.6) | `kimi` | Anthropic-compat | 256K |
+| Kimi Coding | `kimi-coding` | Anthropic-compat | 256K |
+| Moonshot (Kimi K2.6) | `kimi-moonshot` | Anthropic-compat | 128K |
 | DeepSeek | `deepseek` | Anthropic-compat | 128K |
+| Z.ai | `zai-glm`, `zai-air` | Anthropic-compat | 128K |
+| MiniMax | `minimax`, `minimax-m25*` | Anthropic/OpenAI-compat | 128K-200K |
+| OpenAI/Codex | `openai-*`, `codex-spark`, `codex` | Codex CLI | 200K |
+| Gemini | `gemini-*` | Gemini API | 1M |
+| Kilo Gateway | `kilo-*` | OpenAI-compat | model-dependent |
+| LM Studio / local | `lm-studio`, `codex-oss` | OpenAI/Codex local | model-dependent |
 
 See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provider.
 
@@ -152,6 +160,22 @@ Read SETUP_WITH_CLAUDE.md from https://github.com/PUSHINGSQUARES/Pushing-Dispatc
 ```
 
 The session will check your prereqs, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.
+
+## Self-healing & availability
+
+Routing is availability-aware: `route` and `task start --executor auto` only
+return an executor that is actually reachable. Set up once with:
+
+```bash
+bash bin/sync-credentials.sh   # consolidate provider keys into the Keychain
+pushing-dispatch doctor        # live table of reachable / cooldown / re-login lanes
+```
+
+When a worker hits an auth, rate-limit, or network error its lane is demoted
+into a cooldown and the router automatically reroutes to the next candidate;
+the lane recovers on cooldown expiry or the next success. State persists across
+sessions in `availability.json` and `lane_health.json`. Each dispatch's outcome
+is appended to `outcomes.jsonl` (the substrate for the opt-in learning loop).
 
 ## License
 

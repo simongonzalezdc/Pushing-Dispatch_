@@ -22,16 +22,31 @@ The CLI reads the matrix at startup. No hardcoded executor lists.
 
 The auto-router picks an executor based on:
 1. Explicit `executor:` field in the brief (always honored)
-2. Token count of the assembled brief
-3. Keyword signals in the brief body
-4. Mode-specific defaults from the matrix
+2. The brief's tier, derived from token count + keyword signals + mode
+3. The tier's ordered candidate list in `[auto_route]`
+4. **Availability + cooldown filtering** — the router walks the candidate list
+   and returns the first executor that is mode-allowed, reachable right now, and
+   not in a self-healing cooldown. It never returns a dead lane.
 
-Heuristics:
-- Long-context (>50K tokens): prefer Kimi (256K window)
-- Mechanical/trivial: prefer Haiku (fast, cheap)
-- Hard coding with strong spec: try DeepSeek or Kimi-think
-- Synthesis/planning/orchestration: prefer Opus
-- Default: Sonnet
+Tiers and their `*_candidates` lists (matrix-driven, ordered best-first):
+- `long_context_candidates` — >50K tokens or "summarize the entire …"
+- `consult_candidates` — explicit consult mode (advisory/review)
+- `hard_task_candidates` / `hard_breakout_candidates` — implement/debug/architect
+- `trivial_candidates` — small mechanical work
+- `standard_candidates` — everything else
+
+Availability is computed per provider (CLI login for OpenAI/Anthropic, key
+presence for API providers, local CLI for ollama/lm-studio) and cached with a
+short TTL. Single-value back-compat keys still parse if a list is absent.
+
+### Self-healing
+
+A worker that fails with auth / rate-limit / network errors demotes its lane
+into a cooldown (`lane_health.json`); the router reroutes around it and the lane
+recovers on cooldown expiry or the next success. Genuine task failures do not
+demote a lane. `pushing-dispatch doctor` shows the live availability/cooldown
+table; `bin/sync-credentials.sh` consolidates provider keys into the
+`pushing-dispatch` Keychain service.
 
 ## Budget Tracking
 
