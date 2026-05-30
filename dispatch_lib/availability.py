@@ -54,11 +54,34 @@ def _local_ready(provider: str) -> bool:
     return False
 
 
+def _codex_config_has(env_var) -> bool:
+    """Mirror ce_load_api_key's codex-config fallback (presence only)."""
+    if not env_var:
+        return False
+    cfg = Path.home() / ".codex" / "config.toml"
+    if not cfg.exists():
+        return False
+    try:
+        import tomllib
+        with open(cfg, "rb") as f:
+            data = tomllib.load(f)
+    except Exception:
+        return False
+    if data.get("shell_environment_policy", {}).get("set", {}).get(env_var):
+        return True
+    for server in data.get("mcp_servers", {}).values():
+        if server.get("env", {}).get(env_var):
+            return True
+    return False
+
+
 def _key_present(env_var, account) -> bool:
     """Mirror ce_load_api_key lookup order (presence only)."""
     if env_var and os.environ.get(env_var):
         return True
     if account and _keychain_has("pushing-dispatch", account):
+        return True
+    if _codex_config_has(env_var):
         return True
     return False
 
