@@ -45,7 +45,7 @@ def _codex_ready() -> bool:
 
 
 def _local_ready(provider: str) -> bool:
-    if provider == "ollama":
+    if provider in ("ollama", "codex-oss"):
         return shutil.which("ollama") is not None
     if provider == "lm-studio":
         # Endpoint reachability is checked lazily; presence of base url env or
@@ -69,7 +69,7 @@ def _executor_available(cfg: dict) -> bool:
         return _anthropic_ready()
     if provider == "openai-codex":
         return _codex_ready()
-    if provider in ("ollama", "lm-studio"):
+    if provider in ("ollama", "lm-studio", "codex-oss"):
         return _local_ready(provider)
     return _key_present(cfg.get("key_env"), cfg.get("key_account"))
 

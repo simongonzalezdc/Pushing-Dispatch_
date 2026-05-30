@@ -20,7 +20,7 @@ schema_version = 1
 [executors.opus]
 wrapper = "opus.sh"
 provider = "anthropic"
-model_id = "claude-opus-4-7"
+model_id = "claude-opus-4-8"
 allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["top", "review"]
 default_thinking_tokens = 4000
@@ -53,41 +53,354 @@ stall_threshold_seconds = 300
 # Haiku is a leaf executor: cannot dispatch sub-workers
 hard_wall_block_breakout_top = true
 
-[executors.kimi]
-wrapper = "kimi.sh"
-provider = "moonshot"
-model_id = "kimi-k2.6"
+[executors.kimi-coding]
+key_env = "KIMI_API_KEY"
+key_account = "kimi_api_key"
+wrapper = "kimi-coding.sh"
+provider = "kimi-coding"
+model_id = "kimi-for-coding"
 allowed_modes = ["breakout", "task"]
 allowed_seats_in_breakout = ["engineer"]
 default_thinking_tokens = 0        # thinking disabled for mechanical work
-thinking_hard_ceiling = 8000
-context_window = 256000            # Kimi's large context window advantage
+thinking_hard_ceiling = 32768
+context_window = 256000            # Manifest Kimi Coding custom provider
 max_turns = 25
 stall_threshold_seconds = 300
 
-[executors.kimi-think]
-wrapper = "kimi.sh"
+[executors.kimi-moonshot]
+key_env = "MOONSHOT_API_KEY"
+key_account = "moonshot_api_key"
+wrapper = "moonshot.sh"
 provider = "moonshot"
 model_id = "kimi-k2.6"
-allowed_modes = ["breakout", "task"]
-allowed_seats_in_breakout = ["engineer"]
-default_thinking_tokens = 4000     # thinking enabled for hard problems
-thinking_hard_ceiling = 8000
-context_window = 256000
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["engineer", "review"]
+default_thinking_tokens = 4000
+thinking_hard_ceiling = 16000
+context_window = 128000
 max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.deepseek]
+key_env = "DEEPSEEK_API_KEY"
+key_account = "deepseek_api_key"
 wrapper = "deepseek.sh"
 provider = "deepseek"
-model_id = "deepseek-v4-flash"      # V4-flash: cheap mechanical work. Swap to deepseek-v4-pro for harder tasks.
-allowed_modes = ["breakout", "task"]
-allowed_seats_in_breakout = ["engineer"]
+model_id = "deepseek-v4-flash"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["engineer", "leaf"]
 default_thinking_tokens = 4000
-thinking_hard_ceiling = 8000
-context_window = 1000000             # DeepSeek V4 1M context window
+thinking_hard_ceiling = 16000
+context_window = 128000
 max_turns = 25
 stall_threshold_seconds = 300
+
+[executors.zai-glm]
+key_env = "Z_AI_API_KEY"
+key_account = "z_ai_api_key"
+wrapper = "zai.sh"
+provider = "zai"
+model_id = "glm-5.1"
+allowed_modes = ["breakout", "task"]
+allowed_seats_in_breakout = ["engineer", "review"]
+default_thinking_tokens = 32768
+thinking_hard_ceiling = 65536
+context_window = 131072
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.zai-air]
+key_env = "Z_AI_API_KEY"
+key_account = "z_ai_api_key"
+wrapper = "zai-air.sh"
+provider = "zai"
+model_id = "glm-4.5-air"
+allowed_modes = ["task"]
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 8192
+thinking_hard_ceiling = 32768
+context_window = 131072
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.minimax]
+key_env = "MINIMAX_API_KEY"
+key_account = "minimax_api_key"
+wrapper = "minimax.sh"
+provider = "minimax"
+model_id = "MiniMax-M2.7"
+allowed_modes = ["breakout", "task"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 8000
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.minimax-m25]
+key_env = "MINIMAX_API_KEY"
+key_account = "minimax_api_key"
+wrapper = "minimax-m25.sh"
+provider = "minimax"
+model_id = "MiniMax-M2.5"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 8000
+context_window = 204800
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.minimax-m25-highspeed]
+key_env = "MINIMAX_API_KEY"
+key_account = "minimax_api_key"
+wrapper = "minimax-m25-highspeed.sh"
+provider = "minimax"
+model_id = "MiniMax-M2.5-highspeed"
+allowed_modes = ["task"]
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 4000
+context_window = 204800
+max_turns = 25
+stall_threshold_seconds = 180
+
+[executors.minimax-coding-plan]
+key_env = "CUSTOM_MINIMAX_CODING_PLAN_API_KEY"
+key_account = "custom_minimax_coding_plan_api_key"
+wrapper = "minimax-coding-plan.sh"
+provider = "minimax-openai-compatible"
+model_id = "MiniMax-M2.5"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+context_window = 128000
+max_turns = 10
+stall_threshold_seconds = 300
+
+[executors.inception-mercury]
+key_env = "CUSTOM_INCEPTION_API_KEY"
+key_account = "custom_inception_api_key"
+wrapper = "inception-mercury.sh"
+provider = "inception"
+model_id = "Mercury-2"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["engineer", "leaf"]
+default_thinking_tokens = 0
+context_window = 128000
+max_turns = 10
+stall_threshold_seconds = 300
+
+[executors.codex]
+account = "puenteworks"
+wrapper = "codex.sh"
+provider = "openai-codex"
+model_id = "codex-config-default"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["top", "review", "engineer"]
+default_thinking_tokens = 0
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.openai-gpt55]
+account = "icloud"
+wrapper = "codex-gpt55.sh"
+provider = "openai-codex"
+model_id = "gpt-5.5"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["top", "review", "engineer"]
+default_thinking_tokens = 0
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.openai-gpt55-high]
+account = "puenteworks"
+wrapper = "codex-gpt55-high.sh"
+provider = "openai-codex"
+model_id = "gpt-5.5"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["top", "review", "engineer"]
+default_thinking_tokens = 0
+reasoning_effort = "high"
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.openai-gpt55-xhigh]
+account = "icloud"
+wrapper = "codex-gpt55.sh"
+provider = "openai-codex"
+model_id = "gpt-5.5"
+allowed_modes = ["breakout", "consult"]
+allowed_seats_in_breakout = ["top", "review"]
+default_thinking_tokens = 0
+reasoning_effort = "xhigh"
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.openai-mini]
+account = "cerafica"
+wrapper = "codex-mini.sh"
+provider = "openai-codex"
+model_id = "gpt-5.4-mini"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 0
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 300
+
+[executors.codex-spark]
+account = "cerafica"
+wrapper = "codex-spark.sh"
+provider = "openai-codex"
+model_id = "gpt-5.3-codex-spark"
+allowed_modes = ["breakout", "task"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+context_window = 200000
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.gemini-pro]
+key_env = "GEMINI_API_KEY"
+key_account = "gemini_api_key"
+wrapper = "gemini-pro.sh"
+provider = "gemini"
+model_id = "gemini-3.1-pro-preview"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["review", "engineer"]
+default_thinking_tokens = 32768
+thinking_hard_ceiling = 32768
+context_window = 1000000
+max_turns = 10
+stall_threshold_seconds = 600
+
+[executors.gemini-flash]
+key_env = "GEMINI_API_KEY"
+key_account = "gemini_api_key"
+wrapper = "gemini-flash.sh"
+provider = "gemini"
+model_id = "gemini-3-flash-preview"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 8192
+thinking_hard_ceiling = 8192
+context_window = 1000000
+max_turns = 10
+stall_threshold_seconds = 300
+
+[executors.gemini-lite]
+key_env = "GEMINI_API_KEY"
+key_account = "gemini_api_key"
+wrapper = "gemini-lite.sh"
+provider = "gemini"
+model_id = "gemini-3.1-flash-lite-preview"
+allowed_modes = ["task"]
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 1000000
+max_turns = 5
+stall_threshold_seconds = 180
+hard_wall_block_breakout_top = true
+
+[executors.kilo-deepseek-high]
+key_env = "KILO_API_KEY"
+key_account = "kilo_api_key"
+wrapper = "kilo-deepseek-high.sh"
+provider = "kilo"
+model_id = "deepseek/deepseek-v4-pro"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["review", "engineer"]
+default_thinking_tokens = 0
+reasoning_effort = "high"
+context_window = 1048576
+max_turns = 10
+stall_threshold_seconds = 600
+
+[executors.kilo-qwen-high]
+key_env = "KILO_API_KEY"
+key_account = "kilo_api_key"
+wrapper = "kilo-qwen-high.sh"
+provider = "kilo"
+model_id = "qwen/qwen3.7-max"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["review", "engineer"]
+default_thinking_tokens = 0
+reasoning_effort = "high"
+context_window = 1000000
+max_turns = 10
+stall_threshold_seconds = 600
+
+[executors.kilo-mistral-medium]
+key_env = "KILO_API_KEY"
+key_account = "kilo_api_key"
+wrapper = "kilo-mistral-medium.sh"
+provider = "kilo"
+model_id = "mistralai/mistral-medium-3-5"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+reasoning_effort = "medium"
+context_window = 262144
+max_turns = 10
+stall_threshold_seconds = 300
+
+[executors.kilo-research]
+key_env = "KILO_API_KEY"
+key_account = "kilo_api_key"
+wrapper = "kilo-research.sh"
+provider = "kilo"
+model_id = "perplexity/sonar-pro-search"
+allowed_modes = ["consult"]
+allowed_seats_in_breakout = ["review"]
+default_thinking_tokens = 0
+reasoning_effort = "medium"
+context_window = 200000
+max_turns = 5
+stall_threshold_seconds = 600
+
+[executors.kilo-free]
+key_env = "KILO_API_KEY"
+key_account = "kilo_api_key"
+wrapper = "kilo-free.sh"
+provider = "kilo"
+model_id = "x-ai/grok-code-fast-1:optimized:free"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+context_window = 1048576
+max_turns = 5
+stall_threshold_seconds = 180
+hard_wall_block_breakout_top = true
+
+[executors.codex-oss]
+wrapper = "codex-oss.sh"
+provider = "codex-oss"
+model_id = "local-ollama"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+context_window = 32000
+max_turns = 10
+stall_threshold_seconds = 300
+hard_wall_block_breakout_top = true
+
+[executors.lm-studio]
+wrapper = "lm-studio.sh"
+provider = "lm-studio"
+model_id = "qwen3-coder-next-reap-40b-a3b-i1"
+allowed_modes = ["task", "consult"]
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 0
+context_window = 32000
+max_turns = 10
+stall_threshold_seconds = 300
+hard_wall_block_breakout_top = true
 
 # Uncomment to add a local Ollama executor:
 # [executors.ollama-local]
@@ -108,22 +421,32 @@ stall_threshold_seconds = 300
 # Keys are signal names, values are executor preferences.
 
 [auto_route]
-# Long-context tasks (>50K tokens): prefer large-window executor
-long_context_executor = "kimi"
+# Ordered candidate lists per tier. The router returns the first executor that
+# is mode-allowed AND available AND not in cooldown. Adaptive-balanced: hard and
+# deep tiers lead with stronger models; trivial/standard lead with cheaper ones.
+trivial_candidates        = ["openai-mini", "haiku", "zai-air", "gemini-lite"]
+standard_candidates       = ["codex-spark", "sonnet", "zai-glm", "openai-mini"]
+hard_task_candidates      = ["codex-spark", "openai-gpt55-high", "zai-glm", "opus"]
+hard_breakout_candidates  = ["openai-gpt55-high", "opus", "openai-gpt55", "zai-glm"]
+long_context_candidates   = ["kimi-coding", "gemini-pro", "openai-gpt55", "opus"]
+consult_candidates        = ["opus", "openai-gpt55-high", "zai-glm"]
+
+# Back-compat single-value keys (read only if the matching *_candidates list is
+# absent). Kept so older tooling / partial matrices still resolve.
+long_context_executor = "kimi-coding"
 long_context_threshold_tokens = 50000
-
-# Mechanical/trivial tasks: prefer cheap executor
-trivial_executor = "haiku"
+trivial_executor = "openai-mini"
 trivial_threshold_tokens = 5000
-
-# Hard coding problems: prefer reasoning-capable executor
-hard_coding_breakout_executor = "opus"
-hard_coding_task_executor = "sonnet"
-
-# Default fallbacks by mode
-default_breakout = "sonnet"
-default_task = "sonnet"
+hard_coding_breakout_executor = "openai-gpt55"
+hard_coding_task_executor = "codex-spark"
+default_breakout = "openai-gpt55-high"
+default_task = "codex-spark"
 default_consult = "opus"
+
+# Learning loop: when true, candidate ordering is re-biased by outcomes.jsonl
+# history (success rate / cost per tier). Off by default; enable after data
+# accumulates.
+learning = false
 
 # ============================================================
 # Nested dispatch configuration
@@ -142,24 +465,156 @@ max_depth = 1
 # Missing entries are treated as denied.
 # Self-dispatch is always denied regardless of matrix entries.
 
-# Opus can dispatch anything except itself and minimax
-opus.sonnet = true
-opus.haiku = true
-opus.kimi = true
-opus.deepseek = true
+# Opus can dispatch anything except itself
+"opus.sonnet" = true
+"opus.haiku" = true
+"opus.kimi-coding" = true
+"opus.kimi-moonshot" = true
+"opus.deepseek" = true
+"opus.zai-glm" = true
+"opus.zai-air" = true
+"opus.minimax" = true
+"opus.minimax-m25" = true
+"opus.minimax-m25-highspeed" = true
+"opus.minimax-coding-plan" = true
+"opus.inception-mercury" = true
+"opus.gemini-pro" = true
+"opus.gemini-flash" = true
+"opus.gemini-lite" = true
+"opus.kilo-deepseek-high" = true
+"opus.kilo-qwen-high" = true
+"opus.kilo-mistral-medium" = true
+"opus.kilo-research" = true
+"opus.kilo-free" = true
+"opus.codex" = true
+"opus.openai-gpt55" = true
+"opus.openai-gpt55-high" = true
+"opus.openai-mini" = true
+"opus.codex-spark" = true
+"opus.codex-oss" = true
+"opus.lm-studio" = true
 
 # Sonnet can dispatch cheaper executors
-sonnet.haiku = true
-sonnet.kimi = true
-sonnet.deepseek = true
+"sonnet.haiku" = true
+"sonnet.kimi-coding" = true
+"sonnet.kimi-moonshot" = true
+"sonnet.deepseek" = true
+"sonnet.zai-air" = true
+"sonnet.minimax" = true
+"sonnet.minimax-m25" = true
+"sonnet.minimax-m25-highspeed" = true
+"sonnet.inception-mercury" = true
+"sonnet.gemini-flash" = true
+"sonnet.gemini-lite" = true
+"sonnet.kilo-mistral-medium" = true
+"sonnet.kilo-free" = true
+"sonnet.codex" = true
+"sonnet.openai-mini" = true
+"sonnet.codex-spark" = true
+"sonnet.codex-oss" = true
+"sonnet.lm-studio" = true
+
+# Codex can dispatch lower-cost/local leaves
+"codex.haiku" = true
+"codex.kimi-coding" = true
+"codex.kimi-moonshot" = true
+"codex.deepseek" = true
+"codex.zai-air" = true
+"codex.minimax" = true
+"codex.minimax-m25-highspeed" = true
+"codex.inception-mercury" = true
+"codex.gemini-flash" = true
+"codex.gemini-lite" = true
+"codex.kilo-free" = true
+"codex.openai-mini" = true
+"codex.codex-oss" = true
+"codex.lm-studio" = true
+"openai-gpt55.sonnet" = true
+"openai-gpt55.haiku" = true
+"openai-gpt55.kimi-coding" = true
+"openai-gpt55.kimi-moonshot" = true
+"openai-gpt55.deepseek" = true
+"openai-gpt55.zai-glm" = true
+"openai-gpt55.zai-air" = true
+"openai-gpt55.minimax" = true
+"openai-gpt55.minimax-m25" = true
+"openai-gpt55.minimax-coding-plan" = true
+"openai-gpt55.inception-mercury" = true
+"openai-gpt55.gemini-pro" = true
+"openai-gpt55.gemini-flash" = true
+"openai-gpt55.kilo-deepseek-high" = true
+"openai-gpt55.kilo-qwen-high" = true
+"openai-gpt55.kilo-mistral-medium" = true
+"openai-gpt55.openai-mini" = true
+"openai-gpt55.codex-spark" = true
+"openai-gpt55.codex-oss" = true
+"openai-gpt55.lm-studio" = true
+"openai-gpt55-high.sonnet" = true
+"openai-gpt55-high.haiku" = true
+"openai-gpt55-high.kimi-coding" = true
+"openai-gpt55-high.kimi-moonshot" = true
+"openai-gpt55-high.deepseek" = true
+"openai-gpt55-high.zai-glm" = true
+"openai-gpt55-high.zai-air" = true
+"openai-gpt55-high.minimax" = true
+"openai-gpt55-high.minimax-m25" = true
+"openai-gpt55-high.minimax-coding-plan" = true
+"openai-gpt55-high.inception-mercury" = true
+"openai-gpt55-high.gemini-pro" = true
+"openai-gpt55-high.gemini-flash" = true
+"openai-gpt55-high.kilo-deepseek-high" = true
+"openai-gpt55-high.kilo-qwen-high" = true
+"openai-gpt55-high.kilo-mistral-medium" = true
+"openai-gpt55-high.openai-mini" = true
+"openai-gpt55-high.codex-spark" = true
+"openai-gpt55-high.codex-oss" = true
+"openai-gpt55-high.lm-studio" = true
+"codex-spark.haiku" = true
+"codex-spark.kimi-coding" = true
+"codex-spark.deepseek" = true
+"codex-spark.zai-air" = true
+"codex-spark.minimax-m25-highspeed" = true
+"codex-spark.inception-mercury" = true
+"codex-spark.gemini-flash" = true
+"codex-spark.gemini-lite" = true
+"codex-spark.kilo-free" = true
+"codex-spark.openai-mini" = true
+"codex-spark.codex-oss" = true
+"codex-spark.lm-studio" = true
 
 # Kimi can dispatch leaf executors only
-kimi.haiku = true
-
-# DeepSeek can dispatch leaf + peer-tier
-deepseek.haiku = true
-deepseek.kimi = true
+"kimi-coding.haiku" = true
+"kimi-coding.openai-mini" = true
+"kimi-coding.codex-oss" = true
+"kimi-coding.lm-studio" = true
+"kimi-moonshot.haiku" = true
+"kimi-moonshot.openai-mini" = true
+"kimi-moonshot.codex-oss" = true
+"deepseek.haiku" = true
+"deepseek.openai-mini" = true
+"deepseek.codex-oss" = true
+"deepseek.lm-studio" = true
+"zai-glm.haiku" = true
+"zai-glm.openai-mini" = true
+"zai-glm.gemini-flash" = true
+"zai-glm.kilo-free" = true
+"zai-glm.codex-oss" = true
+"minimax.haiku" = true
+"minimax.openai-mini" = true
+"minimax.gemini-lite" = true
+"minimax.kilo-free" = true
+"minimax.codex-oss" = true
+"minimax-m25.haiku" = true
+"minimax-m25.openai-mini" = true
+"minimax-m25.codex-oss" = true
+"minimax-m25-highspeed.haiku" = true
+"minimax-m25-highspeed.openai-mini" = true
+"minimax-coding-plan.haiku" = true
+"minimax-coding-plan.openai-mini" = true
+"inception-mercury.haiku" = true
+"inception-mercury.openai-mini" = true
+"inception-mercury.codex-oss" = true
 
 # Haiku cannot dispatch (leaf executor)
-# MiniMax cannot dispatch (hallucination risk)
+# Local Codex OSS cannot dispatch (leaf executor)
 # Self-dispatch always denied (loop risk)
