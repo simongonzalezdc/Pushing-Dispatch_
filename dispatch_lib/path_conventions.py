@@ -47,6 +47,18 @@ def question_path(worker_id: str) -> Path:
     return question_dir() / f"{worker_id}.md"
 
 
+def availability_path() -> Path:
+    return dispatch_root() / "availability.json"
+
+
+def lane_health_path() -> Path:
+    return dispatch_root() / "lane_health.json"
+
+
+def outcomes_path() -> Path:
+    return dispatch_root() / "outcomes.jsonl"
+
+
 def ensure_dirs():
     """Create all required directories."""
     for d in [status_dir(), log_dir(), question_dir()]:
