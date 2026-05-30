@@ -195,13 +195,15 @@ def cmd_start(args, mode: str):
     matrix = _load_matrix()
     matrix_path = _find_matrix_path()
 
+    tier = "explicit"
     if getattr(args, "executor", "auto") in ("", None, "auto"):
         brief_text = _brief_text_from_args(args)
-        args.executor = auto_route(
+        args.executor, tier = auto_route(
             brief_text=brief_text,
             mode=mode,
             matrix_path=matrix_path,
             explicit_executor=None,
+            return_tier=True,
         )
 
     # Validate executor
@@ -242,8 +244,16 @@ def cmd_start(args, mode: str):
     if args.task:
         cmd.extend(["--task", args.task])
 
-    # Pass nested dispatch env vars
+    # Pass executor identity + tier so the wrapper can attribute self-healing
+    # cooldowns and outcomes to the correct matrix executor (not just the tool).
     env = os.environ.copy()
+    env["CE_EXECUTOR_NAME"] = args.executor
+    env["CE_TIER"] = tier
+    _exec_cfg = (matrix.get("executors", {}) if matrix else {}).get(args.executor, {})
+    if _exec_cfg.get("account"):
+        env["CE_OPENAI_ACCOUNT"] = _exec_cfg["account"]
+
+    # Pass nested dispatch env vars
     parent_id = getattr(args, "parent_id", None)
     depth = getattr(args, "depth", 0)
 

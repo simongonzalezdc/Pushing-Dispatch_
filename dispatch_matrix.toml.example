@@ -453,9 +453,10 @@ learning = false
 # ============================================================
 
 [nested_dispatch]
-# Maximum nesting depth. Design target: 3. Start at 1 for safety.
-# Ramp gradually with cost monitoring between steps.
-max_depth = 1
+# Maximum nesting depth. Design target: 3. Now at 2 for orchestrator ->
+# sub-orchestrator -> workers. Availability + cooldown filtering applies to
+# child dispatches too; self-dispatch remains denied.
+max_depth = 2
 
 # Feature flag: set DISPATCH_NESTED=1 env var to enable.
 # When off, --parent-id and --depth flags are silently ignored.
