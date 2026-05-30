@@ -64,12 +64,14 @@ def _tier(brief_text, mode, route_cfg):
     long_threshold = int(route_cfg.get("long_context_threshold_tokens", 50_000))
     if tokens > long_threshold or LONG_CONTEXT_KEYWORDS.search(brief_text):
         return "long_context_candidates", ["long_context_executor"]
+    # Explicit consult mode is authoritative over coding-keyword heuristics:
+    # a consult is advisory/review work and should prefer the consult tier.
+    if mode == "consult":
+        return "consult_candidates", ["default_consult"]
     if HARD_CODING_KEYWORDS.search(brief_text):
         if mode == "breakout":
             return "hard_breakout_candidates", ["hard_coding_breakout_executor", "default_breakout"]
         return "hard_task_candidates", ["hard_coding_task_executor", "default_task"]
-    if mode == "consult":
-        return "consult_candidates", ["default_consult"]
     if mode == "breakout":
         return "hard_breakout_candidates", ["default_breakout"]
     trivial_threshold = int(route_cfg.get("trivial_threshold_tokens", 5_000))

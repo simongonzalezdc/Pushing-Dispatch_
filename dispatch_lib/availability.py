@@ -37,7 +37,9 @@ def _anthropic_ready() -> bool:
         return True
     if os.environ.get("ANTHROPIC_API_KEY"):
         return True
-    return _keychain_has("Claude Code", None) or _keychain_has("claude.ai", None)
+    # Claude Code stores its login token in the macOS Keychain under the
+    # service "Claude Code-credentials".
+    return _keychain_has("Claude Code-credentials", None)
 
 
 def _codex_ready() -> bool:
@@ -101,7 +103,10 @@ def resolve(matrix: dict, use_cache: bool = True) -> dict:
     """Return {executor: {"available": bool, "provider": str}} for all executors."""
     if use_cache:
         cached = _read_cache()
-        if cached is not None:
+        # Use cache only if it covers every executor currently in the matrix.
+        # A partial/stale cache (e.g. after the matrix gained executors) is
+        # discarded and recomputed — self-healing against matrix drift.
+        if cached is not None and set(matrix.get("executors", {})) <= set(cached):
             return cached
     out = {}
     for name, cfg in matrix.get("executors", {}).items():

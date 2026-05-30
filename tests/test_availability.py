@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 from unittest import mock
 
@@ -13,6 +15,21 @@ MATRIX = {
 }
 
 class TestAvailability(unittest.TestCase):
+    def setUp(self):
+        # Isolate state so resolve()'s cache write never touches the real
+        # ~/.local/share/pushing-dispatch/availability.json.
+        self.tmp = tempfile.TemporaryDirectory()
+        self._prev = os.environ.get("DISPATCH_ROOT")
+        os.environ["DISPATCH_ROOT"] = self.tmp.name
+        self.addCleanup(self.tmp.cleanup)
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        if self._prev is None:
+            os.environ.pop("DISPATCH_ROOT", None)
+        else:
+            os.environ["DISPATCH_ROOT"] = self._prev
+
     def test_anthropic_available_when_claude_logged_in(self):
         with mock.patch.object(availability, "_anthropic_ready", return_value=True), \
              mock.patch.object(availability, "_codex_ready", return_value=False), \

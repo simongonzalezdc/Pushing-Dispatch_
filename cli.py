@@ -45,7 +45,15 @@ from dispatch_lib.nested import (
 )
 from dispatch_lib.matrix_validator import validate
 from dispatch_lib.context_budget import check_budget_for_file
-from dispatch_lib.auto_router import auto_route
+from dispatch_lib.auto_router import (
+    auto_route, detect_mode_from_keywords, _tier, _candidates,
+)
+from dispatch_lib import availability, lane_health
+
+try:
+    import tomllib
+except ImportError:  # pragma: no cover
+    tomllib = None
 
 try:
     import tomllib
@@ -186,6 +194,15 @@ def cmd_start(args, mode: str):
     ensure_dirs()
     matrix = _load_matrix()
     matrix_path = _find_matrix_path()
+
+    if getattr(args, "executor", "auto") in ("", None, "auto"):
+        brief_text = _brief_text_from_args(args)
+        args.executor = auto_route(
+            brief_text=brief_text,
+            mode=mode,
+            matrix_path=matrix_path,
+            explicit_executor=None,
+        )
 
     # Validate executor
     valid_executors = _executor_choices(matrix) if matrix else []
@@ -406,6 +423,96 @@ def cmd_validate_matrix(args):
         sys.exit(1)
     else:
         print("Matrix is valid.")
+
+
+def _brief_text_from_args(args) -> str:
+    if getattr(args, "task_file", None):
+        return Path(args.task_file).read_text()
+    if getattr(args, "task", None):
+        return args.task
+    return ""
+
+
+def cmd_route(args):
+    """Select the best executor for a task without starting it."""
+    matrix_path = args.matrix or _find_matrix_path()
+    brief_text = _brief_text_from_args(args)
+    mode = args.mode or detect_mode_from_keywords(brief_text) or "task"
+    executor, tier = auto_route(
+        brief_text=brief_text,
+        mode=mode,
+        matrix_path=matrix_path,
+        explicit_executor=args.executor,
+        return_tier=True,
+    )
+    if args.json:
+        payload = {
+            "executor": executor,
+            "mode": mode,
+            "tier": tier,
+            "matrix": matrix_path,
+            "estimated_tokens": len(brief_text) // 4,
+        }
+        # Enrich with availability + which earlier candidates were skipped.
+        if matrix_path and tomllib and os.path.exists(matrix_path):
+            with open(matrix_path, "rb") as f:
+                matrix = tomllib.load(f)
+            avail = availability.available_set(matrix)
+            route_cfg = matrix.get("auto_route", {})
+            list_key, legacy = _tier(brief_text, mode, route_cfg)
+            considered = _candidates(route_cfg, list_key, legacy)
+            fallback_from = []
+            for cand in considered:
+                if cand == executor:
+                    break
+                if cand not in avail or lane_health.in_cooldown(cand):
+                    fallback_from.append(cand)
+            payload["considered"] = considered
+            payload["fallback_from"] = fallback_from
+            payload["available"] = sorted(avail)
+        print(json.dumps(payload, indent=2))
+    else:
+        print(executor)
+
+
+def _doctor_rows(matrix):
+    """Build a live availability/health row per executor."""
+    avail = availability.resolve(matrix, use_cache=False)
+    relogin = set(lane_health.needs_relogin())
+    rows = []
+    for name, cfg in matrix.get("executors", {}).items():
+        a = avail.get(name, {"available": False, "provider": cfg.get("provider", "")})
+        rows.append({
+            "executor": name,
+            "provider": a["provider"],
+            "available": a["available"],
+            "cooldown": lane_health.in_cooldown(name),
+            "needs_relogin": name in relogin,
+        })
+    return rows
+
+
+def cmd_doctor(args):
+    """Print live executor availability and lane health."""
+    matrix_path = args.matrix or _find_matrix_path()
+    if not (matrix_path and tomllib and os.path.exists(matrix_path)):
+        print("No matrix found.", file=sys.stderr)
+        return
+    with open(matrix_path, "rb") as f:
+        matrix = tomllib.load(f)
+    rows = _doctor_rows(matrix)
+    if getattr(args, "json", False):
+        print(json.dumps(rows, indent=2))
+        return
+    print(f"{'EXECUTOR':24} {'PROVIDER':22} STATE")
+    print("-" * 64)
+    for r in sorted(rows, key=lambda x: (not x["available"], x["executor"])):
+        state = "available" if r["available"] else "UNAVAILABLE"
+        if r["cooldown"]:
+            state = "cooldown"
+        if r["needs_relogin"]:
+            state = "NEEDS RE-LOGIN"
+        print(f"{r['executor']:24} {r['provider']:22} {state}")
 
 
 def cmd_answer(args):
@@ -729,6 +836,15 @@ def main():
     # questions
     subparsers.add_parser("questions", help="List pending questions")
 
+    # route
+    route_parser = subparsers.add_parser("route", help="Choose the best/cost-efficient executor")
+    route_parser.add_argument("--mode", choices=["task", "breakout", "consult"], help="Execution mode")
+    route_parser.add_argument("--task-file", help="Path to brief file")
+    route_parser.add_argument("--task", help="Inline task string")
+    route_parser.add_argument("--executor", default=None, help="Explicit executor override")
+    route_parser.add_argument("--matrix", help="Override dispatch matrix path")
+    route_parser.add_argument("--json", action="store_true", help="JSON output")
+
     # answer
     answer_parser = subparsers.add_parser("answer", help="Re-dispatch worker with operator answer baked in")
     answer_parser.add_argument("worker_id", help="Worker ID to answer")
@@ -753,6 +869,11 @@ def main():
     vm_parser = subparsers.add_parser("validate-matrix", help="Validate matrix TOML")
     vm_parser.add_argument("matrix_path", help="Path to dispatch_matrix.toml")
 
+    # doctor
+    doctor_parser = subparsers.add_parser("doctor", help="Show live executor availability/health")
+    doctor_parser.add_argument("--matrix", default=None, help="Override dispatch matrix path")
+    doctor_parser.add_argument("--json", action="store_true", help="JSON output")
+
     # compact
     subparsers.add_parser("compact", help="Compact registry")
 
@@ -774,19 +895,24 @@ def main():
         cmd_completions(args)
     elif args.command == "questions":
         cmd_questions(args)
+    elif args.command == "route":
+        cmd_route(args)
     elif args.command == "answer":
         cmd_answer(args)
     elif args.command == "checkpoint":
         cmd_checkpoint(args)
     elif args.command == "validate-matrix":
         cmd_validate_matrix(args)
+    elif args.command == "doctor":
+        cmd_doctor(args)
     elif args.command == "compact":
         cmd_compact(args)
 
 
 def _add_start_args(parser, executor_names):
     """Add common arguments for task/breakout start."""
-    parser.add_argument("--executor", required=True, choices=executor_names, help="Executor name")
+    choices = (executor_names + ["auto"]) if executor_names else None
+    parser.add_argument("--executor", default="auto", choices=choices, help="Executor name, or auto")
     parser.add_argument("--task-file", help="Path to brief file")
     parser.add_argument("--task", help="Inline task string")
     parser.add_argument("--cwd", help="Working directory for worker")
