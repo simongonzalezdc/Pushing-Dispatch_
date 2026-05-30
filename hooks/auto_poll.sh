@@ -21,6 +21,19 @@ SESSION_ID="${DISPATCH_SESSION_ID:-${CLAUDE_SESSION_ID:-unknown}}"
 MARKER_FILE="$DISPATCH_ROOT/auto_poll_active_${SESSION_ID}"
 STALE_MINUTES=30
 
+# Warm the availability cache once per session (cheap; refreshed only when the
+# cache is missing or older than the TTL). Keeps routing's view of which
+# providers are reachable current without hammering the Keychain every prompt.
+DISPATCH_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AVAIL_CACHE="$DISPATCH_ROOT/availability.json"
+_avail_age=99999
+if [[ -f "$AVAIL_CACHE" ]]; then
+    _avail_age=$(( $(date +%s) - $(stat -f %m "$AVAIL_CACHE" 2>/dev/null || stat -c %Y "$AVAIL_CACHE" 2>/dev/null || echo 0) ))
+fi
+if [[ ! -f "$AVAIL_CACHE" || "$_avail_age" -gt 300 ]]; then
+    python3 "$DISPATCH_REPO/cli.py" doctor --json >/dev/null 2>&1 || true
+fi
+
 # Count active workers for this session
 count_session_active() {
     local count=0
