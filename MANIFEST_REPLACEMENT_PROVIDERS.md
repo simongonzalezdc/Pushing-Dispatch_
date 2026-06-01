@@ -23,7 +23,7 @@ Source of truth inspected:
 | DeepSeek provider | `deepseek-v4-flash` | `deepseek` | `DEEPSEEK_API_KEY` |
 | Z.ai / GLM custom provider | `glm-5.1` | `zai-glm` | `Z_AI_API_KEY` |
 | Z.ai / GLM custom provider | `glm-4.5-air` | `zai-air` | `Z_AI_API_KEY` |
-| MiniMax subscription lane | `MiniMax-M2.7` | `minimax` | `MINIMAX_API_KEY` |
+| MiniMax subscription lane | `MiniMax-M3` | `minimax` | `MINIMAX_API_KEY` |
 | MiniMax coding plan | `MiniMax-M2.5` | `minimax-m25` | `MINIMAX_API_KEY` |
 | MiniMax coding plan | `MiniMax-M2.5-highspeed` | `minimax-m25-highspeed` | `MINIMAX_API_KEY` |
 | MiniMax custom OpenAI-compatible plan | `MiniMax-M2.5` | `minimax-coding-plan` | `CUSTOM_MINIMAX_CODING_PLAN_API_KEY` |

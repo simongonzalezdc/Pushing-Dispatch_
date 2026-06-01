@@ -4,7 +4,7 @@
 # Mirrors Manifest's MiniMax subscription lane with an API-key shell
 # binding for Pushing Dispatch:
 #   base URL: https://api.minimax.io/anthropic
-#   model:    MiniMax-M2.7
+#   model:    MiniMax-M3
 #   key:      MINIMAX_API_KEY
 
 set -euo pipefail
@@ -16,7 +16,7 @@ export CE_TOOL_NAME="minimax"
 export CE_BARE_MODE=1
 
 export ANTHROPIC_BASE_URL="https://api.minimax.io/anthropic"
-export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-MiniMax-M2.7}"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-MiniMax-M3}"
 
 export CE_THINKING_TOKENS="${CE_THINKING_TOKENS:-0}"
 export CE_MAX_TURNS="${CE_MAX_TURNS:-25}"
