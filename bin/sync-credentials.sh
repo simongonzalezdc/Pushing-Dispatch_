@@ -18,7 +18,6 @@ GOOSE_ENV="$HOME/.config/goose/.env"
 # account_name | env_var | goose_env_key | dopamine_service(optional)
 MAP=(
   "kimi_api_key|KIMI_API_KEY||"
-  "moonshot_api_key|MOONSHOT_API_KEY||"
   "deepseek_api_key|DEEPSEEK_API_KEY||"
   "minimax_api_key|MINIMAX_API_KEY|MINIMAX_API_KEY|dopamine-depot:minimax"
   "custom_minimax_coding_plan_api_key|CUSTOM_MINIMAX_CODING_PLAN_API_KEY||"
@@ -35,7 +34,7 @@ declare -A ZSH_KEYS
 if command -v zsh >/dev/null 2>&1; then
   while IFS='=' read -r k v; do
     [[ -n "$k" ]] && ZSH_KEYS["$k"]="$v"
-  done < <(zsh -ic 'for v in KIMI_API_KEY MOONSHOT_API_KEY DEEPSEEK_API_KEY MINIMAX_API_KEY CUSTOM_MINIMAX_CODING_PLAN_API_KEY CUSTOM_INCEPTION_API_KEY Z_AI_API_KEY KILO_API_KEY GEMINI_API_KEY GOOGLE_API_KEY LOCAL_API_KEY PIPELINE_LOCAL_LLM_API_KEY; do [[ -n "${(P)v:-}" ]] && print "$v=${(P)v}"; done' 2>/dev/null || true)
+  done < <(zsh -ic 'for v in KIMI_API_KEY DEEPSEEK_API_KEY MINIMAX_API_KEY CUSTOM_MINIMAX_CODING_PLAN_API_KEY CUSTOM_INCEPTION_API_KEY Z_AI_API_KEY KILO_API_KEY GEMINI_API_KEY GOOGLE_API_KEY LOCAL_API_KEY PIPELINE_LOCAL_LLM_API_KEY; do [[ -n "${(P)v:-}" ]] && print "$v=${(P)v}"; done' 2>/dev/null || true)
 fi
 
 get_from_goose() {
@@ -145,6 +144,7 @@ done
 echo "------------------------------------------------"
 echo "CLI-auth providers (no key needed):"
 if [[ -f "$HOME/.codex/auth.json" ]]; then echo "  ok     openai (codex auth.json)"; else echo "  MISS   openai (run: codex login)"; fi
+if [[ -f "$HOME/.kimi/credentials/kimi-code.json" ]]; then echo "  ok     kimi-cli (~/.kimi OAuth credentials)"; else echo "  MISS   kimi-cli (run: kimi login)"; fi
 echo "  ok     anthropic (claude code login)"
 echo
 echo "Done. Verify reachability with: python3 cli.py doctor"

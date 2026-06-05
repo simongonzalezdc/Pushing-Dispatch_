@@ -25,9 +25,12 @@ except ImportError:
 # Executors that may never dispatch sub-workers
 LEAF_EXECUTORS = {"haiku", "minimax", "ollama-local", "gemini"}
 
-# Provider cost tiers: metered providers charge per-token (budget-capped),
-# subscription providers have flat-rate access (unbounded per-call cost).
-METERED_PROVIDERS = frozenset({"minimax", "moonshot", "deepseek", "ollama"})
+# Provider cost tiers: metered providers charge per-token or have bounded
+# worker budgets. Subscription providers have flat-rate access (unbounded
+# per-call cost).
+METERED_PROVIDERS = frozenset({
+    "minimax", "moonshot", "kimi-cli", "kimi-coding", "deepseek", "ollama"
+})
 SUBSCRIPTION_PROVIDERS = frozenset({"anthropic", "google"})
 
 # High-cost subscription executors blocked from metered parents.
@@ -43,8 +46,10 @@ _EXECUTOR_PROVIDERS = {
     "sonnet":     "anthropic",
     "haiku":      "anthropic",
     "minimax":    "minimax",
-    "kimi":       "moonshot",
-    "kimi-think": "moonshot",
+    "kimi-coding": "kimi-coding",
+    "kimi-moonshot": "kimi-cli",
+    "kimi":       "kimi-cli",
+    "kimi-think": "kimi-cli",
     "deepseek":   "deepseek",
     "gemini":     "google",
     "ollama-local": "ollama",

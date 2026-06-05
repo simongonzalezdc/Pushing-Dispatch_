@@ -34,42 +34,46 @@ claude login
 - Rules engine and hooks fire normally (not `--bare`)
 - CLAUDE.md auto-discovery is active (keep it small via skeleton_lint.py)
 
-## Moonshot (Kimi K2.6)
+## Kimi CLI OAuth
 
-### Executors: kimi, kimi-think
+### Executor: kimi-moonshot
 
-**Endpoint:** `https://api.moonshot.ai/anthropic` (Anthropic-compatible)
+**Endpoint:** Kimi Code CLI native OAuth path (`kimi`)
 
 **Auth:**
 ```bash
-export MOONSHOT_API_KEY="sk-..."
+kimi login
 ```
 
-**Bare mode:** On (`CE_BARE_MODE=1`). Workers see only baseline + brief + packs.
+Dispatch checks `~/.kimi/credentials/kimi-code.json` for a refresh token or
+unexpired access token. It does not require `MOONSHOT_API_KEY`.
 
-**Context window:** 256K tokens. Useful when you do not have access to Anthropic's 1M-context tier.
+**Execution mode:** Native Kimi CLI print mode. Workers see baseline + brief +
+packs through the shared Dispatch wrapper.
+
+The wrapper isolates Kimi with a temporary `KIMI_SHARE_DIR` by default,
+symlinking only `config.toml` and the OAuth `credentials/` directory while
+providing an empty `mcp.json`. This keeps global Kimi MCP/search/browser tools
+out of Dispatch workers. Set `KIMI_CLI_ISOLATE_SHARE=0` to opt back into the
+normal global Kimi share dir.
+
+**Context window:** 262K tokens, matching the local Kimi CLI config.
 
 **Thinking tokens:**
-- `kimi`: 0 (thinking disabled, for mechanical work)
-- `kimi-think`: 4000 default, 8000 ceiling (for hard problems)
+- Managed by the Kimi CLI/model config.
 
-**Cost model:** Metered. As of 2026-04-27 (verify at platform.moonshot.cn):
-- Cache miss input: ~$0.95/M
-- Cache hit input: ~$0.16/M (6x cheaper)
-- Output: ~$4.00/M
-
-API key path is metered regardless of any web subscription.
+**Cost model:** OAuth/subscription path; Dispatch records worker outcomes but
+does not require local API-key cost accounting for this lane.
 
 **Routing guidance:**
-- Long-context tasks (>50K tokens): prefer `kimi`
-- Mechanical refactors, doc generation: prefer `kimi`
-- Hard coding problems where Sonnet over-thinks: try `kimi-think`
+- Use when you explicitly want the local Kimi CLI lane or need the existing Kimi
+  OAuth account.
+- Long-context automatic routing currently prefers `kimi-coding` first because
+  the API wrapper has a lighter startup path.
 
 **Caveats:**
-- `temperature` and `top_p` are fixed when thinking is enabled (setting them returns an API error)
-- `tool_choice` limited to `"auto"` or `"none"` with thinking enabled
-- Rules engine does not fire (hooks disabled by `--bare`)
-- Max turns capped at 25 by default (configurable in matrix)
+- The wrapper uses a bounded timeout (`KIMI_CLI_TIMEOUT_SECONDS`, default 600s)
+  so a stuck worker is marked errored instead of hanging forever.
 
 ## DeepSeek
 

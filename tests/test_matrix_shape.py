@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # Providers that authenticate via CLI login or run locally (no API key needed).
-CLI_OR_LOCAL = {"anthropic", "openai-codex", "ollama", "lm-studio", "codex-oss"}
+CLI_OR_LOCAL = {"anthropic", "openai-codex", "kimi-cli", "ollama", "lm-studio", "codex-oss"}
 
 class TestMatrixShape(unittest.TestCase):
     def setUp(self):
