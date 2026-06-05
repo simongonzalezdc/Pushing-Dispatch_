@@ -95,40 +95,6 @@ check_api_key() {
     fi
 }
 
-check_kimi_oauth() {
-    local cred="${KIMI_CREDENTIALS_PATH:-$HOME/.kimi/credentials/kimi-code.json}"
-
-    if ! command -v kimi &>/dev/null && ! command -v kimi-cli &>/dev/null; then
-        echo -e "  ${YELLOW}SKIP${NC}  Kimi CLI OAuth (install kimi CLI to enable)"
-        warn=$((warn + 1))
-        return
-    fi
-
-    if python3 - "$cred" <<'PY' >/dev/null 2>&1; then
-import json
-import sys
-import time
-from pathlib import Path
-
-path = Path(sys.argv[1])
-if not path.exists():
-    raise SystemExit(1)
-data = json.loads(path.read_text())
-if data.get("refresh_token"):
-    raise SystemExit(0)
-expires_at = data.get("expires_at")
-if data.get("access_token") and isinstance(expires_at, (int, float)) and expires_at > time.time():
-    raise SystemExit(0)
-raise SystemExit(1)
-PY
-        echo -e "  ${GREEN}OK${NC}  Kimi CLI OAuth (~/.kimi credential store)"
-        pass=$((pass + 1))
-    else
-        echo -e "  ${YELLOW}SKIP${NC}  Kimi CLI OAuth (run: kimi login)"
-        warn=$((warn + 1))
-    fi
-}
-
 echo "pushing-dispatch prerequisite check"
 echo "=============================="
 echo ""
@@ -147,12 +113,9 @@ check_optional "ollama" "ollama" "Local model dispatch"
 check_optional "pass" "pass" "Password store for API keys"
 
 echo ""
-echo "CLI/OAuth providers:"
-check_kimi_oauth
-
-echo ""
-echo "API keys:"
+echo "API keys (at least one required):"
 check_api_key "Kimi Coding" "KIMI_API_KEY"
+check_api_key "Moonshot/Kimi" "MOONSHOT_API_KEY"
 check_api_key "DeepSeek" "DEEPSEEK_API_KEY"
 check_api_key "MiniMax" "MINIMAX_API_KEY"
 check_api_key "Custom MiniMax Coding Plan" "CUSTOM_MINIMAX_CODING_PLAN_API_KEY"

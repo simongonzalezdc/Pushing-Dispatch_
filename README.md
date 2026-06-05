@@ -10,13 +10,13 @@ AI coding agents work best when you separate **judgment** from **execution**. Th
 
 The problem: every provider has a different CLI, different tool-use semantics, different context loading. Three models means three sets of bugs.
 
-The fix: route every provider through a small wrapper with the same brief, status, and logging contract. API-key providers use compatible HTTP endpoints; CLI-login providers such as Codex and Kimi use their native CLIs.
+The fix: most providers now expose Anthropic-compatible API endpoints. Route them all through one harness. One shared library handles argument parsing, context loading, stream parsing, status writing. Each provider is a ~20-line wrapper that sets an API URL and auth token.
 
 ## The Four Pillars
 
 ### 1. The Harness Flip
 
-Every provider (Anthropic, Kimi, DeepSeek, MiniMax, Codex, local models) runs through the same Dispatch contract. One set of briefs, one status protocol, one context-loading pattern.
+Every provider (Anthropic, Moonshot/Kimi, DeepSeek, MiniMax, local Ollama) runs through the same Claude Code harness via Anthropic-compatible endpoints. One set of tools, one status protocol, one context-loading pattern.
 
 Adding a new provider = one shell wrapper + one TOML entry.
 
@@ -50,11 +50,10 @@ cp dispatch_matrix.toml.example dispatch_matrix.toml
 bash bin/install-global-routing.sh
 bash bin/check-prereqs.sh
 
-# 3. Set up at least one provider
+# 3. Set API keys (at minimum, one provider)
 export ANTHROPIC_API_KEY="sk-ant-..."
-# Or use CLI/OAuth providers:
-kimi login
-# Or third-party API-key providers:
+# Or for third-party providers:
+export MOONSHOT_API_KEY="sk-..."
 export DEEPSEEK_API_KEY="sk-..."
 
 # 4. Write a brief
@@ -81,8 +80,8 @@ pushing-dispatch status <worker-id>
 | Anthropic (Claude Opus) | `opus` | Native | 200K |
 | Anthropic (Claude Sonnet) | `sonnet` | Native | 200K |
 | Anthropic (Claude Haiku) | `haiku` | Native | 200K |
-| Kimi Coding API | `kimi-coding` | Anthropic-compat | 256K |
-| Kimi CLI OAuth | `kimi-moonshot` | Kimi CLI | 262K |
+| Kimi Coding | `kimi-coding` | Anthropic-compat | 256K |
+| Moonshot (Kimi K2.6) | `kimi-moonshot` | Anthropic-compat | 128K |
 | DeepSeek | `deepseek` | Anthropic-compat | 128K |
 | Z.ai | `zai-glm`, `zai-air` | Anthropic-compat | 128K |
 | MiniMax | `minimax`, `minimax-m25*` | Anthropic/OpenAI-compat | 128K-200K |

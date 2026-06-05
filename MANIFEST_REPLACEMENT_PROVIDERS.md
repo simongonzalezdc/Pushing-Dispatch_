@@ -19,7 +19,7 @@ Source of truth inspected:
 | `anthropic` subscription | `claude-sonnet-4-6` | `sonnet` | Claude Code login/config |
 | `anthropic` subscription | `claude-haiku-4-5-20251001` | `haiku` | Claude Code login/config |
 | Kimi custom provider | `kimi-for-coding` | `kimi-coding` | `KIMI_API_KEY` |
-| Kimi CLI OAuth provider | `kimi-code/kimi-for-coding` | `kimi-moonshot` | `kimi login` / `~/.kimi` |
+| Moonshot/Kimi provider | `kimi-k2.6` | `kimi-moonshot` | `MOONSHOT_API_KEY` |
 | DeepSeek provider | `deepseek-v4-flash` | `deepseek` | `DEEPSEEK_API_KEY` |
 | Z.ai / GLM custom provider | `glm-5.1` | `zai-glm` | `Z_AI_API_KEY` |
 | Z.ai / GLM custom provider | `glm-4.5-air` | `zai-air` | `Z_AI_API_KEY` |
@@ -41,13 +41,10 @@ Source of truth inspected:
 
 ## What Changed
 
-- Kimi is no longer the old Moonshot API-key wrapper. Manifest's Kimi Coding
-  API lane uses `https://api.kimi.com/coding`, model `kimi-for-coding`, and
-  `KIMI_API_KEY`.
-- The legacy `kimi-moonshot` executor name now routes through local Kimi CLI
-  OAuth (`~/.kimi`) so it does not require `MOONSHOT_API_KEY`.
-- Direct DeepSeek is routable again as `deepseek`, instead of being an orphaned
-  wrapper script.
+- Kimi is no longer the old Moonshot wrapper. Manifest's Kimi Coding lane uses
+  `https://api.kimi.com/coding`, model `kimi-for-coding`, and `KIMI_API_KEY`.
+- Moonshot/Kimi and direct DeepSeek are routable again as `kimi-moonshot` and
+  `deepseek`, instead of being orphaned wrapper scripts.
 - Z.ai is now first-class through `https://api.z.ai/api/anthropic`.
 - MiniMax is now first-class through `https://api.minimax.io/anthropic`.
 - Goose/custom provider lanes are now first-class too: `inception-mercury`,
@@ -79,6 +76,7 @@ existing keychain loader:
 
 ```bash
 export KIMI_API_KEY=...
+export MOONSHOT_API_KEY=...
 export DEEPSEEK_API_KEY=...
 export MINIMAX_API_KEY=...
 export CUSTOM_MINIMAX_CODING_PLAN_API_KEY=...
@@ -89,9 +87,6 @@ export GEMINI_API_KEY=...
 ```
 
 Or store them in macOS Keychain under service `pushing-dispatch` with accounts
-`kimi_api_key`, `deepseek_api_key`, `minimax_api_key`,
+`kimi_api_key`, `moonshot_api_key`, `deepseek_api_key`, `minimax_api_key`,
 `custom_minimax_coding_plan_api_key`, `custom_inception_api_key`, and
 `z_ai_api_key`.
-
-Kimi CLI OAuth is separate from those API-key lanes. Use `kimi login`; Dispatch
-checks the local `~/.kimi/credentials/kimi-code.json` credential store.

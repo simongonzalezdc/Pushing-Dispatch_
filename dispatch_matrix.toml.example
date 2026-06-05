@@ -68,16 +68,18 @@ max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.kimi-moonshot]
-wrapper = "kimi-cli.sh"
-provider = "kimi-cli"
-model_id = "kimi-code/kimi-for-coding"
+key_env = "MOONSHOT_API_KEY"
+key_account = "moonshot_api_key"
+wrapper = "moonshot.sh"
+provider = "moonshot"
+model_id = "kimi-k2.6"
 allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["engineer", "review"]
-default_thinking_tokens = 0
+default_thinking_tokens = 4000
 thinking_hard_ceiling = 16000
-context_window = 262144
+context_window = 128000
 max_turns = 25
-stall_threshold_seconds = 600
+stall_threshold_seconds = 300
 
 [executors.deepseek]
 key_env = "DEEPSEEK_API_KEY"

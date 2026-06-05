@@ -49,17 +49,10 @@
 
 **Symptom:** `Error: API key not found for pushing-dispatch/moonshot_api_key`
 
-**Cause:** This is the old Moonshot API-key path. The current
-`kimi-moonshot` executor uses Kimi CLI OAuth instead.
-
-**Fix:** Use the Kimi CLI login path:
-```bash
-kimi login
-python3 cli.py doctor
-```
-
-For other API-key providers, set the provider-specific env var or Keychain
-account shown by `bash bin/check-prereqs.sh`.
+**Fix:** Set the API key via one of:
+- Environment variable: `export MOONSHOT_API_KEY="sk-..."`
+- macOS Keychain: `security add-generic-password -s "pushing-dispatch" -a "moonshot_api_key" -w "sk-..."`
+- pass: `pass insert pushing-dispatch/moonshot_api_key`
 
 ### Worktree already exists
 
