@@ -28,7 +28,7 @@ Source of truth inspected:
 | MiniMax coding plan | `MiniMax-M2.5-highspeed` | `minimax-m25-highspeed` | `MINIMAX_API_KEY` |
 | MiniMax custom OpenAI-compatible plan | `MiniMax-M2.5` | `minimax-coding-plan` | `CUSTOM_MINIMAX_CODING_PLAN_API_KEY` |
 | Inception Labs custom provider | `Mercury-2` | `inception-mercury` | `CUSTOM_INCEPTION_API_KEY` |
-| LM Studio over Tailscale | `qwen3-coder-next-reap-40b-a3b-i1` | `lm-studio` | `OPENAI_API_KEY` |
+| NUC LiteLLM / LM Studio | `qwen3.6-35b-a3b-mtp` | `lm-studio` | `LOCAL_API_KEY` or `PIPELINE_LOCAL_LLM_API_KEY` |
 | Gemini API-key lane | `gemini-3.1-pro-preview` | `gemini-pro` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
 | Gemini API-key lane | `gemini-3-flash-preview` | `gemini-flash` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
 | Gemini API-key lane | `gemini-3.1-flash-lite-preview` | `gemini-lite` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |

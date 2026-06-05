@@ -57,5 +57,10 @@ class TestAvailability(unittest.TestCase):
         self.assertIn("openai-mini", s)
         self.assertNotIn("zai-glm", s)
 
+    def test_lm_studio_available_from_nuc_local_keychain_slot(self):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+             mock.patch.object(availability, "_keychain_has", return_value=True):
+            self.assertTrue(availability._local_ready("lm-studio"))
+
 if __name__ == "__main__":
     unittest.main()

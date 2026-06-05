@@ -50,9 +50,18 @@ def _local_ready(provider: str) -> bool:
     if provider in ("ollama", "codex-oss"):
         return shutil.which("ollama") is not None
     if provider == "lm-studio":
-        # Endpoint reachability is checked lazily; presence of base url env or
-        # OPENAI_API_KEY is the cheap proxy here.
-        return bool(os.environ.get("LM_STUDIO_BASE_URL") or os.environ.get("OPENAI_API_KEY"))
+        # Endpoint reachability is checked by health/smoke paths. Availability
+        # here means the local NUC contract can be resolved without cloud keys.
+        return bool(
+            os.environ.get("LM_STUDIO_BASE_URL")
+            or os.environ.get("LMSTUDIO_BASE_URL")
+            or os.environ.get("FACTORY_SELF_HOSTED_INFERENCE_URL")
+            or os.environ.get("LOCAL_BASE_URL")
+            or os.environ.get("LOCAL_API_KEY")
+            or os.environ.get("PIPELINE_LOCAL_LLM_API_KEY")
+            or _keychain_has("pushing-dispatch", "local_api_key")
+            or _keychain_has("pushing-dispatch", "pipeline_local_llm_api_key")
+        )
     return False
 
 
