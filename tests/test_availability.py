@@ -62,5 +62,10 @@ class TestAvailability(unittest.TestCase):
              mock.patch.object(availability, "_keychain_has", return_value=True):
             self.assertTrue(availability._local_ready("lm-studio"))
 
+    def test_lm_studio_available_from_nucbox_gemma_url(self):
+        with mock.patch.dict(os.environ, {"NUCBOX_OLLAMA_OPENAI_BASE_URL": "http://nucbox.example:11434/v1"}, clear=True), \
+             mock.patch.object(availability, "_keychain_has", return_value=False):
+            self.assertTrue(availability._local_ready("lm-studio"))
+
 if __name__ == "__main__":
     unittest.main()

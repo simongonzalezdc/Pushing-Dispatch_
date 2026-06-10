@@ -55,6 +55,9 @@ def _local_ready(provider: str) -> bool:
         return bool(
             os.environ.get("LM_STUDIO_BASE_URL")
             or os.environ.get("LMSTUDIO_BASE_URL")
+            or os.environ.get("NUCBOX_OLLAMA_OPENAI_BASE_URL")
+            or os.environ.get("NUCBOX_GEMMA_BASE_URL")
+            or os.environ.get("OLLAMA_OPENAI_BASE_URL")
             or os.environ.get("FACTORY_SELF_HOSTED_INFERENCE_URL")
             or os.environ.get("LOCAL_BASE_URL")
             or os.environ.get("LOCAL_API_KEY")

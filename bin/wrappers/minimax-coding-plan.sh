@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# minimax-coding-plan.sh - MiniMax M2.5 via Goose custom OpenAI-compatible provider.
+# minimax-coding-plan.sh - MiniMax M3 via MiniMax Token Plan OpenAI-compatible provider.
 
 set -euo pipefail
 
@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/_exec.sh"
 export CE_TOOL_NAME="minimax-coding-plan"
 export OPENAI_COMPAT_BASE_URL="${OPENAI_COMPAT_BASE_URL:-https://api.minimax.io/v1}"
 export OPENAI_COMPAT_PATH="${OPENAI_COMPAT_PATH:-/chat/completions}"
-export OPENAI_COMPAT_MODEL="${OPENAI_COMPAT_MODEL:-MiniMax-M2.5}"
+export OPENAI_COMPAT_MODEL="${OPENAI_COMPAT_MODEL:-MiniMax-M3}"
 export OPENAI_COMPAT_MAX_TOKENS="${OPENAI_COMPAT_MAX_TOKENS:-8192}"
 export OPENAI_COMPAT_TEMPERATURE="${OPENAI_COMPAT_TEMPERATURE:-0.2}"
 

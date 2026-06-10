@@ -456,6 +456,10 @@ temperature = os.environ.get("OPENAI_COMPAT_TEMPERATURE")
 if temperature:
     body["temperature"] = float(temperature)
 
+think = os.environ.get("OPENAI_COMPAT_THINK")
+if think:
+    body["think"] = think.strip().lower() in {"1", "true", "yes", "on"}
+
 req = urllib.request.Request(
     base_url + path,
     data=json.dumps(body).encode("utf-8"),

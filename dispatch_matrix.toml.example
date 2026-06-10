@@ -71,15 +71,15 @@ stall_threshold_seconds = 300
 key_env = "MOONSHOT_API_KEY"
 key_account = "moonshot_api_key"
 wrapper = "moonshot.sh"
-provider = "moonshot"
-model_id = "kimi-k2.6"
+provider = "kimi-cli"
+model_id = "kimi-code/kimi-for-coding"
 allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["engineer", "review"]
-default_thinking_tokens = 4000
+default_thinking_tokens = 0
 thinking_hard_ceiling = 16000
-context_window = 128000
+context_window = 262144
 max_turns = 25
-stall_threshold_seconds = 300
+stall_threshold_seconds = 600
 
 [executors.deepseek]
 key_env = "DEEPSEEK_API_KEY"
@@ -170,11 +170,11 @@ key_env = "CUSTOM_MINIMAX_CODING_PLAN_API_KEY"
 key_account = "custom_minimax_coding_plan_api_key"
 wrapper = "minimax-coding-plan.sh"
 provider = "minimax-openai-compatible"
-model_id = "MiniMax-M2.5"
-allowed_modes = ["task", "consult"]
+model_id = "MiniMax-M3"
+allowed_modes = ["breakout", "task", "consult"]
 allowed_seats_in_breakout = ["engineer"]
 default_thinking_tokens = 0
-context_window = 128000
+context_window = 200000
 max_turns = 10
 stall_threshold_seconds = 300
 
@@ -402,6 +402,18 @@ max_turns = 10
 stall_threshold_seconds = 300
 hard_wall_block_breakout_top = true
 
+[executors.nucbox-gemma4]
+wrapper = "nucbox-gemma4.sh"
+provider = "lm-studio"
+model_id = "gemma4:12b"
+allowed_modes = ["breakout", "task", "consult"]
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 0
+context_window = 131072
+max_turns = 8
+stall_threshold_seconds = 300
+hard_wall_block_breakout_top = true
+
 # Uncomment to add a local Ollama executor:
 # [executors.ollama-local]
 # wrapper = "ollama.sh"
@@ -424,24 +436,24 @@ hard_wall_block_breakout_top = true
 # Ordered candidate lists per tier. The router returns the first executor that
 # is mode-allowed AND available AND not in cooldown. Adaptive-balanced: hard and
 # deep tiers lead with stronger models; trivial/standard lead with cheaper ones.
-trivial_candidates        = ["openai-mini", "haiku", "zai-air", "gemini-lite"]
-standard_candidates       = ["codex-spark", "sonnet", "zai-glm", "openai-mini"]
-hard_task_candidates      = ["codex-spark", "openai-gpt55-high", "zai-glm", "opus"]
-hard_breakout_candidates  = ["openai-gpt55-high", "opus", "openai-gpt55", "zai-glm"]
-long_context_candidates   = ["kimi-coding", "gemini-pro", "openai-gpt55", "opus"]
-consult_candidates        = ["opus", "openai-gpt55-high", "zai-glm"]
+trivial_candidates        = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "openai-mini", "haiku"]
+standard_candidates       = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "codex-spark", "sonnet"]
+hard_task_candidates      = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "openai-gpt55-high", "opus"]
+hard_breakout_candidates  = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "openai-gpt55-high", "opus"]
+long_context_candidates   = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "kimi-coding", "gemini-pro"]
+consult_candidates        = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "opus"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
 long_context_executor = "kimi-coding"
 long_context_threshold_tokens = 50000
-trivial_executor = "openai-mini"
+trivial_executor = "zai-glm"
 trivial_threshold_tokens = 5000
-hard_coding_breakout_executor = "openai-gpt55"
-hard_coding_task_executor = "codex-spark"
-default_breakout = "openai-gpt55-high"
-default_task = "codex-spark"
-default_consult = "opus"
+hard_coding_breakout_executor = "zai-glm"
+hard_coding_task_executor = "zai-glm"
+default_breakout = "zai-glm"
+default_task = "zai-glm"
+default_consult = "zai-glm"
 
 # Learning loop: when true, candidate ordering is re-biased by outcomes.jsonl
 # history (success rate / cost per tier). Off by default; enable after data
@@ -494,6 +506,7 @@ max_depth = 2
 "opus.codex-spark" = true
 "opus.codex-oss" = true
 "opus.lm-studio" = true
+"opus.nucbox-gemma4" = true
 
 # Sonnet can dispatch cheaper executors
 "sonnet.haiku" = true
@@ -514,6 +527,7 @@ max_depth = 2
 "sonnet.codex-spark" = true
 "sonnet.codex-oss" = true
 "sonnet.lm-studio" = true
+"sonnet.nucbox-gemma4" = true
 
 # Codex can dispatch lower-cost/local leaves
 "codex.haiku" = true
@@ -530,6 +544,7 @@ max_depth = 2
 "codex.openai-mini" = true
 "codex.codex-oss" = true
 "codex.lm-studio" = true
+"codex.nucbox-gemma4" = true
 "openai-gpt55.sonnet" = true
 "openai-gpt55.haiku" = true
 "openai-gpt55.kimi-coding" = true
@@ -550,6 +565,7 @@ max_depth = 2
 "openai-gpt55.codex-spark" = true
 "openai-gpt55.codex-oss" = true
 "openai-gpt55.lm-studio" = true
+"openai-gpt55.nucbox-gemma4" = true
 "openai-gpt55-high.sonnet" = true
 "openai-gpt55-high.haiku" = true
 "openai-gpt55-high.kimi-coding" = true
@@ -570,6 +586,7 @@ max_depth = 2
 "openai-gpt55-high.codex-spark" = true
 "openai-gpt55-high.codex-oss" = true
 "openai-gpt55-high.lm-studio" = true
+"openai-gpt55-high.nucbox-gemma4" = true
 "codex-spark.haiku" = true
 "codex-spark.kimi-coding" = true
 "codex-spark.deepseek" = true
@@ -582,12 +599,14 @@ max_depth = 2
 "codex-spark.openai-mini" = true
 "codex-spark.codex-oss" = true
 "codex-spark.lm-studio" = true
+"codex-spark.nucbox-gemma4" = true
 
 # Kimi can dispatch leaf executors only
 "kimi-coding.haiku" = true
 "kimi-coding.openai-mini" = true
 "kimi-coding.codex-oss" = true
 "kimi-coding.lm-studio" = true
+"kimi-coding.nucbox-gemma4" = true
 "kimi-moonshot.haiku" = true
 "kimi-moonshot.openai-mini" = true
 "kimi-moonshot.codex-oss" = true
@@ -595,16 +614,23 @@ max_depth = 2
 "deepseek.openai-mini" = true
 "deepseek.codex-oss" = true
 "deepseek.lm-studio" = true
+"deepseek.nucbox-gemma4" = true
 "zai-glm.haiku" = true
 "zai-glm.openai-mini" = true
 "zai-glm.gemini-flash" = true
 "zai-glm.kilo-free" = true
 "zai-glm.codex-oss" = true
+"zai-glm.minimax-coding-plan" = true
+"zai-glm.minimax" = true
+"zai-glm.nucbox-gemma4" = true
 "minimax.haiku" = true
 "minimax.openai-mini" = true
 "minimax.gemini-lite" = true
 "minimax.kilo-free" = true
 "minimax.codex-oss" = true
+"minimax.zai-glm" = true
+"minimax.minimax-coding-plan" = true
+"minimax.nucbox-gemma4" = true
 "minimax-m25.haiku" = true
 "minimax-m25.openai-mini" = true
 "minimax-m25.codex-oss" = true
@@ -612,6 +638,9 @@ max_depth = 2
 "minimax-m25-highspeed.openai-mini" = true
 "minimax-coding-plan.haiku" = true
 "minimax-coding-plan.openai-mini" = true
+"minimax-coding-plan.zai-glm" = true
+"minimax-coding-plan.minimax" = true
+"minimax-coding-plan.nucbox-gemma4" = true
 "inception-mercury.haiku" = true
 "inception-mercury.openai-mini" = true
 "inception-mercury.codex-oss" = true
