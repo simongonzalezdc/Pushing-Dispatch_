@@ -137,46 +137,11 @@ context_window = 200000
 max_turns = 25
 stall_threshold_seconds = 300
 
-[executors.minimax-m25]
-key_env = "MINIMAX_API_KEY"
-key_account = "minimax_api_key"
-wrapper = "minimax-m25.sh"
-provider = "minimax"
-model_id = "MiniMax-M2.5"
-allowed_modes = ["task", "consult"]
-allowed_seats_in_breakout = ["engineer"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 8000
-context_window = 204800
-max_turns = 25
-stall_threshold_seconds = 300
-
-[executors.minimax-m25-highspeed]
-key_env = "MINIMAX_API_KEY"
-key_account = "minimax_api_key"
-wrapper = "minimax-m25-highspeed.sh"
-provider = "minimax"
-model_id = "MiniMax-M2.5-highspeed"
-allowed_modes = ["task"]
-allowed_seats_in_breakout = ["leaf", "engineer"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 4000
-context_window = 204800
-max_turns = 25
-stall_threshold_seconds = 180
-
-[executors.minimax-coding-plan]
-key_env = "CUSTOM_MINIMAX_CODING_PLAN_API_KEY"
-key_account = "custom_minimax_coding_plan_api_key"
-wrapper = "minimax-coding-plan.sh"
-provider = "minimax-openai-compatible"
-model_id = "MiniMax-M3"
-allowed_modes = ["breakout", "task", "consult"]
-allowed_seats_in_breakout = ["engineer"]
-default_thinking_tokens = 0
-context_window = 200000
-max_turns = 10
-stall_threshold_seconds = 300
+# Retired 2026-06-12: minimax-m25 / minimax-m25-highspeed (legacy M2.5 lanes —
+# the `minimax` lane is MiniMax-M3 on the same key; m25 also inherited a
+# poisoned ANTHROPIC_BASE_URL via its ${VAR:-default} pattern) and
+# minimax-coding-plan (separate stale CUSTOM_MINIMAX_CODING_PLAN_API_KEY,
+# duplicated minimax M3). See fix/dispatch-lane-health.
 
 [executors.inception-mercury]
 key_env = "CUSTOM_INCEPTION_API_KEY"
@@ -271,7 +236,9 @@ key_account = "gemini_api_key"
 wrapper = "gemini-pro.sh"
 provider = "gemini"
 model_id = "gemini-3.1-pro-preview"
-allowed_modes = ["breakout", "task", "consult"]
+# Consult-only: gemini lanes are single-shot generateContent (no tool loop).
+# In task mode they silently no-op while reporting done (2026-06-12).
+allowed_modes = ["consult"]
 allowed_seats_in_breakout = ["review", "engineer"]
 default_thinking_tokens = 32768
 thinking_hard_ceiling = 32768
@@ -285,7 +252,7 @@ key_account = "gemini_api_key"
 wrapper = "gemini-flash.sh"
 provider = "gemini"
 model_id = "gemini-3-flash-preview"
-allowed_modes = ["task", "consult"]
+allowed_modes = ["consult"]
 allowed_seats_in_breakout = ["leaf", "engineer"]
 default_thinking_tokens = 8192
 thinking_hard_ceiling = 8192
@@ -299,7 +266,7 @@ key_account = "gemini_api_key"
 wrapper = "gemini-lite.sh"
 provider = "gemini"
 model_id = "gemini-3.1-flash-lite-preview"
-allowed_modes = ["task"]
+allowed_modes = ["consult"]
 allowed_seats_in_breakout = ["leaf"]
 default_thinking_tokens = 0
 thinking_hard_ceiling = 0
@@ -436,12 +403,12 @@ hard_wall_block_breakout_top = true
 # Ordered candidate lists per tier. The router returns the first executor that
 # is mode-allowed AND available AND not in cooldown. Adaptive-balanced: hard and
 # deep tiers lead with stronger models; trivial/standard lead with cheaper ones.
-trivial_candidates        = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "openai-mini", "haiku"]
-standard_candidates       = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "codex-spark", "sonnet"]
-hard_task_candidates      = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "openai-gpt55-high", "opus"]
-hard_breakout_candidates  = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "openai-gpt55-high", "opus"]
-long_context_candidates   = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "kimi-coding", "gemini-pro"]
-consult_candidates        = ["zai-glm", "minimax-coding-plan", "minimax", "nucbox-gemma4", "opus"]
+trivial_candidates        = ["zai-glm", "minimax", "nucbox-gemma4", "openai-mini", "haiku"]
+standard_candidates       = ["zai-glm", "minimax", "nucbox-gemma4", "codex-spark", "sonnet"]
+hard_task_candidates      = ["zai-glm", "minimax", "nucbox-gemma4", "openai-gpt55-high", "opus"]
+hard_breakout_candidates  = ["zai-glm", "minimax", "nucbox-gemma4", "openai-gpt55-high", "opus"]
+long_context_candidates   = ["zai-glm", "minimax", "nucbox-gemma4", "kimi-coding", "gemini-pro"]
+consult_candidates        = ["zai-glm", "minimax", "nucbox-gemma4", "opus"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
@@ -487,9 +454,6 @@ max_depth = 2
 "opus.zai-glm" = true
 "opus.zai-air" = true
 "opus.minimax" = true
-"opus.minimax-m25" = true
-"opus.minimax-m25-highspeed" = true
-"opus.minimax-coding-plan" = true
 "opus.inception-mercury" = true
 "opus.gemini-pro" = true
 "opus.gemini-flash" = true
@@ -515,8 +479,6 @@ max_depth = 2
 "sonnet.deepseek" = true
 "sonnet.zai-air" = true
 "sonnet.minimax" = true
-"sonnet.minimax-m25" = true
-"sonnet.minimax-m25-highspeed" = true
 "sonnet.inception-mercury" = true
 "sonnet.gemini-flash" = true
 "sonnet.gemini-lite" = true
@@ -536,7 +498,6 @@ max_depth = 2
 "codex.deepseek" = true
 "codex.zai-air" = true
 "codex.minimax" = true
-"codex.minimax-m25-highspeed" = true
 "codex.inception-mercury" = true
 "codex.gemini-flash" = true
 "codex.gemini-lite" = true
@@ -553,8 +514,6 @@ max_depth = 2
 "openai-gpt55.zai-glm" = true
 "openai-gpt55.zai-air" = true
 "openai-gpt55.minimax" = true
-"openai-gpt55.minimax-m25" = true
-"openai-gpt55.minimax-coding-plan" = true
 "openai-gpt55.inception-mercury" = true
 "openai-gpt55.gemini-pro" = true
 "openai-gpt55.gemini-flash" = true
@@ -574,8 +533,6 @@ max_depth = 2
 "openai-gpt55-high.zai-glm" = true
 "openai-gpt55-high.zai-air" = true
 "openai-gpt55-high.minimax" = true
-"openai-gpt55-high.minimax-m25" = true
-"openai-gpt55-high.minimax-coding-plan" = true
 "openai-gpt55-high.inception-mercury" = true
 "openai-gpt55-high.gemini-pro" = true
 "openai-gpt55-high.gemini-flash" = true
@@ -591,7 +548,6 @@ max_depth = 2
 "codex-spark.kimi-coding" = true
 "codex-spark.deepseek" = true
 "codex-spark.zai-air" = true
-"codex-spark.minimax-m25-highspeed" = true
 "codex-spark.inception-mercury" = true
 "codex-spark.gemini-flash" = true
 "codex-spark.gemini-lite" = true
@@ -620,7 +576,6 @@ max_depth = 2
 "zai-glm.gemini-flash" = true
 "zai-glm.kilo-free" = true
 "zai-glm.codex-oss" = true
-"zai-glm.minimax-coding-plan" = true
 "zai-glm.minimax" = true
 "zai-glm.nucbox-gemma4" = true
 "minimax.haiku" = true
@@ -629,18 +584,7 @@ max_depth = 2
 "minimax.kilo-free" = true
 "minimax.codex-oss" = true
 "minimax.zai-glm" = true
-"minimax.minimax-coding-plan" = true
 "minimax.nucbox-gemma4" = true
-"minimax-m25.haiku" = true
-"minimax-m25.openai-mini" = true
-"minimax-m25.codex-oss" = true
-"minimax-m25-highspeed.haiku" = true
-"minimax-m25-highspeed.openai-mini" = true
-"minimax-coding-plan.haiku" = true
-"minimax-coding-plan.openai-mini" = true
-"minimax-coding-plan.zai-glm" = true
-"minimax-coding-plan.minimax" = true
-"minimax-coding-plan.nucbox-gemma4" = true
 "inception-mercury.haiku" = true
 "inception-mercury.openai-mini" = true
 "inception-mercury.codex-oss" = true
