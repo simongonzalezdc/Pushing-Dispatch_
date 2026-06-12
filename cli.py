@@ -525,9 +525,16 @@ def _probe_executor(name, cfg, repo_root):
         return {"executor": name, "probe": "SKIP", "detail": f"no probeable mode in {modes}"}
 
     probe_root = tempfile.mkdtemp(prefix="dispatch-probe-")
+    # codex exec refuses untrusted non-git directories; a bare repo marker
+    # makes the probe cwd acceptable to every provider CLI.
+    subprocess.run(["git", "init", "-q", probe_root], capture_output=True)
     worker_id = f"probe-{name}-{int(time.time())}"
     env = os.environ.copy()
     env["DISPATCH_ROOT"] = probe_root  # keep probe status/logs out of the registry
+    # NOTE: CE_OPENAI_ACCOUNT is deliberately NOT set — while the legacy
+    # codex-switch fallback exists, account selection mutates the SHARED
+    # ~/.codex/auth.json (stale-snapshot stomp); probes must stay read-only
+    # on credentials. Probes therefore exercise the default auth lineage.
     cmd = [
         wrapper_path,
         "--task", "Reply with exactly: OK",
