@@ -502,6 +502,64 @@ def _doctor_rows(matrix):
     return rows
 
 
+def _probe_executor(name, cfg, repo_root):
+    """Live end-to-end probe through the lane's real wrapper.
+
+    Availability checks are presence-only (key/file exists), which let five
+    broken lanes report "available" on 2026-06-12. A probe dispatches one
+    tiny request through the production wrapper path — catching stale keys,
+    env contamination, permission-mode failures, and no-op integrations.
+    Costs ~1 minimal model call per lane.
+    """
+    import tempfile
+
+    wrapper = cfg.get("wrapper")
+    if not wrapper:
+        return {"executor": name, "probe": "SKIP", "detail": "no wrapper"}
+    wrapper_path = os.path.join(repo_root, "bin", "wrappers", wrapper)
+    if not os.path.exists(wrapper_path):
+        return {"executor": name, "probe": "SKIP", "detail": "wrapper missing"}
+    modes = cfg.get("allowed_modes", [])
+    mode = "task" if "task" in modes else ("consult" if "consult" in modes else None)
+    if mode is None:
+        return {"executor": name, "probe": "SKIP", "detail": f"no probeable mode in {modes}"}
+
+    probe_root = tempfile.mkdtemp(prefix="dispatch-probe-")
+    worker_id = f"probe-{name}-{int(time.time())}"
+    env = os.environ.copy()
+    env["DISPATCH_ROOT"] = probe_root  # keep probe status/logs out of the registry
+    cmd = [
+        wrapper_path,
+        "--task", "Reply with exactly: OK",
+        "--worker-id", worker_id,
+        "--mode", mode,
+        "--max-turns", "1",
+        "--cwd", probe_root,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
+    except subprocess.TimeoutExpired:
+        return {"executor": name, "probe": "TIMEOUT", "detail": "no response in 120s"}
+
+    out = (proc.stdout or "") + (proc.stderr or "")
+    log_path = os.path.join(probe_root, "logs", f"{worker_id}.log")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, "r", errors="replace") as f:
+                out += f.read()[-4000:]
+        except OSError:
+            pass
+
+    if proc.returncode == 0:
+        return {"executor": name, "probe": "OK", "detail": ""}
+    lowered = out.lower()
+    auth_markers = ("401", "invalid bearer", "invalid api key", "invalid authentication",
+                    "refresh token", "unauthorized")
+    if any(m in lowered for m in auth_markers):
+        return {"executor": name, "probe": "AUTH_FAIL", "detail": f"rc={proc.returncode}"}
+    return {"executor": name, "probe": "ERROR", "detail": f"rc={proc.returncode}"}
+
+
 def cmd_doctor(args):
     """Print live executor availability and lane health."""
     matrix_path = args.matrix or _find_matrix_path()
@@ -511,18 +569,55 @@ def cmd_doctor(args):
     with open(matrix_path, "rb") as f:
         matrix = tomllib.load(f)
     rows = _doctor_rows(matrix)
+
+    probe_results = {}
+    probe_arg = getattr(args, "probe", None)
+    if probe_arg is not None:
+        executors = matrix.get("executors", {})
+        if probe_arg:
+            targets = [n for n in probe_arg if n in executors]
+            for n in probe_arg:
+                if n not in executors:
+                    print(f"probe: unknown executor '{n}'", file=sys.stderr)
+        else:
+            # Default sweep skips openai-codex lanes: probing them consumes the
+            # account's single-use OAuth refresh token and can race interactive
+            # sessions (the 2026-06-12 auth.json lockout). Name them explicitly
+            # to probe anyway.
+            targets = [
+                r["executor"] for r in rows
+                if r["available"] and executors.get(r["executor"], {}).get("provider") != "openai-codex"
+            ]
+        repo_root = os.path.dirname(os.path.abspath(matrix_path))
+        for n in targets:
+            probe_results[n] = _probe_executor(n, executors[n], repo_root)
+
+    for r in rows:
+        if r["executor"] in probe_results:
+            p = probe_results[r["executor"]]
+            r["probe"] = p["probe"]
+            r["probe_detail"] = p["detail"]
+
     if getattr(args, "json", False):
         print(json.dumps(rows, indent=2))
         return
-    print(f"{'EXECUTOR':24} {'PROVIDER':22} STATE")
-    print("-" * 64)
+    header = f"{'EXECUTOR':24} {'PROVIDER':22} {'STATE':14}"
+    if probe_results:
+        header += " PROBE"
+    print(header)
+    print("-" * (64 if not probe_results else 80))
     for r in sorted(rows, key=lambda x: (not x["available"], x["executor"])):
         state = "available" if r["available"] else "UNAVAILABLE"
         if r["cooldown"]:
             state = "cooldown"
         if r["needs_relogin"]:
             state = "NEEDS RE-LOGIN"
-        print(f"{r['executor']:24} {r['provider']:22} {state}")
+        line = f"{r['executor']:24} {r['provider']:22} {state:14}"
+        if probe_results:
+            p = r.get("probe", "")
+            d = r.get("probe_detail", "")
+            line += f" {p}{(' (' + d + ')') if d else ''}"
+        print(line)
 
 
 def cmd_answer(args):
@@ -883,6 +978,12 @@ def main():
     doctor_parser = subparsers.add_parser("doctor", help="Show live executor availability/health")
     doctor_parser.add_argument("--matrix", default=None, help="Override dispatch matrix path")
     doctor_parser.add_argument("--json", action="store_true", help="JSON output")
+    doctor_parser.add_argument(
+        "--probe", nargs="*", default=None, metavar="EXECUTOR",
+        help="Live-probe lanes end-to-end through their real wrappers (~1 tiny "
+             "model call each). With no names: all available lanes except "
+             "openai-codex (whose OAuth refresh is single-use; name explicitly "
+             "to probe).")
 
     # compact
     subparsers.add_parser("compact", help="Compact registry")
