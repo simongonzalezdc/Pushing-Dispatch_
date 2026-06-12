@@ -43,6 +43,11 @@ def _anthropic_ready() -> bool:
 
 
 def _codex_ready() -> bool:
+    # Per-account dispatch homes (~/.codex-dispatch/<account>/auth.json) are
+    # the preferred auth source; the shared ~/.codex/auth.json remains valid
+    # for setups that have not migrated.
+    if any((Path.home() / ".codex-dispatch").glob("*/auth.json")):
+        return True
     return (Path.home() / ".codex" / "auth.json").exists()
 
 
