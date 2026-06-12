@@ -157,7 +157,7 @@ max_turns = 10
 stall_threshold_seconds = 300
 
 [executors.codex]
-account = "puenteworks"
+account = "puenteworks"  # deprecates 2026-07-05 → flip to "icloud" then (the permanent account)
 wrapper = "codex.sh"
 provider = "openai-codex"
 model_id = "codex-config-default"
@@ -181,7 +181,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.openai-gpt55-high]
-account = "puenteworks"
+account = "puenteworks"  # deprecates 2026-07-05 → flip to "icloud" then (the permanent account)
 wrapper = "codex-gpt55-high.sh"
 provider = "openai-codex"
 model_id = "gpt-5.5"
@@ -207,7 +207,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.openai-mini]
-account = "cerafica"
+account = "icloud"  # was cerafica (deprecated 2026-06-12); icloud is the permanent account
 wrapper = "codex-mini.sh"
 provider = "openai-codex"
 model_id = "gpt-5.4-mini"
@@ -219,7 +219,7 @@ max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.codex-spark]
-account = "cerafica"
+account = "icloud"  # was cerafica (deprecated 2026-06-12); icloud is the permanent account
 wrapper = "codex-spark.sh"
 provider = "openai-codex"
 model_id = "gpt-5.3-codex-spark"
