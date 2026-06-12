@@ -628,6 +628,23 @@ PY
 # --- API key loading helpers ---
 
 # Generic keychain loader (macOS). Falls back to env var.
+ce_sanitize_anthropic_env() {
+    # Anthropic lanes must hit the real API. The dispatching session often
+    # carries ANTHROPIC_* overrides (proxy base URLs, foreign auth tokens, GLM
+    # model aliases) that 401 or silently misroute OAuth creds (2026-06-12).
+    # Headless `claude -p` on such rigs also needs a long-lived token from
+    # `claude setup-token` — keychain OAuth alone does not serve it (same
+    # recipe as liminal's fable-watchman).
+    unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY \
+          ANTHROPIC_DEFAULT_HAIKU_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL
+    local _tok
+    for _tok in "$HOME/.claude/dispatch-token" "$HOME/.claude/watchman-token"; do
+        if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -f "$_tok" ]]; then
+            export CLAUDE_CODE_OAUTH_TOKEN="$(cat "$_tok")"
+        fi
+    done
+}
+
 ce_load_api_key() {
     local service="$1"
     local account="$2"

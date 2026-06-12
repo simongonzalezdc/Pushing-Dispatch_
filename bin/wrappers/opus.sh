@@ -16,8 +16,9 @@ source "$SCRIPT_DIR/_exec.sh"
 export CE_TOOL_NAME="opus"
 export CE_BARE_MODE=0
 
-# Drop inherited ANTHROPIC_* overrides — see sonnet.sh (401s, 2026-06-12).
-unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY
+# Drop inherited ANTHROPIC_* overrides and load the headless OAuth token
+# (401s under provider-overridden environments, 2026-06-12).
+ce_sanitize_anthropic_env
 
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-opus-4-8}"
 

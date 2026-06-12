@@ -16,11 +16,9 @@ source "$SCRIPT_DIR/_exec.sh"
 export CE_TOOL_NAME="sonnet"
 export CE_BARE_MODE=0  # Anthropic providers keep normal mode (subscription OAuth)
 
-# Anthropic lanes must hit the real API with subscription OAuth. The
-# dispatching session often carries ANTHROPIC_* overrides (proxy base URLs,
-# foreign auth tokens) that silently route OAuth creds to the wrong endpoint
-# (401 Invalid authentication credentials, 2026-06-12). Drop them.
-unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY
+# Drop inherited ANTHROPIC_* overrides and load the headless OAuth token
+# (401s under provider-overridden environments, 2026-06-12).
+ce_sanitize_anthropic_env
 
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-sonnet-4-6}"
 
