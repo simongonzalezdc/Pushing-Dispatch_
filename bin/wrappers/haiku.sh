@@ -15,6 +15,10 @@ source "$SCRIPT_DIR/_exec.sh"
 # Provider config
 export CE_TOOL_NAME="haiku"
 export CE_BARE_MODE=0
+
+# Drop inherited ANTHROPIC_* overrides — see sonnet.sh (401s, 2026-06-12).
+unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY
+
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}"
 export CE_THINKING_TOKENS=0  # Haiku: no extended thinking
 

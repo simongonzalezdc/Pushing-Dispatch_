@@ -15,6 +15,10 @@ source "$SCRIPT_DIR/_exec.sh"
 # Provider config
 export CE_TOOL_NAME="opus"
 export CE_BARE_MODE=0
+
+# Drop inherited ANTHROPIC_* overrides — see sonnet.sh (401s, 2026-06-12).
+unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY
+
 export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-opus-4-8}"
 
 # Opus supports higher thinking token budgets

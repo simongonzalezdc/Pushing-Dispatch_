@@ -269,8 +269,16 @@ ce_run_claude() {
         cmd+=(--max-turns "$CE_MAX_TURNS")
     fi
 
+    # Headless workers cannot answer permission prompts; without an explicit
+    # permission mode the harness denies any Bash call that misses the host
+    # repo's allowlist, so worker success depended on command-shape luck
+    # (kimi-coding "Bash denied" while identical minimax tasks passed,
+    # 2026-06-12). Task/breakout workers run in isolated worktrees and need
+    # full tool access; read-only consults keep the restrictive default.
     if [[ "$CE_READ_ONLY" -eq 1 ]]; then
         cmd+=(--disallowed-tools "Write,Edit,MultiEdit,NotebookEdit")
+    else
+        cmd+=(--permission-mode "${CE_PERMISSION_MODE:-bypassPermissions}")
     fi
 
     # Dry run mode
