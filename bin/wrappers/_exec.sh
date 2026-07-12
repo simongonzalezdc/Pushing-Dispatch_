@@ -223,10 +223,36 @@ ce_finalize_from_text() {
         ce_finalize_status "blocked" 3 "Worker reported blocked"
         return 3
     else
-        echo "Worker $CE_WORKER_ID completed (no explicit status token)."
-        ce_finalize_status "done" 0 ""
-        return 0
+        echo "Worker $CE_WORKER_ID failed: missing terminal status token." >&2
+        ce_finalize_status "errored" 4 "missing terminal status token"
+        return 4
     fi
+}
+
+ce_parse_claude_log() {
+    local log_file="$1"
+
+    PYTHONPATH="$CE_REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 - \
+        "$log_file" "$CE_WORKER_ID" <<'PY'
+import sys
+
+from dispatch_lib.status_writer import update_tokens
+from dispatch_lib.stream_parser import (
+    count_turns,
+    extract_final_text,
+    extract_token_usage,
+    parse_stream_events,
+)
+
+log_file, worker_id = sys.argv[1:3]
+with open(log_file, encoding="utf-8", errors="replace") as stream:
+    events = list(parse_stream_events(stream))
+
+usage = extract_token_usage(events)
+turns = count_turns(events)
+update_tokens(worker_id, usage["tokens_in"], usage["tokens_out"], turns)
+print(extract_final_text(events))
+PY
 }
 
 # --- Main execution ---
@@ -258,6 +284,7 @@ ce_run_claude() {
         claude
         -p "$CE_FINAL_PROMPT"
         --output-format stream-json
+        --verbose
     )
 
     # Add provider-specific flags
@@ -304,10 +331,11 @@ ce_run_claude() {
     # Clean up temp files
     rm -f "$prompt_file" "$CE_ASSEMBLED_BRIEF"
 
-    # Extract final text from stream for status-token scanning.
+    # Parse Claude Code JSONL so escaped terminal status text and telemetry are
+    # interpreted structurally rather than grepped from raw JSON.
     local final_text=""
     if [[ -f "$log_file" ]]; then
-        final_text="$(tail -200 "$log_file")"
+        final_text="$(ce_parse_claude_log "$log_file")"
     fi
 
     # Map worker Status: tokens to documented exit codes.
@@ -316,7 +344,7 @@ ce_run_claude() {
     #   Status: NEEDS_GUIDANCE             -> 2
     #   Status: BLOCKED                    -> 3
     #   claude non-zero (no status token)  -> 4 (distinct from wrapper errors which use 1)
-    #   no explicit status + clean exit    -> 0
+    #   no explicit status + clean exit    -> 4 (fail closed)
     if [[ $exit_code -ne 0 ]]; then
         echo "Worker $CE_WORKER_ID: claude exited with code $exit_code." >&2
         ce_finalize_status "errored" 4 "claude exited with code $exit_code"
