@@ -46,7 +46,8 @@ from dispatch_lib.nested import (
 from dispatch_lib.matrix_validator import validate
 from dispatch_lib.context_budget import check_budget_for_file
 from dispatch_lib.auto_router import (
-    auto_route, detect_mode_from_keywords, _tier, _candidates,
+    auto_route, detect_mode_from_keywords, required_capabilities,
+    missing_capabilities, _tier, _candidates,
 )
 from dispatch_lib import availability, lane_health
 
@@ -472,13 +473,22 @@ def cmd_route(args):
             list_key, legacy = _tier(brief_text, mode, route_cfg)
             considered = _candidates(route_cfg, list_key, legacy)
             fallback_from = []
+            required = required_capabilities(brief_text)
+            capability_rejections = {}
             for cand in considered:
                 if cand == executor:
                     break
+                missing = missing_capabilities(matrix, cand, required)
+                if missing:
+                    capability_rejections[cand] = f"missing {', '.join(missing)} capability"
+                    continue
                 if cand not in avail or lane_health.in_cooldown(cand):
                     fallback_from.append(cand)
             payload["considered"] = considered
             payload["fallback_from"] = fallback_from
+            if required:
+                payload["required_capabilities"] = sorted(required)
+                payload["capability_rejections"] = capability_rejections
             payload["available"] = sorted(avail)
         print(json.dumps(payload, indent=2))
     else:

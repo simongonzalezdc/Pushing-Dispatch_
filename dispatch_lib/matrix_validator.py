@@ -26,6 +26,7 @@ REQUIRED_EXECUTOR_FIELDS = {
 }
 
 OPTIONAL_EXECUTOR_FIELDS = {
+    "capabilities",
     "model_id",
     "default_thinking_tokens",
     "thinking_hard_ceiling",
@@ -86,6 +87,10 @@ def _validate_executor(name: str, config: dict) -> list[str]:
     for mode in modes:
         if mode not in VALID_MODES:
             errors.append(f"Executor '{name}' has invalid mode: {mode}")
+
+    capabilities = config.get("capabilities", [])
+    if not isinstance(capabilities, list) or not all(isinstance(item, str) for item in capabilities):
+        errors.append(f"Executor '{name}' capabilities must be a list of strings")
 
     thinking = config.get("default_thinking_tokens", 0)
     ceiling = config.get("thinking_hard_ceiling", thinking)

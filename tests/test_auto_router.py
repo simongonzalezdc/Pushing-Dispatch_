@@ -4,12 +4,12 @@ from dispatch_lib import auto_router
 
 MATRIX = {
     "executors": {
-        "openai-mini":       {"provider": "openai-codex", "allowed_modes": ["task", "consult"]},
-        "codex-spark":       {"provider": "openai-codex", "allowed_modes": ["task", "breakout"]},
-        "openai-gpt55-high": {"provider": "openai-codex", "allowed_modes": ["task", "breakout", "consult"]},
-        "zai-glm":           {"provider": "zai", "allowed_modes": ["task", "breakout", "consult"]},
-        "opus":              {"provider": "anthropic", "allowed_modes": ["task", "breakout", "consult"]},
-        "kimi-coding":       {"provider": "kimi", "allowed_modes": ["task", "consult"]},
+        "openai-mini":       {"provider": "openai-codex", "allowed_modes": ["task", "consult"], "capabilities": ["vision"]},
+        "codex-spark":       {"provider": "openai-codex", "allowed_modes": ["task", "breakout"], "capabilities": ["vision"]},
+        "openai-gpt55-high": {"provider": "openai-codex", "allowed_modes": ["task", "breakout", "consult"], "capabilities": ["vision"]},
+        "zai-glm":           {"provider": "zai", "allowed_modes": ["task", "breakout", "consult"], "capabilities": []},
+        "opus":              {"provider": "anthropic", "allowed_modes": ["task", "breakout", "consult"], "capabilities": ["vision"]},
+        "kimi-coding":       {"provider": "kimi", "allowed_modes": ["task", "consult"], "capabilities": ["vision"]},
     },
     "auto_route": {
         "trivial_candidates": ["openai-mini", "zai-glm"],
@@ -54,6 +54,31 @@ class TestRouter(unittest.TestCase):
     def test_long_context_keyword(self):
         self.assertEqual(route("summarize the entire codebase", "task",
                                available=["kimi-coding", "opus"]), "kimi-coding")
+
+    def test_explicit_vision_required_skips_visionless_executor(self):
+        self.assertEqual(
+            route("VISION REQUIRED: inspect the supplied UI", "task",
+                  available=["zai-glm", "opus"]),
+            "opus")
+
+    def test_visual_inspection_terms_skip_visionless_executor(self):
+        for task in (
+            "inspect this screenshot for layout defects",
+            "review the attached image",
+            "perform a render inspection before approving",
+        ):
+            with self.subTest(task=task):
+                self.assertEqual(route(task, "task", available=["zai-glm", "opus"]), "opus")
+
+    def test_vision_requirement_explains_capability_rejection_when_none_eligible(self):
+        with self.assertRaisesRegex(
+            auto_router.NoExecutorAvailable,
+            r"requires vision; rejected: zai-glm \(missing vision capability\)",
+        ):
+            route("VISION REQUIRED: inspect the supplied UI", "task", available=["zai-glm"])
+
+    def test_nonvisual_routing_is_unchanged_by_capability_metadata(self):
+        self.assertEqual(route("fix typo", "task", available=["openai-mini", "zai-glm"]), "openai-mini")
 
     def test_errors_when_nothing_available(self):
         with self.assertRaises(auto_router.NoExecutorAvailable):
