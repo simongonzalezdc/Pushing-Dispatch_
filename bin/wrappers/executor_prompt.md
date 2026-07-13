@@ -14,6 +14,13 @@ guidance.
 
 {{TASK}}
 
+## Stop conditions
+
+- Stop as soon as the requested outcome is complete and verified; report the result.
+- If the next step needs missing facts, operator judgment, broader authority, or would repeat an unsuccessful approach, stop and use the question protocol below.
+- Do not continue reasoning merely because additional reasoning budget remains.
+- After two materially different unsuccessful approaches, stop, summarize the evidence, and reassess instead of looping.
+
 ## How to ask a question
 
 If you hit a decision that requires the operator's judgment (architectural choice,

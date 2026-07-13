@@ -70,7 +70,7 @@ Current provider truth:
 - `claude-minimax` is the direct MiniMax M3 fallback.
 - Kimi K2.7 is the single `kimi-k27` lane, exclusive to native `kimi-cli` through its managed `kimi-for-coding` alias.
 - Gemini models are exclusive to AGY (`agy-gemini-flash` and `agy-gemini-pro`); Gemini CLI and legacy direct-API lanes are retired.
-- Codex uses the ChatGPT subscription: GPT-5.6 Luna for trivial work, Terra as the better-and-cheaper everyday replacement for GPT-5.5, and Sol for frontier hard/consult work. GPT-5.5, Codex OSS, and NUCBox Gemma are retired.
+- Codex uses the ChatGPT subscription. Start with GPT-5.6 Luna at xhigh for every task. If its completed result is unusable, explicitly retry Terra at high. Use Sol only when justified, explicitly escalating low, medium, then high; never exceed high, and stop to reassess after high. Auto-routing chooses the first attempt and availability fallback only—it cannot judge semantic answer quality. GPT-5.5, Codex OSS, and NUCBox Gemma are retired.
 - Kilo is CLI-only and free-only: the durable lane is `kilo-free-auto` using `kilo/kilo-auto/free`. Never fall through to a paid Kilo model; rotating monthly `:free` models must be verified live before use.
 
 ## Registered Local Surfaces

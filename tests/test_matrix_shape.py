@@ -1,5 +1,7 @@
 import unittest
 import tomllib
+import os
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,6 +55,41 @@ class TestMatrixShape(unittest.TestCase):
         self.assertNotIn("gpt-5.5", serialized)
         self.assertNotIn("codex-oss", serialized)
         self.assertNotIn("nucbox", serialized)
+
+    def test_codex_reasoning_policy_prefers_luna_then_terra(self):
+        executors = self.m["executors"]
+        self.assertEqual(executors["codex-luna"]["reasoning_effort"], "xhigh")
+        self.assertEqual(executors["codex-terra"]["reasoning_effort"], "high")
+        self.assertEqual(executors["codex-sol"]["reasoning_effort"], "low")
+
+        ar = self.m["auto_route"]
+        for key in (
+            "trivial_candidates", "standard_candidates", "hard_task_candidates",
+            "hard_breakout_candidates", "long_context_candidates",
+            "consult_candidates",
+        ):
+            candidates = ar[key]
+            self.assertLess(candidates.index("codex-luna"), candidates.index("codex-terra"), key)
+            self.assertLess(candidates.index("codex-terra"), candidates.index("codex-sol"), key)
+
+        self.assertIn("breakout", executors["codex-luna"]["allowed_modes"])
+
+    def test_sol_wrapper_enforces_high_ceiling(self):
+        wrapper = ROOT / "bin" / "wrappers" / "codex-sol.sh"
+        env = os.environ.copy()
+        env["CODEX_REASONING_EFFORT"] = "xhigh"
+        result = subprocess.run(
+            [str(wrapper), "--help"], env=env, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("capped at high", result.stderr)
+
+    def test_worker_prompt_has_bounded_reasoning_stop_contract(self):
+        prompt = (ROOT / "bin" / "wrappers" / "executor_prompt.md").read_text()
+        self.assertIn("Stop conditions", prompt)
+        self.assertIn("Do not continue reasoning", prompt)
+        self.assertIn("reassess", prompt.lower())
 
     def test_expired_anthropic_subscription_is_not_routable(self):
         providers = {cfg.get("provider") for cfg in self.m["executors"].values()}

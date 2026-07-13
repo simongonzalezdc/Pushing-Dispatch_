@@ -22,8 +22,9 @@ Stay inline when:
 |--------|----------|-----|
 | Long context (>50K tokens) | `kimi-k27` | Native Kimi K2.7 lane |
 | Mechanical refactor | `codex-luna` | Fast subscription lane |
-| Everyday work | `codex-terra` | Default quality/cost balance |
-| Hard coding or synthesis | `codex-sol` | Frontier hard/consult lane |
+| First attempt, including everyday and hard work | `codex-luna` | Run at xhigh; strongest default speed/cost balance |
+| Unusable Luna result | `codex-terra` | Explicit retry at high; do not call `auto` again |
+| Genuinely frontier fallback | `codex-sol` | Explicit low → medium → high ladder; stop after high |
 | Visual work | Terra/Sol, Kimi, or AGY | GLM has no vision |
 | Free overflow | `kilo-free-auto` | Kilo free models only |
 

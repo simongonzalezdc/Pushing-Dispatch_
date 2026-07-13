@@ -8,9 +8,9 @@ model from the harness name, and do not restore a retired lane from an old doc.
 
 | Executor | Harness / access | Model | Vision | Intended role |
 |---|---|---|---|---|
-| `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna | Yes | Tiny mechanical work |
-| `codex-terra` | Codex CLI, ChatGPT subscription | GPT-5.6 Terra | Yes | Everyday default; replaces GPT-5.5 |
-| `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol | Yes | Hard tasks and consults |
+| `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna (xhigh) | Yes | First attempt for every task |
+| `codex-terra` | Codex CLI, ChatGPT subscription | GPT-5.6 Terra (high) | Yes | Explicit fallback after an unusable Luna result |
+| `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low default; high ceiling) | Yes | Exceptional fallback; explicitly escalate low → medium → high |
 | `zai-glm` | Claude Code harness via `claude-glm52` | GLM 5.2 | **No** | Strong non-visual worker |
 | `kimi-k27` | Native `kimi-cli` only | `kimi-code/kimi-for-coding` (Kimi K2.7) | Yes | Long context and implementation |
 | `minimax-m3` | GJC backup path | `minimax-code/minimax-m3` | No | Backup coding lane |

@@ -70,11 +70,11 @@ account = "icloud"
 wrapper = "codex-luna.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-luna"
-allowed_modes = ["task", "consult"]
+allowed_modes = ["breakout", "task", "consult"]
 capabilities = ["vision"]
-allowed_seats_in_breakout = ["leaf", "engineer"]
+allowed_seats_in_breakout = ["top", "review", "leaf", "engineer"]
 default_thinking_tokens = 0
-reasoning_effort = "low"
+reasoning_effort = "xhigh"
 context_window = 272000
 max_turns = 25
 stall_threshold_seconds = 300
@@ -88,7 +88,7 @@ allowed_modes = ["breakout", "task", "consult"]
 capabilities = ["vision"]
 allowed_seats_in_breakout = ["top", "review", "engineer"]
 default_thinking_tokens = 0
-reasoning_effort = "medium"
+reasoning_effort = "high"
 context_window = 272000
 max_turns = 25
 stall_threshold_seconds = 600
@@ -102,7 +102,7 @@ allowed_modes = ["breakout", "task", "consult"]
 capabilities = ["vision"]
 allowed_seats_in_breakout = ["top", "review", "engineer"]
 default_thinking_tokens = 0
-reasoning_effort = "high"
+reasoning_effort = "low"
 context_window = 272000
 max_turns = 25
 stall_threshold_seconds = 600
@@ -179,15 +179,17 @@ hard_wall_block_breakout_top = true
 
 [auto_route]
 # Ordered candidate lists per tier. The router returns the first executor that
-# is mode-allowed AND available AND not in cooldown. Adaptive-balanced: hard and
-# deep tiers lead with stronger models; trivial/standard lead with cheaper ones.
-trivial_candidates        = ["codex-luna", "kilo-free-auto", "zai-glm", "lm-studio"]
-standard_candidates       = ["codex-terra", "zai-glm", "agy-gemini-flash", "kilo-free-auto", "minimax-m3"]
-hard_task_candidates      = ["codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
-hard_breakout_candidates  = ["codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
-long_context_candidates   = ["kimi-k27", "zai-glm", "codex-sol", "agy-gemini-pro", "minimax-m3"]
-consult_candidates        = ["codex-sol", "agy-gemini-pro", "zai-glm", "kimi-k27"]
-consult_fallback_candidates = ["codex-terra", "agy-gemini-flash"]
+# is mode-allowed AND available AND not in cooldown.
+# GPT-5.6 preference: auto-routing selects Luna xhigh first for every tier.
+# After an unsatisfactory completed attempt, the orchestrator must explicitly
+# retry Terra high, then (only if justified) Sol low/medium/high. Availability
+# routing cannot infer whether a semantically valid answer was good enough.
+trivial_candidates        = ["codex-luna", "codex-terra", "codex-sol", "kilo-free-auto", "zai-glm", "lm-studio"]
+standard_candidates       = ["codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-flash", "kilo-free-auto", "minimax-m3"]
+hard_task_candidates      = ["codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
+hard_breakout_candidates  = ["codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
+long_context_candidates   = ["codex-luna", "codex-terra", "codex-sol", "kimi-k27", "zai-glm", "agy-gemini-pro", "minimax-m3"]
+consult_candidates        = ["codex-luna", "codex-terra", "codex-sol", "agy-gemini-pro", "zai-glm", "kimi-k27"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
@@ -197,9 +199,9 @@ trivial_executor = "codex-luna"
 trivial_threshold_tokens = 5000
 hard_coding_breakout_executor = "codex-sol"
 hard_coding_task_executor = "codex-sol"
-default_breakout = "codex-terra"
-default_task = "codex-terra"
-default_consult = "codex-sol"
+default_breakout = "codex-luna"
+default_task = "codex-luna"
+default_consult = "codex-luna"
 
 # Learning loop: when true, candidate ordering is re-biased by outcomes.jsonl
 # history (success rate / cost per tier). Off by default; enable after data

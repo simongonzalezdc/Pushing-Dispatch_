@@ -19,8 +19,9 @@ diagnostic probe, not preference-based routing.
 | Need | Normal route |
 |---|---|
 | Typo, lint, tiny mechanical edit | `codex-luna` |
-| Ordinary implementation | `codex-terra` |
-| Hard implementation, architecture, consult | `codex-sol` |
+| First attempt for any task | `codex-luna` (xhigh) |
+| Explicit retry after unusable Luna result | `codex-terra` (high) |
+| Exceptional final ladder | `codex-sol` (low, then medium, then high; stop) |
 | Long context | `kimi-k27` |
 | Visual work | Codex, Kimi, or AGY; never GLM |
 | Gemini | AGY only |
