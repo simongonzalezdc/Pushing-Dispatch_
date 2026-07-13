@@ -85,6 +85,19 @@ class TestMatrixShape(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("capped at high", result.stderr)
 
+    def test_codex_dispatch_allows_projectless_working_directory(self):
+        wrapper = ROOT / "bin" / "wrappers" / "codex-luna.sh"
+        result = subprocess.run(
+            [
+                str(wrapper), "--worker-id", "test-projectless",
+                "--cwd", "/tmp", "--mode", "task",
+                "--task", "Return Status: DONE", "--dry-run",
+            ],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--skip-git-repo-check", result.stdout)
+
     def test_worker_prompt_has_bounded_reasoning_stop_contract(self):
         prompt = (ROOT / "bin" / "wrappers" / "executor_prompt.md").read_text()
         self.assertIn("Stop conditions", prompt)

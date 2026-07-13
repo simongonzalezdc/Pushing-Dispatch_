@@ -372,6 +372,7 @@ ce_run_codex() {
     local cmd=(
         codex
         exec
+        --skip-git-repo-check
         --cd "$CE_CWD"
         --sandbox "${CODEX_SANDBOX:-workspace-write}"
     )
