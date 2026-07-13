@@ -7,14 +7,14 @@ A brief is a markdown file with optional YAML frontmatter. It is the contract be
 ```markdown
 ---
 title: Short descriptive title
-executor: sonnet           # Optional: override auto-routing
+executor: codex-terra      # Optional; prefer auto-routing
 workspace: my-project      # Optional: project context
 includes:
   - dispatch-protocol
   - branch-safety
 nested_dispatch:           # Optional: enable nested dispatch
   max_depth: 2
-  allowed_executors: [haiku, kimi]
+  allowed_executors: [codex-luna, kilo-free-auto]
 ---
 
 # Task description
@@ -41,7 +41,7 @@ Use includes: for shared context rather than repeating it.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `title` | No | Human-readable title |
-| `executor` | No | Override auto-routing (e.g. "opus", "kimi") |
+| `executor` | No | Override auto-routing (e.g. `codex-terra`, `kimi-k27`) |
 | `workspace` | No | Project/workspace name for context |
 | `includes` | No | List of pack names to resolve and prepend |
 | `nested_dispatch` | No | Enable nested dispatch with constraints |

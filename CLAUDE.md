@@ -4,9 +4,11 @@ You are working in the `pushing-dispatch` repo: a multi-model dispatch framework
 
 ## What This Is
 
-A system that lets an orchestrator model dispatch worker agents across multiple providers (Anthropic, Moonshot/Kimi, DeepSeek, and others) through a unified CLI. Four pillars:
+A system that lets an orchestrator dispatch workers across the verified Codex,
+GLM 5.2, native Kimi, GJC MiniMax, AGY Gemini, Kilo-free, and LM Studio lanes
+through a unified CLI. Four pillars:
 
-1. **Harness flip**: all providers route through one Claude Code harness via Anthropic-compat endpoints
+1. **Native harness routing**: each executor uses its verified native or managed harness
 2. **Brief-only context**: workers see only baseline + declared packs + task (no ambient context leakage)
 3. **Matrix-driven routing**: `dispatch_matrix.toml` is the single source of truth for executor capabilities
 4. **Nested dispatch**: workers can spawn sub-workers with budget cascade, permissions, depth caps

@@ -37,6 +37,21 @@ class TestRouter(unittest.TestCase):
     def test_trivial_picks_first_available(self):
         self.assertEqual(route("fix typo", "task", available=["openai-mini", "zai-glm"]), "openai-mini")
 
+    def test_natural_language_typo_is_trivial(self):
+        self.assertEqual(route("fix a typo", "task", available=["openai-mini", "zai-glm"]), "openai-mini")
+
+    def test_short_nonmechanical_task_uses_standard_tier(self):
+        self.assertEqual(
+            route("write the account recovery flow", "task", available=["codex-spark", "openai-mini"]),
+            "codex-spark",
+        )
+
+    def test_plain_implementation_is_standard_not_hard(self):
+        self.assertEqual(
+            route("implement the account recovery flow", "task", available=["codex-spark", "openai-gpt55-high"]),
+            "codex-spark",
+        )
+
     def test_trivial_falls_back_when_first_unavailable(self):
         self.assertEqual(route("fix typo", "task", available=["zai-glm"]), "zai-glm")
 

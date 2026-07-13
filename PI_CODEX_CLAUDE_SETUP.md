@@ -1,5 +1,9 @@
 # Pushing Dispatch Local Setup
 
+> Historical multi-host setup notes. `codex-oss` and Anthropic subscription
+> executors are retired. Use a host-specific LM Studio/Ollama matrix entry and
+> the current rules in `GLOBAL_AGENT_ROUTING.md`.
+
 This checkout is configured for mixed Claude Code, Codex, metered provider, and Raspberry Pi/local-model use.
 
 ## Executors

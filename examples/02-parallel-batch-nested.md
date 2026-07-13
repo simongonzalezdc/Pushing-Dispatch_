@@ -1,12 +1,12 @@
 ---
 title: Add license headers to all Python files
-executor: sonnet
+executor: codex-terra
 includes:
   - branch-safety
   - nested-dispatch
 nested_dispatch:
   max_depth: 1
-  allowed_executors: [haiku]
+  allowed_executors: [codex-luna]
 ---
 
 # Task
@@ -25,7 +25,7 @@ doesn't already have one.
 
 1. Find all .py files in src/ missing the license header
 2. Group them into batches of 10 files
-3. For each batch, dispatch a haiku sub-worker with a brief listing
+3. For each batch, dispatch a codex-luna sub-worker with a brief listing
    the exact files to update
 4. Wait for all sub-workers to complete
 5. Run a verification pass: grep all .py files to confirm the header
@@ -38,7 +38,7 @@ For each batch, write a brief like:
 ```markdown
 ---
 title: Add license header batch N
-executor: haiku
+executor: codex-luna
 ---
 Add this exact header to the top of each file (before any existing code,
 after any shebang line):
@@ -57,4 +57,4 @@ Files:
 - Only add the header, do not modify any other content
 - Preserve shebang lines (#!/usr/bin/env python3) at the top
 - Do not add duplicate headers to files that already have one
-- Sub-workers use haiku (this is mechanical insertion)
+- Sub-workers use codex-luna (this is mechanical insertion)

@@ -1,127 +1,64 @@
-# Provider Configuration
+# Provider and Executor Matrix
 
-## Anthropic (Claude)
+The committed `dispatch_matrix.toml` in the canonical Forgejo repository is the
+fleet-wide machine-readable source of truth. Do not infer a
+model from the harness name, and do not restore a retired lane from an old doc.
 
-### Executors: opus, sonnet, haiku
+## Current Matrix
 
-**Endpoint:** Native (no ANTHROPIC_BASE_URL override needed)
+| Executor | Harness / access | Model | Vision | Intended role |
+|---|---|---|---|---|
+| `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna | Yes | Tiny mechanical work |
+| `codex-terra` | Codex CLI, ChatGPT subscription | GPT-5.6 Terra | Yes | Everyday default; replaces GPT-5.5 |
+| `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol | Yes | Hard tasks and consults |
+| `zai-glm` | Claude Code harness via `claude-glm52` | GLM 5.2 | **No** | Strong non-visual worker |
+| `kimi-k27` | Native `kimi-cli` only | `kimi-code/kimi-for-coding` (Kimi K2.7) | Yes | Long context and implementation |
+| `minimax-m3` | GJC backup path | `minimax-code/minimax-m3` | No | Backup coding lane |
+| `agy-gemini-pro` | AGY only | Gemini 3.1 Pro (High) | Yes | Deep/visual Gemini lane |
+| `agy-gemini-flash` | AGY only | Gemini 3.5 Flash (Medium) | Yes | Fast/visual Gemini lane |
+| `kilo-free-auto` | Native Kilo CLI | `kilo/kilo-auto/free` | No | Free overflow only |
+| `lm-studio` | Local LM Studio | `qwen3.6-35b-a3b-mtp` | No | Local/private fallback |
 
-**Auth:** Anthropic API key or Claude Code subscription
+## Routing Rules
+
+- Luna handles trivial mechanical work.
+- Terra is the normal default.
+- Sol handles hard implementation, architecture, review, and consult work.
+- Kimi K2.7 is available only through native Kimi CLI.
+- Gemini is available only through AGY; Gemini CLI and direct-API wrappers are retired.
+- MiniMax M3 is accessed through GJC as a backup.
+- Kilo is free-only. Its safe default is `kilo/kilo-auto/free`; monthly named free models must be verified live before use. Never silently fall through to a paid Kilo model.
+- GLM 5.2 has no vision. Image, screenshot, PDF-render, and visual tasks must use a vision-capable lane.
+- When native search is missing or unreliable, use the globally configured DuckDuckGo `ddg` MCP. Never fabricate search results.
+
+## Claude Code Means GLM 5.2 Here
+
+The official Anthropic subscription is not an active provider lane. The global
+`claude` entry point is a GLM 5.2 harness, backed by `bin/claude-glm52`; the
+original binary remains available as `claude-real` for maintenance only.
+Opus, Sonnet, and Haiku are not Dispatch executors.
+
+## Authentication
+
+- Codex executors use the logged-in ChatGPT subscription session, not an OpenAI API key.
+- `zai-glm` uses `Z_AI_API_KEY` or the corresponding secure key store entry.
+- Kimi, AGY, GJC, Kilo, and LM Studio use their native harness authentication.
+- Do not paste credentials into the matrix or documentation.
+
+## Verify Current State
 
 ```bash
-# Option A: API key
-export ANTHROPIC_API_KEY="sk-ant-api03-..."
-
-# Option B: Subscription auth
-claude login
+pushing-dispatch validate-matrix dispatch_matrix.toml
+pushing-dispatch doctor
+pushing-dispatch doctor --probe
 ```
 
-**Bare mode:** Off (`CE_BARE_MODE=0`). Anthropic providers use normal Claude Code mode because subscription OAuth requires it. Workers auto-load the project CLAUDE.md (which should be skeletonized to stay small).
+The full probe must pass through each real wrapper before the matrix is called
+green. Route a task through `auto`; do not hand-pick a provider from this table.
 
-**Context window:**
-- Opus 4.7: 1M tokens (1M-context plan) or 200K (standard tier)
-- Sonnet 4.6: 200K standard, 1M with the `context-1m-2025-08-07` beta header
-- Haiku 4.5: 200K
+## Retired Lanes
 
-**Thinking tokens:**
-- Opus: default 4000, ceiling 16000
-- Sonnet: default 4000, ceiling 16000
-- Haiku: default 0 (disabled), ceiling 2000
-
-**Cost model:** Subscription-based. Token counts tracked for visibility but cost shows as $0.00 in the budget ledger (unless using API key billing).
-
-**Caveats:**
-- Rules engine and hooks fire normally (not `--bare`)
-- CLAUDE.md auto-discovery is active (keep it small via skeleton_lint.py)
-
-## Moonshot (Kimi K2.6)
-
-### Executors: kimi, kimi-think
-
-**Endpoint:** `https://api.moonshot.ai/anthropic` (Anthropic-compatible)
-
-**Auth:**
-```bash
-export MOONSHOT_API_KEY="sk-..."
-```
-
-**Bare mode:** On (`CE_BARE_MODE=1`). Workers see only baseline + brief + packs.
-
-**Context window:** 256K tokens. Useful when you do not have access to Anthropic's 1M-context tier.
-
-**Thinking tokens:**
-- `kimi`: 0 (thinking disabled, for mechanical work)
-- `kimi-think`: 4000 default, 8000 ceiling (for hard problems)
-
-**Cost model:** Metered. As of 2026-04-27 (verify at platform.moonshot.cn):
-- Cache miss input: ~$0.95/M
-- Cache hit input: ~$0.16/M (6x cheaper)
-- Output: ~$4.00/M
-
-API key path is metered regardless of any web subscription.
-
-**Routing guidance:**
-- Long-context tasks (>50K tokens): prefer `kimi`
-- Mechanical refactors, doc generation: prefer `kimi`
-- Hard coding problems where Sonnet over-thinks: try `kimi-think`
-
-**Caveats:**
-- `temperature` and `top_p` are fixed when thinking is enabled (setting them returns an API error)
-- `tool_choice` limited to `"auto"` or `"none"` with thinking enabled
-- Rules engine does not fire (hooks disabled by `--bare`)
-- Max turns capped at 25 by default (configurable in matrix)
-
-## DeepSeek
-
-### Executor: deepseek
-
-**Endpoint:** `https://api.deepseek.com/anthropic` (Anthropic-compatible)
-
-**Auth:**
-```bash
-export DEEPSEEK_API_KEY="sk-..."
-```
-
-**Bare mode:** On (`CE_BARE_MODE=1`)
-
-**Context window:** 1M tokens (DeepSeek V4)
-
-**Default model:** `deepseek-v4-flash` (cheap, mechanical work). Swap to `deepseek-v4-pro` in the matrix for harder reasoning.
-
-**Thinking tokens:** Default 4000, ceiling 8000
-
-**Cost model:** Metered. As of 2026-04-27 (verify at platform.deepseek.com):
-- V4-flash: ~$0.14/M input, ~$0.28/M output
-- V4-pro (75% promo through 2026-05-05): ~$0.435/M input, ~$0.87/M output. Post-promo: multiply by 4.
-- V4-pro cache hit: ~$0.0036/M input
-
-**Routing guidance:**
-- Pure-code tasks with strong type/test signals: prefer `deepseek` (v4-flash)
-- Good alternative to Sonnet for mechanical coding
-- Long-context summarization: V4's 1M window competes with Kimi's 256K
-
-**Caveats:**
-- Same `--bare` limitations as Kimi (no hooks, no rules engine)
-- Max turns capped at 25 by default
-
-## Adding a New Provider
-
-Any provider that exposes an Anthropic-compatible API endpoint can be added in under 30 minutes. See [CUSTOMIZATION.md](CUSTOMIZATION.md) for the step-by-step recipe.
-
-Requirements for a new provider:
-1. Anthropic-compatible `/v1/messages` endpoint
-2. Support for `ANTHROPIC_AUTH_TOKEN` header (or equivalent)
-3. Tool-use support in the API response format
-
-## Provider Comparison Matrix
-
-| Feature | Anthropic | Moonshot | DeepSeek |
-|---------|-----------|----------|----------|
-| Context window | 200K, 1M (Opus, Sonnet w/ beta) | 256K | 1M (V4) |
-| Bare mode | No (OAuth) | Yes | Yes |
-| Hooks fire | Yes | No | No |
-| CLAUDE.md loads | Yes (skeleton) | No | No |
-| Thinking tokens | Up to 16K | Up to 8K | Up to 8K |
-| Cost model | Subscription/API | Metered | Metered |
-| Nested dispatch | Yes | Yes | Yes |
-| Max turns default | Unlimited | 25 | 25 |
+GPT-5.5, Codex OSS, NUCBox Gemma, direct Anthropic subscription models,
+Moonshot Anthropic-compatible Kimi, DeepSeek, direct MiniMax, Gemini CLI, and
+legacy direct Gemini API lanes are retired. Historical handoffs and plans may
+mention them, but they are not operational instructions.

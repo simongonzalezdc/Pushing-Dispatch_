@@ -3,8 +3,8 @@
 pushing-dispatch CLI - Multi-model dispatch for AI coding agents.
 
 Usage:
-    python cli.py task start --executor sonnet --task-file brief.md --cwd /path/to/project
-    python cli.py breakout start --executor opus --task-file brief.md --cwd /path/to/project
+    python cli.py task start --executor codex-terra --task-file brief.md --cwd /path/to/project
+    python cli.py breakout start --executor codex-sol --task-file brief.md --cwd /path/to/project
     python cli.py list [--tree] [--active]
     python cli.py status <worker-id>
     python cli.py kill <worker-id> [--no-cascade]
@@ -547,10 +547,10 @@ def _probe_executor(name, cfg, repo_root):
     # on credentials. Probes therefore exercise the default auth lineage.
     cmd = [
         wrapper_path,
-        "--task", "Reply with exactly: OK",
+        "--task", "Reply with exactly two lines:\nOK\nStatus: DONE",
         "--worker-id", worker_id,
         "--mode", mode,
-        "--max-turns", "1",
+        "--max-turns", "3",
         "--cwd", probe_root,
     ]
     try:
@@ -700,7 +700,7 @@ def cmd_answer(args):
     })
 
     # Re-dispatch with same executor.
-    executor = status.get("executor", "sonnet")
+    executor = status.get("executor", "codex-terra")
     cwd = status.get("cwd") or os.getcwd()
     matrix = _load_matrix()
     executors_map = _build_executors(matrix) if matrix else {}
@@ -813,7 +813,7 @@ def cmd_checkpoint_continue(args):
         sys.exit(2)
 
     matrix = _load_matrix()
-    executor = args.executor or "sonnet"
+    executor = args.executor or "codex-terra"
     executors_map = _build_executors(matrix) if matrix else {}
     wrapper = executors_map.get(executor, f"{executor}.sh")
     wrapper_path = Path(__file__).parent / "bin" / "wrappers" / wrapper
@@ -984,7 +984,7 @@ def main():
     ck_cont = checkpoint_sub.add_parser("continue", help="Re-dispatch a paused worker")
     ck_cont.add_argument("worker_id", help="Worker ID to resume")
     ck_cont.add_argument("--worktree", help="Override worktree path")
-    ck_cont.add_argument("--executor", help="Executor for resumption (default: sonnet)")
+    ck_cont.add_argument("--executor", help="Executor for resumption (default: codex-terra)")
     ck_cont.add_argument("--task-file", help="Resumption brief path")
 
     # validate-matrix

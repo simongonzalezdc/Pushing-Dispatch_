@@ -1,5 +1,8 @@
 # Handoff: pushing-dispatch Public Repo Build
 
+> Historical snapshot only. Its provider names and model IDs are retired; use
+> `dispatch_matrix.toml` and `docs/PROVIDERS.md` for current operations.
+
 ## What Was Built
 
 A standalone, public-ready multi-model dispatch framework extracted from a private dispatch system. The repo contains:

@@ -29,10 +29,13 @@ LONG_CONTEXT_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 MECHANICAL_KEYWORDS = re.compile(
-    r"(rename|refactor|lint|format|fix typo|add comment|update import)", re.IGNORECASE,
+    r"(rename|refactor|lint|format|fix(?:\s+(?:a|the))?\s+typo|add comment|update import)",
+    re.IGNORECASE,
 )
 HARD_CODING_KEYWORDS = re.compile(
-    r"(implement|architect|design|debug|optimize|complex logic|concurren)", re.IGNORECASE,
+    r"(architect|debug|optimi[sz]e|complex logic|concurren|race condition|"
+    r"hard implementation|multi[- ]module|distributed system)",
+    re.IGNORECASE,
 )
 VISION_REQUIREMENT_KEYWORDS = re.compile(
     r"\bvision\s+required\b|\b(?:screenshot|image)\b|"
@@ -80,7 +83,7 @@ def _tier(brief_text, mode, route_cfg):
     if mode == "breakout":
         return "hard_breakout_candidates", ["default_breakout"]
     trivial_threshold = int(route_cfg.get("trivial_threshold_tokens", 5_000))
-    if tokens < trivial_threshold and (mode == "task" or MECHANICAL_KEYWORDS.search(brief_text)):
+    if tokens < trivial_threshold and MECHANICAL_KEYWORDS.search(brief_text):
         return "trivial_candidates", ["trivial_executor", "default_task"]
     return "standard_candidates", ["default_task"]
 

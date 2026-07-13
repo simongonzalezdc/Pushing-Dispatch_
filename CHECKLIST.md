@@ -1,5 +1,7 @@
 # Delivery Checklist
 
+> Historical build checklist. It does not define the current executor matrix.
+
 What is covered vs deferred in this release.
 
 ## Covered

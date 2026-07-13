@@ -1,4 +1,8 @@
-# Pushing Dispatch_ -- Gemini CLI Orientation
+# Pushing Dispatch -- Legacy Gemini CLI Orientation
+
+> **Retired operational surface:** Gemini now runs through AGY only
+> (`agy-gemini-pro` and `agy-gemini-flash`). Do not use this file to restore a
+> Gemini CLI or direct-API lane. It remains only as historical orientation.
 
 You are working in the `pushing-dispatch` repo: a multi-model dispatch framework for AI coding agents.
 

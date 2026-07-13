@@ -5,7 +5,7 @@ Pushing Dispatch is the shared model-selection front door for coding agents.
 ## Install
 
 ```bash
-cd /Users/simongonzalezdecruz/workspaces/Pushing-Dispatch_
+cd "$HOME/workspaces/pushing-dispatch"
 bash bin/install-global-routing.sh
 ```
 
@@ -56,9 +56,22 @@ To launch a worker:
 pushing-dispatch task start --executor auto --task "<brief>" --cwd "$PWD"
 ```
 
-Do not hand-pick Opus/Sonnet/Haiku/GPT/Kimi/Z.ai/MiniMax/Gemini/Kilo from vibes
+Do not hand-pick GPT/Kimi/Z.AI/MiniMax/Gemini/local models from vibes
 when Dispatch is available. Dispatch owns the best-fit and cost-efficient choice
 through `dispatch_matrix.toml`.
+
+Current provider truth:
+
+- Anthropic subscription lanes are retired and absent from the matrix.
+- Claude Code defaults to Z.AI `glm-5.2` through `bin/claude-glm52`.
+- GLM 5.2 has no vision capability. Dispatch must reject GLM for images, screenshots, video, rendered-UI inspection, and every other visual task.
+- When any model's primary search path fails or yields unusable results, retry through the globally configured DuckDuckGo `ddg` MCP. If DDG also fails, report the search failure; never fabricate results, URLs, or citations.
+- GJC is the backup: `gjc --model zai/glm-5.2` or `gjc --model minimax-code/minimax-m3`.
+- `claude-minimax` is the direct MiniMax M3 fallback.
+- Kimi K2.7 is the single `kimi-k27` lane, exclusive to native `kimi-cli` through its managed `kimi-for-coding` alias.
+- Gemini models are exclusive to AGY (`agy-gemini-flash` and `agy-gemini-pro`); Gemini CLI and legacy direct-API lanes are retired.
+- Codex uses the ChatGPT subscription: GPT-5.6 Luna for trivial work, Terra as the better-and-cheaper everyday replacement for GPT-5.5, and Sol for frontier hard/consult work. GPT-5.5, Codex OSS, and NUCBox Gemma are retired.
+- Kilo is CLI-only and free-only: the durable lane is `kilo-free-auto` using `kilo/kilo-auto/free`. Never fall through to a paid Kilo model; rotating monthly `:free` models must be verified live before use.
 
 ## Registered Local Surfaces
 
@@ -81,6 +94,6 @@ bash bin/install-global-routing.sh
 pushing-dispatch route --mode task --task "fix a typo"
 ```
 
-For local-only Pi workers, make sure `codex`, `ollama`, and the selected local
-model are installed, then use the `codex-oss` executor or let `auto` choose it
-when the matrix is adjusted for that host.
+For local-only hosts, define an explicit host-local executor in that host's
+matrix (for example LM Studio or Ollama) and let `auto` select it. `codex-oss`
+is retired and must not be restored as a generic fallback.

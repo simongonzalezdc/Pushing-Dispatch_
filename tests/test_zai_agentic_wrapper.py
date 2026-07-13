@@ -8,6 +8,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ZaiAgenticWrapperTests(unittest.TestCase):
+    def test_zai_defaults_to_glm_52(self):
+        wrapper = (ROOT / "bin" / "wrappers" / "zai.sh").read_text()
+
+        self.assertIn('ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-glm-5.2}"', wrapper)
+
+    def test_global_launcher_forces_glm_52_without_plaintext_key(self):
+        launcher = (ROOT / "bin" / "claude-glm52").read_text()
+
+        self.assertIn("https://api.z.ai/api/anthropic", launcher)
+        self.assertIn("glm-5.2", launcher)
+        self.assertIn("security find-generic-password", launcher)
+        self.assertIn("ANTHROPIC_SMALL_FAST_MODEL", launcher)
+        self.assertIn("unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY", launcher)
+        self.assertIn("glm_api_key", launcher)
+        self.assertNotIn("Z_AI_API_KEY=", launcher)
+
     def test_zai_uses_agentic_claude_code_transport(self):
         wrapper = (ROOT / "bin" / "wrappers" / "zai.sh").read_text()
 

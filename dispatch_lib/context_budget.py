@@ -15,14 +15,16 @@ CHARS_PER_TOKEN = 4
 
 # Default context windows by provider (tokens).
 DEFAULT_CONTEXT_WINDOWS = {
-    "opus": 200_000,
-    "sonnet": 200_000,
-    "haiku": 200_000,
-    "kimi": 256_000,
-    "kimi-think": 256_000,
-    "deepseek": 128_000,
-    "minimax": 128_000,
-    "ollama-local": 8_000,
+    "kimi-k27": 262_144,
+    "zai-glm": 1_000_000,
+    "minimax-m3": 512_000,
+    "codex-luna": 272_000,
+    "codex-terra": 272_000,
+    "codex-sol": 272_000,
+    "agy-gemini-pro": 1_000_000,
+    "agy-gemini-flash": 1_000_000,
+    "kilo-free-auto": 128_000,
+    "lm-studio": 131_072,
 }
 
 # Reserved tokens for system prompt, tool definitions, response.

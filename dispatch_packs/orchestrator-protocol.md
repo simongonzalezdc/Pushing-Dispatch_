@@ -20,12 +20,12 @@ Stay inline when:
 
 | Signal | Executor | Why |
 |--------|----------|-----|
-| Long context (>50K tokens) | kimi | 256K window, cheap per-token |
-| Mechanical refactor | kimi or haiku | No reasoning needed |
-| Hard coding with clear spec | deepseek or kimi-think | Strong code generation |
-| Synthesis / planning | opus | Best judgment |
-| Trivial (lint, typo) | haiku | Fast, cheap |
-| Default (no signal) | sonnet | Good all-rounder |
+| Long context (>50K tokens) | `kimi-k27` | Native Kimi K2.7 lane |
+| Mechanical refactor | `codex-luna` | Fast subscription lane |
+| Everyday work | `codex-terra` | Default quality/cost balance |
+| Hard coding or synthesis | `codex-sol` | Frontier hard/consult lane |
+| Visual work | Terra/Sol, Kimi, or AGY | GLM has no vision |
+| Free overflow | `kilo-free-auto` | Kilo free models only |
 
 ## Writing a Brief
 
@@ -59,7 +59,7 @@ When writing a brief that should allow the worker to sub-dispatch, add:
 ```yaml
 nested_dispatch:
   max_depth: 2
-  allowed_executors: [haiku, kimi]
+  allowed_executors: [codex-luna, kilo-free-auto]
 ```
 
 This injects the nested dispatch feature flag and depth cap at launch time.

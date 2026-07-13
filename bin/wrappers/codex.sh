@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 # codex.sh - Dispatch a Codex worker through Codex CLI.
 #
-# Uses Codex's native non-interactive exec mode. Configure with:
-#   CODEX_MODEL=gpt-5.1-codex
+# Uses Codex's native non-interactive exec mode. Active model wrappers are
+# codex-luna.sh, codex-terra.sh, and codex-sol.sh.
 #   CODEX_SANDBOX=workspace-write
 #   CODEX_APPROVAL_POLICY=never
 #
-# For local/Ollama execution, use the codex-oss executor or set:
-#   CODEX_OSS=1 CODEX_LOCAL_PROVIDER=ollama
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

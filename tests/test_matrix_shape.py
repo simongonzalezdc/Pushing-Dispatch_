@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # Providers that authenticate via CLI login or run locally (no API key needed).
-CLI_OR_LOCAL = {"anthropic", "openai-codex", "ollama", "lm-studio", "codex-oss"}
+CLI_OR_LOCAL = {"anthropic", "openai-codex", "agy", "gjc", "kilo-cli", "kimi-cli", "ollama", "lm-studio"}
 
 class TestMatrixShape(unittest.TestCase):
     def setUp(self):
@@ -38,6 +38,96 @@ class TestMatrixShape(unittest.TestCase):
         for name, cfg in self.m["executors"].items():
             if cfg.get("provider") == "openai-codex":
                 self.assertIn("account", cfg, name)
+
+    def test_codex_subscription_uses_only_gpt56_family(self):
+        codex = {
+            name: cfg for name, cfg in self.m["executors"].items()
+            if cfg.get("provider") == "openai-codex"
+        }
+        self.assertEqual(set(codex), {"codex-luna", "codex-terra", "codex-sol"})
+        self.assertEqual(
+            {cfg["model_id"] for cfg in codex.values()},
+            {"gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"},
+        )
+        serialized = str(self.m).lower()
+        self.assertNotIn("gpt-5.5", serialized)
+        self.assertNotIn("codex-oss", serialized)
+        self.assertNotIn("nucbox", serialized)
+
+    def test_expired_anthropic_subscription_is_not_routable(self):
+        providers = {cfg.get("provider") for cfg in self.m["executors"].values()}
+        self.assertNotIn("anthropic", providers)
+
+    def test_gemini_is_exclusive_to_agy(self):
+        gemini = {
+            name: cfg for name, cfg in self.m["executors"].items()
+            if "gemini" in name or "gemini" in cfg.get("model_id", "").lower()
+        }
+        self.assertEqual(set(gemini), {"agy-gemini-pro", "agy-gemini-flash"})
+        for name, cfg in gemini.items():
+            with self.subTest(executor=name):
+                self.assertEqual(cfg["provider"], "agy")
+                self.assertTrue(cfg["wrapper"].startswith("agy-"))
+                self.assertIn("vision", cfg.get("capabilities", []))
+
+    def test_kilo_is_cli_and_free_only(self):
+        kilo = {
+            name: cfg for name, cfg in self.m["executors"].items()
+            if "kilo" in name or cfg.get("provider") == "kilo-cli"
+        }
+        self.assertEqual(set(kilo), {"kilo-free-auto"})
+        cfg = kilo["kilo-free-auto"]
+        self.assertEqual(cfg["provider"], "kilo-cli")
+        self.assertEqual(cfg["model_id"], "kilo/kilo-auto/free")
+
+    def test_minimax_backup_uses_gjc(self):
+        cfg = self.m["executors"]["minimax-m3"]
+        self.assertEqual(cfg["provider"], "gjc")
+        self.assertEqual(cfg["model_id"], "minimax-code/minimax-m3")
+
+    def test_kimi_is_exclusive_to_native_cli(self):
+        kimi = {
+            name: cfg for name, cfg in self.m["executors"].items()
+            if "kimi" in name or "kimi" in cfg.get("model_id", "").lower()
+        }
+        self.assertEqual(set(kimi), {"kimi-k27"})
+        cfg = kimi["kimi-k27"]
+        self.assertEqual(cfg["provider"], "kimi-cli")
+        self.assertEqual(cfg["wrapper"], "kimi-cli.sh")
+        self.assertIn("vision", cfg.get("capabilities", []))
+
+    def test_primary_zai_lane_uses_glm_52(self):
+        zai = self.m["executors"]["zai-glm"]
+        self.assertEqual(zai["model_id"], "glm-5.2")
+        self.assertEqual(zai["context_window"], 1_000_000)
+        self.assertNotIn("vision", zai.get("capabilities", []))
+
+    def test_glm_variants_are_never_vision_capable(self):
+        for name, executor in self.m["executors"].items():
+            if "glm" in name or "glm" in executor.get("model_id", "").lower():
+                with self.subTest(executor=name):
+                    self.assertNotIn("vision", executor.get("capabilities", []))
+
+    def test_worker_baseline_requires_ddg_search_fallback(self):
+        baseline = (ROOT / "dispatch_packs" / "_baseline.md").read_text()
+        self.assertIn("DuckDuckGo", baseline)
+        self.assertIn("`ddg` MCP", baseline)
+        self.assertIn("Do not fabricate", baseline)
+
+    def test_minimax_m3_context_matches_current_provider(self):
+        minimax = self.m["executors"]["minimax-m3"]
+        self.assertEqual(minimax["model_id"], "minimax-code/minimax-m3")
+        self.assertGreaterEqual(minimax["context_window"], 512_000)
+
+    def test_nested_permissions_reference_real_executors(self):
+        for filename in ("dispatch_matrix.toml", "dispatch_matrix.toml.example"):
+            with open(ROOT / filename, "rb") as f:
+                matrix = tomllib.load(f)
+            executors = set(matrix["executors"])
+            for edge in matrix["nested_dispatch"]["permissions"]:
+                parent, child = edge.split(".", 1)
+                self.assertIn(parent, executors, f"{filename}: {edge}")
+                self.assertIn(child, executors, f"{filename}: {edge}")
 
     def test_example_matches_live_matrix(self):
         live = (ROOT / "dispatch_matrix.toml").read_bytes()

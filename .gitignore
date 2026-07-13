@@ -6,8 +6,8 @@ __pycache__/
 dist/
 build/
 
-# Dispatch artifacts (user-specific, not committed)
-dispatch_matrix.toml
+# The verified fleet matrix is committed and canonical. Host-specific
+# availability belongs in runtime health state, not a competing matrix.
 dispatch_pricing.toml
 
 # OMC / runtime state

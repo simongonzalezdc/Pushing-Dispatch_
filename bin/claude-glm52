@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Canonical Claude Code launcher: Claude Code harness, Z.AI GLM 5.2 model.
+
+set -euo pipefail
+
+real_claude="${CLAUDE_REAL_BIN:-$HOME/.local/bin/claude-real}"
+if [[ ! -x "$real_claude" ]]; then
+    echo "Claude Code binary not found at $real_claude" >&2
+    exit 1
+fi
+
+export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
+export ANTHROPIC_MODEL="glm-5.2"
+export ANTHROPIC_SMALL_FAST_MODEL="glm-5.2"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.2"
+export CLAUDE_CODE_SUBAGENT_MODEL="glm-5.2"
+
+# A stale Anthropic OAuth session must never shadow the selected Z.AI provider.
+unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
+
+if [[ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+    if [[ -n "${Z_AI_API_KEY:-}" ]]; then
+        export ANTHROPIC_AUTH_TOKEN="$Z_AI_API_KEY"
+    else
+        key=""
+        for account in z_ai_api_key glm_api_key; do
+            key="$(security find-generic-password -s "pushing-dispatch" -a "$account" -w 2>/dev/null || true)"
+            [[ -n "$key" ]] && break
+        done
+        if [[ -z "$key" ]]; then
+            echo "No Z.AI key found in the pushing-dispatch Keychain service" >&2
+            exit 1
+        fi
+        export ANTHROPIC_AUTH_TOKEN="$key"
+    fi
+fi
+
+exec "$real_claude" "$@"

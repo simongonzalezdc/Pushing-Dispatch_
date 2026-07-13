@@ -7,7 +7,7 @@ is a long-running worker that gets its own worktree, branch, and
 context-isolated environment.
 
 Usage:
-    python breakout.py launch <slug> [--executor opus] [--task-file brief.md]
+    python breakout.py launch <slug> [--executor codex-terra] [--task-file brief.md]
     python breakout.py launch <slug> --interactive
     python breakout.py status <worker-id>
     python breakout.py done <worker-id>
@@ -37,7 +37,7 @@ def cmd_launch(args):
     """Launch a breakout session in its own git worktree."""
     slug = args.slug
     cwd = args.cwd or os.getcwd()
-    executor = args.executor or "sonnet"
+    executor = args.executor or "codex-terra"
     task_file = args.task_file
 
     # Validate we're in a git repo
@@ -229,7 +229,7 @@ def main():
     # launch
     launch_parser = subparsers.add_parser("launch", help="Launch a breakout session")
     launch_parser.add_argument("slug", help="Short name for the worktree")
-    launch_parser.add_argument("--executor", default="sonnet", help="Executor name")
+    launch_parser.add_argument("--executor", default="codex-terra", help="Executor name")
     launch_parser.add_argument("--task-file", help="Path to brief file")
     launch_parser.add_argument("--cwd", help="Project directory")
     launch_parser.add_argument("--interactive", action="store_true", help="Interactive mode (no auto-dispatch)")

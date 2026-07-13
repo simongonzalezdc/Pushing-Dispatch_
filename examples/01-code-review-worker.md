@@ -1,6 +1,6 @@
 ---
 title: Code review with custom reviewer voice
-executor: opus
+executor: codex-sol
 includes:
   - branch-safety
 ---

@@ -7,7 +7,7 @@ Missing entries are treated as denied.
 
 Hard rules (always enforced, cannot be overridden by matrix):
   - Self-dispatch denied (loop prevention)
-  - Leaf executors cannot dispatch (haiku, minimax, ollama-local)
+  - Leaf executors cannot dispatch
   - Metered -> high-cost-subscription dispatch denied (cost-asymmetric)
 """
 
@@ -23,31 +23,29 @@ except ImportError:
 
 
 # Executors that may never dispatch sub-workers
-LEAF_EXECUTORS = {"haiku", "minimax", "ollama-local", "gemini"}
+LEAF_EXECUTORS = {"codex-luna", "minimax-m3", "agy-gemini-flash", "kilo-free-auto", "lm-studio"}
 
 # Provider cost tiers: metered providers charge per-token (budget-capped),
 # subscription providers have flat-rate access (unbounded per-call cost).
-METERED_PROVIDERS = frozenset({"minimax", "moonshot", "deepseek", "ollama"})
-SUBSCRIPTION_PROVIDERS = frozenset({"anthropic", "google"})
+METERED_PROVIDERS = frozenset({"zai", "kimi-cli", "gjc", "agy"})
+SUBSCRIPTION_PROVIDERS = frozenset({"openai-codex"})
 
-# High-cost subscription executors blocked from metered parents.
-# Haiku is anthropic (subscription) but cheap/bounded -- explicitly allowed
-# by the permissions table (kimi->haiku, deepseek->haiku). Only Opus and
-# Sonnet represent the "unbounded subscription cost" concern.
-HIGH_COST_SUBSCRIPTION = frozenset({"opus", "sonnet"})
+# Highest-cost subscription executor blocked from metered parents.
+HIGH_COST_SUBSCRIPTION = frozenset({"codex-sol"})
 
 # Executor -> provider mapping. Mirrors dispatch_matrix.toml for fast lookup
 # without a full matrix parse in the hot path.
 _EXECUTOR_PROVIDERS = {
-    "opus":       "anthropic",
-    "sonnet":     "anthropic",
-    "haiku":      "anthropic",
-    "minimax":    "minimax",
-    "kimi":       "moonshot",
-    "kimi-think": "moonshot",
-    "deepseek":   "deepseek",
-    "gemini":     "google",
-    "ollama-local": "ollama",
+    "kimi-k27": "kimi-cli",
+    "zai-glm": "zai",
+    "minimax-m3": "gjc",
+    "codex-luna": "openai-codex",
+    "codex-terra": "openai-codex",
+    "codex-sol": "openai-codex",
+    "agy-gemini-pro": "agy",
+    "agy-gemini-flash": "agy",
+    "kilo-free-auto": "kilo-cli",
+    "lm-studio": "lm-studio",
 }
 
 
@@ -86,10 +84,7 @@ def check_nested_permission(
                        f"sub-workers (leaf tier: no nested dispatch allowed)")
 
     # Hard rule 3: metered -> high-cost-subscription cost-asymmetric block.
-    # Blocks metered parents (kimi, deepseek, minimax) from spawning Opus or
-    # Sonnet. Haiku is anthropic (subscription) but cheap/bounded -- explicitly
-    # allowed by the permissions matrix. Only Opus and Sonnet represent the
-    # "unbounded subscription cost" concern.
+    # Blocks metered parents from spawning the highest-cost subscription lane.
     if _is_metered(parent_executor) and child_executor in HIGH_COST_SUBSCRIPTION:
         parent_provider = _EXECUTOR_PROVIDERS.get(parent_executor, "?")
         child_provider = _EXECUTOR_PROVIDERS.get(child_executor, "?")
@@ -97,7 +92,7 @@ def check_nested_permission(
                        f"{parent_executor} ({parent_provider}) cannot spawn "
                        f"{child_executor} ({child_provider}) -- cost-asymmetric: "
                        f"metered parent budget cannot account for "
-                       f"Opus/Sonnet subscription costs")
+                       f"the high-cost subscription child")
 
     # Load matrix permissions
     permissions = _load_permissions(matrix_path)
@@ -128,20 +123,25 @@ def _load_permissions(matrix_path: str = None) -> dict:
 def _default_permissions() -> dict:
     """Default permissions when no matrix file is available."""
     return {
-        "opus.sonnet": True,
-        "opus.haiku": True,
-        "opus.kimi": True,
-        "opus.deepseek": True,
-        "opus.ollama-local": True,
-        "opus.gemini": True,
-        "sonnet.haiku": True,
-        "sonnet.kimi": True,
-        "sonnet.deepseek": True,
-        "sonnet.ollama-local": True,
-        "sonnet.gemini": True,
-        "kimi.haiku": True,
-        "kimi.ollama-local": True,
-        "deepseek.haiku": True,
-        "deepseek.kimi": True,
-        "deepseek.ollama-local": True,
+        "codex-sol.codex-terra": True,
+        "codex-sol.codex-luna": True,
+        "codex-sol.kimi-k27": True,
+        "codex-sol.zai-glm": True,
+        "codex-sol.agy-gemini-pro": True,
+        "codex-sol.agy-gemini-flash": True,
+        "codex-sol.minimax-m3": True,
+        "codex-sol.kilo-free-auto": True,
+        "codex-sol.lm-studio": True,
+        "codex-terra.codex-luna": True,
+        "codex-terra.kilo-free-auto": True,
+        "codex-terra.lm-studio": True,
+        "kimi-k27.codex-luna": True,
+        "kimi-k27.kilo-free-auto": True,
+        "kimi-k27.lm-studio": True,
+        "zai-glm.codex-luna": True,
+        "zai-glm.agy-gemini-flash": True,
+        "zai-glm.minimax-m3": True,
+        "zai-glm.kilo-free-auto": True,
+        "minimax-m3.codex-luna": True,
+        "minimax-m3.kilo-free-auto": True,
     }

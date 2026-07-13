@@ -52,7 +52,7 @@ def _codex_ready() -> bool:
 
 
 def _local_ready(provider: str) -> bool:
-    if provider in ("ollama", "codex-oss"):
+    if provider == "ollama":
         return shutil.which("ollama") is not None
     if provider == "lm-studio":
         # Endpoint reachability is checked by health/smoke paths. Availability
@@ -107,11 +107,19 @@ def _key_present(env_var, account) -> bool:
 
 def _executor_available(cfg: dict) -> bool:
     provider = cfg.get("provider", "")
+    if provider == "agy":
+        return shutil.which("agy") is not None
+    if provider == "kilo-cli":
+        return shutil.which("kilo") is not None
+    if provider == "kimi-cli":
+        return shutil.which("kimi") is not None
+    if provider == "gjc":
+        return shutil.which("gjc") is not None
     if provider == "anthropic":
         return _anthropic_ready()
     if provider == "openai-codex":
         return _codex_ready()
-    if provider in ("ollama", "lm-studio", "codex-oss"):
+    if provider in ("ollama", "lm-studio"):
         return _local_ready(provider)
     return _key_present(cfg.get("key_env"), cfg.get("key_account"))
 

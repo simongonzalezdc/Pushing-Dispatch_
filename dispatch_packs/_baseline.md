@@ -23,6 +23,12 @@ Workers execute and report. Be terse. No conversational filler. Focus on: what y
 - **Never silently guess** when the spec is ambiguous
 - **Never retry blindly** on failure -- diagnose first
 
+## Search and Vision Safety
+
+- If the active model's search tool fails, returns unusable results, or is unavailable, retry the search through the globally configured DuckDuckGo `ddg` MCP.
+- Do not fabricate search results, citations, URLs, or claims when search fails. Report a blocker if both the primary search path and DuckDuckGo fail.
+- GLM models have no vision capability. Never ask GLM to inspect images, screenshots, video, rendered UI, or other visual artifacts; route that work to an executor whose matrix capabilities include `vision`.
+
 ## Question File Format
 
 ```markdown

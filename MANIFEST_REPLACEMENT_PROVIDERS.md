@@ -1,11 +1,14 @@
 # Manifest Replacement Provider Map
 
+> Historical planning artifact. All operational provider choices now live in
+> `dispatch_matrix.toml`; do not restore executors from this snapshot.
+
 Pushing Dispatch now mirrors the local Manifest routing matrix directly instead
 of using Manifest as a gateway.
 
 Source of truth inspected:
 
-- `/Users/simongonzalezdecruz/Documents/Codex/2026-05-23/mnfst-manifest-https-github-com-mnfst/manifest/ops/manifest-routing/matrix.json`
+- `<manifest-checkout>/ops/manifest-routing/matrix.json`
 
 ## Ported Providers
 

@@ -16,7 +16,7 @@ The fix: most providers now expose Anthropic-compatible API endpoints. Route the
 
 ### 1. The Harness Flip
 
-Every provider (Anthropic, Moonshot/Kimi, DeepSeek, MiniMax, local Ollama) runs through the same Claude Code harness via Anthropic-compatible endpoints. One set of tools, one status protocol, one context-loading pattern.
+Agentic providers use the strongest supported harness. Claude Code defaults to Z.AI GLM 5.2; GJC provides GLM 5.2 and MiniMax M3 backup paths; Kimi remains exclusive to `kimi-cli`. One status protocol and context-loading pattern span the executors.
 
 Adding a new provider = one shell wrapper + one TOML entry.
 
@@ -42,7 +42,7 @@ Kill propagation walks the tree bottom-up. No auto-retry on failure. Ever.
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/YOUR_ORG/pushing-dispatch.git
+git clone https://git.kyanitelabs.tech/simon/pushing-dispatch.git
 cd pushing-dispatch
 cp dispatch_matrix.toml.example dispatch_matrix.toml
 
@@ -50,11 +50,8 @@ cp dispatch_matrix.toml.example dispatch_matrix.toml
 bash bin/install-global-routing.sh
 bash bin/check-prereqs.sh
 
-# 3. Set API keys (at minimum, one provider)
-export ANTHROPIC_API_KEY="sk-ant-..."
-# Or for third-party providers:
-export MOONSHOT_API_KEY="sk-..."
-export DEEPSEEK_API_KEY="sk-..."
+# 3. Store provider credentials in the macOS Keychain
+bash bin/sync-credentials.sh
 
 # 4. Write a brief
 cat > /tmp/my-brief.md << 'EOF'
@@ -77,18 +74,14 @@ pushing-dispatch status <worker-id>
 
 | Provider | Executor | Endpoint | Context Window |
 |----------|----------|----------|----------------|
-| Anthropic (Claude Opus) | `opus` | Native | 200K |
-| Anthropic (Claude Sonnet) | `sonnet` | Native | 200K |
-| Anthropic (Claude Haiku) | `haiku` | Native | 200K |
-| Kimi Coding | `kimi-coding` | Anthropic-compat | 256K |
-| Moonshot (Kimi K2.6) | `kimi-moonshot` | Anthropic-compat | 128K |
-| DeepSeek | `deepseek` | Anthropic-compat | 128K |
-| Z.ai | `zai-glm`, `zai-air` | Anthropic-compat | 128K |
-| MiniMax | `minimax`, `minimax-m25*` | Anthropic/OpenAI-compat | 128K-200K |
-| OpenAI/Codex | `openai-*`, `codex-spark`, `codex` | Codex CLI | 200K |
-| Gemini | `gemini-*` | Gemini API | 1M |
-| Kilo Gateway | `kilo-*` | OpenAI-compat | model-dependent |
-| LM Studio / local | `lm-studio`, `codex-oss` | OpenAI/Codex local | model-dependent |
+| Kimi K2.7 | `kimi-k27` | Native Kimi CLI (`kimi-for-coding` managed alias) | 256K |
+| Z.ai GLM 5.2 | `zai-glm` | Claude Code / Anthropic-compat | 1M |
+| MiniMax M3 | `minimax-m3` | GJC | 512K |
+| GPT-5.6 Luna | `codex-luna` | Codex CLI / ChatGPT subscription | 272K |
+| GPT-5.6 Terra | `codex-terra` | Codex CLI / ChatGPT subscription | 272K |
+| GPT-5.6 Sol | `codex-sol` | Codex CLI / ChatGPT subscription | 272K |
+| Gemini via AGY | `agy-gemini-*` | AGY agentic harness | 1M |
+| LM Studio / local | `lm-studio` | OpenAI-compatible local | model-dependent |
 
 See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provider.
 
@@ -116,7 +109,7 @@ pushing-dispatch/
     wrappers/                     # Provider wrappers
       _exec.sh                    # Shared execution library
       executor_prompt.md          # Worker prompt template
-      sonnet.sh, opus.sh, ...     # One per provider
+      codex-terra.sh, zai.sh, ... # One per active executor/harness
     check-prereqs.sh              # Environment verification
     smoke-test.sh                 # First-run validation
   dispatch_packs/                 # Context packs for brief assembly
@@ -145,7 +138,7 @@ pushing-dispatch/
 This repo includes orientation files for AI coding agents:
 - [CLAUDE.md](CLAUDE.md) -- for Claude Code sessions
 - [AGENTS.md](AGENTS.md) -- for OpenAI Codex / generic agents
-- [GEMINI.md](GEMINI.md) -- for Gemini CLI sessions
+- [GEMINI.md](GEMINI.md) -- legacy orientation (AGY is the active Gemini harness)
 
 ## Core Principle
 
@@ -156,7 +149,7 @@ Judgment stays in one place (the orchestrator seat). Execution fans out to the c
 The fastest setup path: open a fresh Claude Code session, paste this:
 
 ```
-Read SETUP_WITH_CLAUDE.md from https://github.com/PUSHINGSQUARES/Pushing-Dispatch_ and walk me through setup end to end.
+Read SETUP_WITH_CLAUDE.md from the canonical Forgejo checkout and walk me through setup end to end.
 ```
 
 The session will check your prereqs, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.

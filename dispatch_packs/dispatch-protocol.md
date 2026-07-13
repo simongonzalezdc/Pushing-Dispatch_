@@ -35,8 +35,8 @@ Tiers and their `*_candidates` lists (matrix-driven, ordered best-first):
 - `trivial_candidates` — small mechanical work
 - `standard_candidates` — everything else
 
-Availability is computed per provider (CLI login for OpenAI/Anthropic, key
-presence for API providers, local CLI for ollama/lm-studio) and cached with a
+Availability is computed per provider (native login for Codex, Kimi, AGY, GJC,
+and Kilo; secure keys for Z.AI; local reachability for LM Studio) and cached with a
 short TTL. Single-value back-compat keys still parse if a list is absent.
 
 ### Self-healing
@@ -52,7 +52,8 @@ table; `bin/sync-credentials.sh` consolidates provider keys into the
 
 Every worker's cost is logged to an append-only JSONL ledger. The `budget` subcommand shows today's spend, optionally grouped by tree (for nested dispatch).
 
-Metered providers (Moonshot, DeepSeek) have real per-token costs. Subscription providers (Anthropic) track token counts for visibility but cost shows as $0.00.
+Metered/native-plan lanes track configured cost metadata. Codex subscription
+lanes track usage for visibility but do not use an OpenAI API-key cost path.
 
 ## Stall Detection
 

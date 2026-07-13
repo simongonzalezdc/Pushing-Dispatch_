@@ -431,6 +431,135 @@ ce_run_codex() {
     ce_finalize_from_text "$final_text"
 }
 
+ce_run_agy() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local cmd=(agy --model "${AGY_MODEL:?AGY_MODEL is required}" --print-timeout "${AGY_PRINT_TIMEOUT:-10m}" --print "$CE_FINAL_PROMPT")
+
+    if [[ "$CE_READ_ONLY" -eq 0 ]]; then
+        cmd+=(--dangerously-skip-permissions --mode accept-edits)
+    fi
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute AGY model: $AGY_MODEL"
+        return 0
+    fi
+
+    local exit_code=0
+    if [[ -n "$CE_CWD" ]]; then
+        (cd "$CE_CWD" && "${cmd[@]}") 2>&1 | tee "$log_file" || exit_code=$?
+    else
+        "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    fi
+    rm -f "$CE_ASSEMBLED_BRIEF"
+
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "agy exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
+ce_run_kilo() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local cmd=(kilo run --model "${KILO_MODEL:?KILO_MODEL is required}" --dir "$CE_CWD")
+    if [[ "$CE_READ_ONLY" -eq 0 ]]; then
+        cmd+=(--auto)
+    fi
+    cmd+=("$CE_FINAL_PROMPT")
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute Kilo model: $KILO_MODEL"
+        return 0
+    fi
+
+    local exit_code=0
+    "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    rm -f "$CE_ASSEMBLED_BRIEF"
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "kilo exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
+ce_run_kimi() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local cmd=(kimi --model "${KIMI_MODEL:?KIMI_MODEL is required}" --prompt "$CE_FINAL_PROMPT")
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute Kimi model alias: $KIMI_MODEL"
+        return 0
+    fi
+
+    local exit_code=0
+    if [[ -n "$CE_CWD" ]]; then
+        (cd "$CE_CWD" && "${cmd[@]}") 2>&1 | tee "$log_file" || exit_code=$?
+    else
+        "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    fi
+    rm -f "$CE_ASSEMBLED_BRIEF"
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "kimi exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
+ce_run_gjc() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local cmd=(gjc --model "${GJC_MODEL:?GJC_MODEL is required}" --no-session --no-title -p "$CE_FINAL_PROMPT")
+    local exit_code=0
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute GJC model: $GJC_MODEL"
+        return 0
+    fi
+    if [[ -n "$CE_CWD" ]]; then
+        (cd "$CE_CWD" && "${cmd[@]}") 2>&1 | tee "$log_file" || exit_code=$?
+    else
+        "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    fi
+    rm -f "$CE_ASSEMBLED_BRIEF"
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "gjc exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
 ce_run_openai_compatible() {
     if [[ -z "${CE_CWD:-}" ]]; then
         ce_parse_args "$@"

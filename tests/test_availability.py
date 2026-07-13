@@ -15,6 +15,22 @@ MATRIX = {
 }
 
 class TestAvailability(unittest.TestCase):
+    def test_agy_provider_uses_cli_presence(self):
+        with mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/agy"):
+            self.assertTrue(availability._executor_available({"provider": "agy"}))
+
+    def test_kilo_provider_uses_cli_presence(self):
+        with mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/kilo"):
+            self.assertTrue(availability._executor_available({"provider": "kilo-cli"}))
+
+    def test_kimi_provider_uses_cli_presence(self):
+        with mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/kimi"):
+            self.assertTrue(availability._executor_available({"provider": "kimi-cli"}))
+
+    def test_gjc_provider_uses_cli_presence(self):
+        with mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/gjc"):
+            self.assertTrue(availability._executor_available({"provider": "gjc"}))
+
     def setUp(self):
         # Isolate state so resolve()'s cache write never touches the real
         # ~/.local/share/pushing-dispatch/availability.json.
