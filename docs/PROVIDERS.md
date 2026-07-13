@@ -41,7 +41,7 @@ Opus, Sonnet, and Haiku are not Dispatch executors.
 ## Authentication
 
 - Codex executors use the logged-in ChatGPT subscription session, not an OpenAI API key.
-- `zai-glm` uses `Z_AI_API_KEY` or the corresponding secure key store entry.
+- `zai-glm` uses `Z_AI_API_KEY` or the corresponding macOS Keychain / `pass` entry.
 - Kimi, AGY, GJC, Kilo, and LM Studio use their native harness authentication.
 - Do not paste credentials into the matrix or documentation.
 

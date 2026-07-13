@@ -25,12 +25,20 @@ if [[ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
         export ANTHROPIC_AUTH_TOKEN="$Z_AI_API_KEY"
     else
         key=""
-        for account in z_ai_api_key glm_api_key; do
-            key="$(security find-generic-password -s "pushing-dispatch" -a "$account" -w 2>/dev/null || true)"
-            [[ -n "$key" ]] && break
-        done
+        if command -v security >/dev/null 2>&1; then
+            for account in z_ai_api_key glm_api_key; do
+                key="$(security find-generic-password -s "pushing-dispatch" -a "$account" -w 2>/dev/null || true)"
+                [[ -n "$key" ]] && break
+            done
+        fi
+        if [[ -z "$key" ]] && command -v pass >/dev/null 2>&1; then
+            for account in z_ai_api_key glm_api_key; do
+                key="$(pass show "pushing-dispatch/$account" 2>/dev/null | head -n 1 || true)"
+                [[ -n "$key" ]] && break
+            done
+        fi
         if [[ -z "$key" ]]; then
-            echo "No Z.AI key found in the pushing-dispatch Keychain service" >&2
+            echo "No Z.AI key found in the environment, Keychain, or pass store" >&2
             exit 1
         fi
         export ANTHROPIC_AUTH_TOKEN="$key"

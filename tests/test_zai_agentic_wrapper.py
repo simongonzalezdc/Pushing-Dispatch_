@@ -19,6 +19,7 @@ class ZaiAgenticWrapperTests(unittest.TestCase):
         self.assertIn("https://api.z.ai/api/anthropic", launcher)
         self.assertIn("glm-5.2", launcher)
         self.assertIn("security find-generic-password", launcher)
+        self.assertIn('pass show "pushing-dispatch/$account"', launcher)
         self.assertIn("ANTHROPIC_SMALL_FAST_MODEL", launcher)
         self.assertIn("unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY", launcher)
         self.assertIn("glm_api_key", launcher)
