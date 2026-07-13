@@ -22,7 +22,7 @@ model from the harness name, and do not restore a retired lane from an old doc.
 ## Routing Rules
 
 - Luna handles trivial mechanical work.
-- Terra is the normal default.
+- Luna xhigh is the normal first attempt. Terra high is the explicit fallback after an unusable Luna result.
 - Sol handles hard implementation, architecture, review, and consult work.
 - Kimi K2.7 is available only through native Kimi CLI.
 - Gemini is available only through AGY; Gemini CLI and direct-API wrappers are retired.

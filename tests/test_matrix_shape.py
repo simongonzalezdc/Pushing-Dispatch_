@@ -91,6 +91,21 @@ class TestMatrixShape(unittest.TestCase):
         self.assertIn("Do not continue reasoning", prompt)
         self.assertIn("reassess", prompt.lower())
 
+    def test_agent_docs_do_not_teach_retired_terra_default(self):
+        paths = (
+            ROOT / "AGENTS.md",
+            ROOT / "GLOBAL_AGENT_ROUTING.md",
+            ROOT / "docs" / "PROVIDERS.md",
+            ROOT / "docs" / "ORCHESTRATING.md",
+            ROOT / "dispatch_packs" / "orchestrator-protocol.md",
+        )
+        stale = ("Luna for trivial", "Terra is the normal default", "Terra as the everyday default")
+        for path in paths:
+            text = path.read_text()
+            for phrase in stale:
+                self.assertNotIn(phrase, text, f"{path}: {phrase}")
+        self.assertIn("Luna at Extra High", (ROOT / "AGENTS.md").read_text())
+
     def test_expired_anthropic_subscription_is_not_routable(self):
         providers = {cfg.get("provider") for cfg in self.m["executors"].values()}
         self.assertNotIn("anthropic", providers)

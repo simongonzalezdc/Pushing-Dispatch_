@@ -1,6 +1,6 @@
 ---
 title: Add license headers to all Python files
-executor: codex-terra
+executor: codex-luna
 includes:
   - branch-safety
   - nested-dispatch

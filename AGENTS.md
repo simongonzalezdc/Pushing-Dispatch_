@@ -31,7 +31,7 @@ Four pillars:
 - If any model's normal search path fails or produces unusable results, use the global DuckDuckGo `ddg` MCP fallback; never invent search results or citations.
 - Kimi K2.7 is the single `kimi-k27` lane, exclusively through native `kimi-cli` using its managed `kimi-for-coding` alias; never Claude Code or GJC.
 - Gemini is exclusive to AGY; do not route Gemini through Gemini CLI or the legacy direct API wrappers.
-- Codex uses the ChatGPT subscription exclusively: Luna for trivial work, Terra as the everyday default, and Sol for hard/consult work. GPT-5.5, Codex OSS, and NUCBox Gemma are retired.
+- Codex uses the ChatGPT subscription with this mandatory GPT-5.6 ladder: Luna at Extra High is the first attempt for every task. If Luna returns an unusable result, explicitly retry Terra at High. Use Sol only when genuinely necessary, explicitly escalating Light, then Medium, then High; never exceed High, and stop to reassess after High. Auto-routing cannot judge semantic answer quality, so do not call `auto` again to advance the ladder. Every model prompt must state when to stop. GPT-5.5, Codex OSS, and NUCBox Gemma are retired.
 - Kilo uses the native Kilo CLI and only `kilo/kilo-auto/free`. Rotating `:free` monthly models require live catalog verification before temporary use; paid Kilo models are forbidden.
 - No swarm code (rolled back, no provider support).
 - No auto-retry on worker failure. Parent decides.
