@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Explicit Liam/Hermes adapter for external Pushing Dispatch workers.
+
+set -euo pipefail
+
+dispatch="${PUSHING_DISPATCH_BIN:-$HOME/.local/bin/pushing-dispatch}"
+if [[ ! -x "$dispatch" ]]; then
+  echo "Pushing Dispatch is unavailable at $dispatch" >&2
+  exit 69
+fi
+
+command_name="${1:-}"
+[[ -n "$command_name" ]] && shift
+
+case "$command_name" in
+  route)
+    exec "$dispatch" route "$@"
+    ;;
+  start)
+    mode="task"
+    args=()
+    while (($#)); do
+      case "$1" in
+        --mode)
+          [[ $# -ge 2 ]] || { echo "--mode requires task or breakout" >&2; exit 64; }
+          mode="$2"
+          shift 2
+          ;;
+        --executor|--executor=*)
+          echo "executor selection belongs to Pushing Dispatch" >&2
+          exit 64
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+    case "$mode" in
+      task|breakout) ;;
+      *) echo "start mode must be task or breakout; consult is route-only" >&2; exit 64 ;;
+    esac
+    exec "$dispatch" "$mode" start --executor auto "${args[@]}"
+    ;;
+  status|list|doctor|kill)
+    exec "$dispatch" "$command_name" "$@"
+    ;;
+  *)
+    echo "usage: hermes-dispatch {route|start|status|list|doctor|kill} ..." >&2
+    exit 64
+    ;;
+esac

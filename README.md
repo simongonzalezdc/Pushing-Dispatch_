@@ -130,6 +130,7 @@ pushing-dispatch/
 - [docs/ORCHESTRATING.md](docs/ORCHESTRATING.md) -- complete orchestrator guide
 - [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) -- per-user customization recipes
 - [docs/PROVIDERS.md](docs/PROVIDERS.md) -- provider-specific configuration
+- [docs/HERMES.md](docs/HERMES.md) -- Liam/Hermes orchestration integration
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) -- common gotchas
 - [CONTRIBUTING.md](CONTRIBUTING.md) -- how to contribute
 

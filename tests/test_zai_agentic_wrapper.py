@@ -23,7 +23,9 @@ class ZaiAgenticWrapperTests(unittest.TestCase):
         self.assertIn("ANTHROPIC_SMALL_FAST_MODEL", launcher)
         self.assertIn("unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY", launcher)
         self.assertIn("glm_api_key", launcher)
-        self.assertNotIn("Z_AI_API_KEY=", launcher)
+        self.assertIn("read-hermes-zai-key", launcher)
+        self.assertNotIn('source "$HOME/.hermes/.env"', launcher)
+        self.assertNotRegex(launcher, r'''export Z_AI_API_KEY=["'][^$]''')
 
     def test_zai_uses_agentic_claude_code_transport(self):
         wrapper = (ROOT / "bin" / "wrappers" / "zai.sh").read_text()
@@ -32,6 +34,41 @@ class ZaiAgenticWrapperTests(unittest.TestCase):
         self.assertIn("ANTHROPIC_AUTH_TOKEN", wrapper)
         self.assertIn("ce_run_claude", wrapper)
         self.assertNotIn("ce_run_openai_compatible", wrapper)
+
+    def test_global_launcher_finds_reader_when_invoked_through_symlink(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            hermes = home / ".hermes"
+            hermes.mkdir()
+            env_file = hermes / ".env"
+            env_file.write_text("Z_AI_API_KEY=symlink-key\n")
+            env_file.chmod(0o600)
+            fake_claude = home / "claude-real"
+            fake_claude.write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s|%s' \"${ANTHROPIC_AUTH_TOKEN:-}\" \"${ANTHROPIC_MODEL:-}\"\n"
+            )
+            fake_claude.chmod(0o700)
+            linked_claude = home / "claude"
+            linked_claude.symlink_to(ROOT / "bin" / "claude-glm52")
+
+            result = subprocess.run(
+                [linked_claude, "--version"],
+                env={
+                    **os.environ,
+                    "HOME": str(home),
+                    "CLAUDE_REAL_BIN": str(fake_claude),
+                    "ANTHROPIC_AUTH_TOKEN": "",
+                    "Z_AI_API_KEY": "",
+                },
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "symlink-key|glm-5.2")
 
     def test_claude_stream_json_enables_verbose_mode(self):
         executor = (ROOT / "bin" / "wrappers" / "_exec.sh").read_text()

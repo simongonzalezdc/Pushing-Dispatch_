@@ -1,0 +1,68 @@
+# Liam/Hermes Integration
+
+Hermes is Liam's resident orchestrator. Pushing Dispatch is its model-selection and external-worker front door.
+
+## Boundary
+
+- Hermes's primary conversation model is Z.AI GLM 5.2.
+- Hermes-native child agents inherit GLM 5.2 and are appropriate for tightly coupled, in-session decomposition.
+- External delegated, background, parallel, consultation, coding, research, and specialist workers launch through the `hermes-dispatch` adapter.
+- CLI-backed executors are not duplicated as Hermes HTTP providers. Dispatch owns their authentication, capability checks, availability, and launch behavior.
+
+This prevents provider drift and avoids falsely representing ChatGPT subscription Codex, Kimi CLI, AGY, GJC, or Kilo CLI as direct Hermes API providers.
+
+## Managed Hermes configuration
+
+`bin/install-hermes-routing.sh` installs the adapter and skill, backs up the live Hermes configuration, and enforces the native provider boundary below. The native provider catalog contains only providers Hermes invokes directly.
+
+```yaml
+model:
+  provider: zai
+  default: glm-5.2
+  base_url: https://api.z.ai/api/coding/paas/v4
+  api_mode: chat_completions
+
+providers:
+  ollama-local:
+    request_timeout_seconds: 300
+    stale_timeout_seconds: 900
+  zai:
+    api_key: ''
+    api_mode: chat_completions
+    base_url: https://api.z.ai/api/coding/paas/v4
+    model: glm-5.2
+    reasoning_effort: high
+
+fallback_providers: []
+custom_providers: []
+
+delegation:
+  provider: zai
+  model: glm-5.2
+  orchestrator_enabled: true
+```
+
+The empty fallback lists are intentional. Retired models must not silently reactivate when GLM is unavailable.
+
+## Dispatch behavior
+
+Before external delegation, use the Hermes-owned adapter:
+
+```bash
+hermes-dispatch route --mode task --task "<brief>"
+hermes-dispatch start --mode task --task "<brief>" --cwd "$PWD"
+hermes-dispatch status <worker-id>
+```
+
+Use `breakout` or `consult` when that is the actual mode. The committed matrix remains authoritative.
+
+## Credential bridge
+
+The global Dispatch and Claude launchers use one non-executing reader for the Z.AI aliases `Z_AI_API_KEY`, `ZAI_API_KEY`, or `GLM_API_KEY` from Liam's trusted `$HOME/.hermes/.env`. The reader rejects symlinks, non-owner files, and group/world-readable files. Other Hermes credentials are not imported. Claude Code still clears Anthropic OAuth/API state and always targets Z.AI GLM 5.2.
+
+## Capability rules
+
+- GLM is text-only. Vision routes to a vision-capable Dispatch lane.
+- Weak or failed search uses DuckDuckGo MCP.
+- `pushing-dispatch doctor` reports host-specific availability.
+- GPT-5.5, Codex OSS, NUCBox Gemma, direct MiniMax, direct Moonshot/Kimi, legacy Gemini CLI, paid Kilo, and Anthropic subscription models are retired.

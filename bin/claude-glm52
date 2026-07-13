@@ -20,6 +20,22 @@ export CLAUDE_CODE_SUBAGENT_MODEL="glm-5.2"
 # A stale Anthropic OAuth session must never shadow the selected Z.AI provider.
 unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
 
+if [[ -z "${Z_AI_API_KEY:-}" ]]; then
+    script_path="${BASH_SOURCE[0]}"
+    while [[ -L "$script_path" ]]; do
+        script_parent="$(cd "$(dirname "$script_path")" && pwd)"
+        script_link="$(readlink "$script_path")"
+        if [[ "$script_link" == /* ]]; then
+            script_path="$script_link"
+        else
+            script_path="$script_parent/$script_link"
+        fi
+    done
+    script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+    hermes_zai_key="$("$script_dir/read-hermes-zai-key" 2>/dev/null || true)"
+    [[ -z "$hermes_zai_key" ]] || export Z_AI_API_KEY="$hermes_zai_key"
+fi
+
 if [[ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
     if [[ -n "${Z_AI_API_KEY:-}" ]]; then
         export ANTHROPIC_AUTH_TOKEN="$Z_AI_API_KEY"

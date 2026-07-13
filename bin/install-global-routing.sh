@@ -16,6 +16,11 @@ set -euo pipefail
 REPO="$REPO_ROOT"
 export DISPATCH_MATRIX="\${DISPATCH_MATRIX:-\$REPO/dispatch_matrix.toml}"
 
+if [[ -z "\${Z_AI_API_KEY:-}" ]]; then
+  hermes_zai_key="\$("\$REPO/bin/read-hermes-zai-key" 2>/dev/null || true)"
+  [[ -z "\$hermes_zai_key" ]] || export Z_AI_API_KEY="\$hermes_zai_key"
+fi
+
 python_is_supported() {
   "\$1" -c 'import sys; raise SystemExit(sys.version_info < (3, 10))' >/dev/null 2>&1
 }
