@@ -20,12 +20,13 @@ Stay inline when:
 
 | Signal | Executor | Why |
 |--------|----------|-----|
-| Long context (>50K tokens) | `kimi-k27` | Native Kimi K2.7 lane |
+| Long context (>50K tokens) | Matrix-ranked candidates | Kimi K2.7 remains the dedicated long-context fallback |
 | Mechanical refactor | `codex-luna` | Fast subscription lane |
-| First attempt, including everyday and hard work | `codex-luna` | Run at xhigh; strongest default speed/cost balance |
+| First attempt for ordinary work | `codex-luna` | Run at xhigh; strongest default speed/cost balance |
 | Unusable Luna result | `codex-terra` | Explicit retry at high; do not call `auto` again |
 | Genuinely frontier fallback | `codex-sol` | Explicit low → medium → high ladder; stop after high |
-| Visual work | Terra/Sol, Kimi, or AGY | GLM has no vision |
+| Retired Claude Opus-class work | `grok-build` | Hard implementation, deep architecture, adversarial review, breakout, consult |
+| Visual work | Codex, Grok, Kimi, or AGY | GLM has no vision |
 | Free overflow | `kilo-free-auto` | Kilo free models only |
 
 ## Writing a Brief

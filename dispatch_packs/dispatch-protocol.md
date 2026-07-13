@@ -35,9 +35,15 @@ Tiers and their `*_candidates` lists (matrix-driven, ordered best-first):
 - `trivial_candidates` — small mechanical work
 - `standard_candidates` — everything else
 
-Availability is computed per provider (native login for Codex, Kimi, AGY, GJC,
+Availability is computed per provider (native login for Codex, Kimi, Grok, AGY, GJC,
 and Kilo; secure keys for Z.AI; local reachability for LM Studio) and cached with a
 short TTL. Single-value back-compat keys still parse if a list is absent.
+
+The `grok-build` lane uses xAI's official `grok` CLI pinned to `grok-4.5`.
+Availability requires the binary plus native OAuth state or `XAI_API_KEY`;
+execution uses prompt-file transport and explicit `workspace`/`read-only` sandboxes.
+It replaces retired Claude Opus-class work, so hard task, breakout, and consult
+candidate lists prefer Grok. Ordinary task tiers remain Luna-first.
 
 ### Self-healing
 

@@ -56,7 +56,7 @@ To launch a worker:
 pushing-dispatch task start --executor auto --task "<brief>" --cwd "$PWD"
 ```
 
-Do not hand-pick GPT/Kimi/Z.AI/MiniMax/Gemini/local models from vibes
+Do not hand-pick GPT/Kimi/Z.AI/MiniMax/Gemini/Grok/local models from vibes
 when Dispatch is available. Dispatch owns the best-fit and cost-efficient choice
 through `dispatch_matrix.toml`.
 
@@ -70,7 +70,8 @@ Current provider truth:
 - `claude-minimax` is the direct MiniMax M3 fallback.
 - Kimi K2.7 is the single `kimi-k27` lane, exclusive to native `kimi-cli` through its managed `kimi-for-coding` alias.
 - Gemini models are exclusive to AGY (`agy-gemini-flash` and `agy-gemini-pro`); Gemini CLI and legacy direct-API lanes are retired.
-- Codex uses the ChatGPT subscription. Start with GPT-5.6 Luna at xhigh for every task. If its completed result is unusable, explicitly retry Terra at high. Use Sol only when justified, explicitly escalating low, medium, then high; never exceed high, and stop to reassess after high. Auto-routing chooses the first attempt and availability fallback only—it cannot judge semantic answer quality. GPT-5.5, Codex OSS, and NUCBox Gemma are retired.
+- Grok Build is the `grok-build` executor through xAI's official `grok` CLI, pinned to `grok-4.5`. It replaces retired Claude Opus-class work: hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer Grok. It is vision-capable, uses native OAuth or `XAI_API_KEY`, transports briefs by prompt file, and runs with explicit `workspace`/`read-only` sandbox profiles. Do not route through community Grok clients.
+- Ordinary work remains GPT-5.6 Luna-first. Within Codex, retry an unusable Luna result with Terra high; use Sol only when justified, escalating low, medium, then high and stopping after high. Auto-routing cannot judge semantic answer quality. GPT-5.5, Codex OSS, NUCBox Gemma, and Anthropic Opus are retired.
 - Kilo is CLI-only and free-only: the durable lane is `kilo-free-auto` using `kilo/kilo-auto/free`. Never fall through to a paid Kilo model; rotating monthly `:free` models must be verified live before use.
 
 ## Registered Local Surfaces
@@ -87,7 +88,7 @@ The routing rule is installed in:
 ## Pi / Other Machine Setup
 
 Clone this repo to the target machine, copy or recreate `dispatch_matrix.toml`,
-install provider CLIs/keys needed on that machine, then run:
+install provider CLIs/keys needed on that machine (for Grok: `npm install -g @xai-official/grok` then `grok login --oauth`), then run:
 
 ```bash
 bash bin/install-global-routing.sh

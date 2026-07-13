@@ -112,6 +112,7 @@ check_optional "Codex CLI" "codex" "GPT-5.6 Luna/Terra/Sol subscription dispatch
 check_optional "AGY" "agy" "Gemini dispatch"
 check_optional "GJC" "gjc" "MiniMax M3 backup dispatch"
 check_optional "Kilo CLI" "kilo" "free-only overflow dispatch"
+check_optional "Official Grok CLI" "grok" "Grok Build 4.5 vision-capable dispatch"
 check_optional "pass" "pass" "Password store for API keys"
 
 echo ""

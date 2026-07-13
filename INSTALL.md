@@ -14,15 +14,21 @@
     ```
     Wrappers use `#!/usr/bin/env bash`, so they pick up whichever `bash` is first in `PATH`. Make sure Homebrew's bash is ahead of `/bin/bash`.
 - **Git** -- worktree-based isolation requires git
-- **Claude Code CLI** (`claude`) -- the harness that runs all providers
+- **Claude Code CLI** (`claude`) -- the Z.AI GLM 5.2 harness on this machine
   - Install: `npm install -g @anthropic-ai/claude-code`
   - Or via Homebrew: `brew install claude-code`
   - Verify: `claude --version`
 
 ### Optional (for specific providers)
 
-- **Kimi CLI** (`kimi-cli`) -- only needed if using Kimi's native mode (rare)
+- **Kimi CLI** (`kimi-cli`) -- required for the native `kimi-k27` lane
   - Install: `pip install kimi-cli`
+- **Official Grok CLI** (`grok`) -- required for the `grok-build` / Grok 4.5 lane
+  - Install: `npm install -g @xai-official/grok`
+  - Authenticate: `grok login --oauth` (or `grok login --device-auth` headlessly)
+  - Verify: `grok models`
+  - Open interactively: `grok`
+  - Run one prompt: `grok -p "Explain this repo"`
 - **Ollama** -- only needed for local model dispatch
   - Install: https://ollama.com/download
 

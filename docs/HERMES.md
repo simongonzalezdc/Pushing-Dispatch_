@@ -9,7 +9,7 @@ Hermes is Liam's resident orchestrator. Pushing Dispatch is its model-selection 
 - External delegated, background, parallel, consultation, coding, research, and specialist workers launch through the `hermes-dispatch` adapter.
 - CLI-backed executors are not duplicated as Hermes HTTP providers. Dispatch owns their authentication, capability checks, availability, and launch behavior.
 
-This prevents provider drift and avoids falsely representing ChatGPT subscription Codex, Kimi CLI, AGY, GJC, or Kilo CLI as direct Hermes API providers.
+This prevents provider drift and avoids falsely representing ChatGPT subscription Codex, Kimi CLI, the official Grok CLI, AGY, GJC, or Kilo CLI as direct Hermes API providers.
 
 ## Managed Hermes configuration
 
@@ -63,6 +63,7 @@ The global Dispatch and Claude launchers use one non-executing reader for the Z.
 ## Capability rules
 
 - GLM is text-only. Vision routes to a vision-capable Dispatch lane.
+- Grok Build routes through the `grok-build` executor and xAI's official CLI; it replaces retired Claude Opus-class hard implementation, architecture, adversarial review, breakout, and consult work. It is not a Hermes HTTP provider.
 - Weak or failed search uses DuckDuckGo MCP.
 - `pushing-dispatch doctor` reports host-specific availability.
 - GPT-5.5, Codex OSS, NUCBox Gemma, direct MiniMax, direct Moonshot/Kimi, legacy Gemini CLI, paid Kilo, and Anthropic subscription models are retired.

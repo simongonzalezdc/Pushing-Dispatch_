@@ -16,7 +16,7 @@ The fix: most providers now expose Anthropic-compatible API endpoints. Route the
 
 ### 1. The Harness Flip
 
-Agentic providers use the strongest supported harness. Claude Code defaults to Z.AI GLM 5.2; GJC provides GLM 5.2 and MiniMax M3 backup paths; Kimi remains exclusive to `kimi-cli`. One status protocol and context-loading pattern span the executors.
+Agentic providers use the strongest supported harness. Claude Code defaults to Z.AI GLM 5.2; GJC provides GLM 5.2 and MiniMax M3 backup paths; Kimi remains exclusive to `kimi-cli`; Grok Build uses xAI's official `grok` CLI. One status protocol and context-loading pattern span the executors.
 
 Adding a new provider = one shell wrapper + one TOML entry.
 
@@ -49,6 +49,12 @@ cp dispatch_matrix.toml.example dispatch_matrix.toml
 # 2. Install global routing commands and check prerequisites
 bash bin/install-global-routing.sh
 bash bin/check-prereqs.sh
+
+# Optional Grok lane: install xAI's official CLI and authenticate
+npm install -g @xai-official/grok
+grok login --oauth
+grok                       # open the interactive Grok Build TUI
+grok -p "Explain this repo" # one-shot/headless prompt
 
 # 3. Store provider credentials in the macOS Keychain
 bash bin/sync-credentials.sh
@@ -85,6 +91,8 @@ pushing-dispatch status <worker-id>
 | LM Studio / local | `lm-studio` | OpenAI-compatible local | model-dependent |
 
 See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provider.
+
+The `grok-build` lane is pinned to `grok-4.5`, supports vision, and accepts either the official CLI's OAuth session or `XAI_API_KEY`. It is the replacement for retired Claude Opus-class work: hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer Grok. Ordinary tasks remain Luna-first. Dispatch marks Grok unavailable when neither auth source exists.
 
 ## Repo Structure
 

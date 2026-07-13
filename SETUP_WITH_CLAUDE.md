@@ -23,10 +23,24 @@ Code binary as `claude-real` for harness maintenance only.
 - GJC for MiniMax M3.
 - AGY for Gemini.
 - Native Kilo CLI for free-only routing.
+- Official Grok CLI for the `grok-build` / Grok 4.5 lane.
 - LM Studio for the local lane.
 
 Store credentials in the native login/key store or environment; never in the
 matrix or docs.
+
+Install and authenticate Grok with the official xAI package:
+
+```bash
+npm install -g @xai-official/grok
+grok login --oauth
+grok models
+grok
+```
+
+Plain `grok` opens the interactive TUI. For one-shot/headless work, use
+`grok -p "Explain this repo"`; headless hosts can authenticate with
+`grok login --device-auth` or provide `XAI_API_KEY`.
 
 ## Verify
 

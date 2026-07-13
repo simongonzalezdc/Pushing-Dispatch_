@@ -74,6 +74,17 @@ class TestMatrixShape(unittest.TestCase):
 
         self.assertIn("breakout", executors["codex-luna"]["allowed_modes"])
 
+    def test_grok_replaces_opus_level_routing(self):
+        ar = self.m["auto_route"]
+        for key in ("hard_task_candidates", "hard_breakout_candidates", "consult_candidates"):
+            with self.subTest(key=key):
+                self.assertEqual(ar[key][0], "grok-build")
+
+        # Ordinary work still starts with Luna; the Grok preference is scoped
+        # to work that previously justified an Opus-class lane.
+        self.assertEqual(ar["trivial_candidates"][0], "codex-luna")
+        self.assertEqual(ar["standard_candidates"][0], "codex-luna")
+
     def test_sol_wrapper_enforces_high_ceiling(self):
         wrapper = ROOT / "bin" / "wrappers" / "codex-sol.sh"
         env = os.environ.copy()
@@ -118,6 +129,35 @@ class TestMatrixShape(unittest.TestCase):
             for phrase in stale:
                 self.assertNotIn(phrase, text, f"{path}: {phrase}")
         self.assertIn("Luna at Extra High", (ROOT / "AGENTS.md").read_text())
+
+    def test_current_operator_docs_cover_grok(self):
+        paths = (
+            ROOT / "AGENTS.md",
+            ROOT / "GLOBAL_AGENT_ROUTING.md",
+            ROOT / "README.md",
+            ROOT / "SETUP_WITH_CLAUDE.md",
+            ROOT / "CLAUDE.md",
+            ROOT / "INSTALL.md",
+            ROOT / "dispatch_packs" / "dispatch-protocol.md",
+            ROOT / "dispatch_packs" / "orchestrator-protocol.md",
+            ROOT / "docs" / "ORCHESTRATING.md",
+            ROOT / "docs" / "PROVIDERS.md",
+            ROOT / "docs" / "TROUBLESHOOTING.md",
+            ROOT / "docs" / "HERMES.md",
+            ROOT / "integrations" / "hermes" / "SKILL.md",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertIn("grok-build", path.read_text().lower())
+
+        prereqs = (ROOT / "bin" / "check-prereqs.sh").read_text()
+        self.assertIn('check_optional "Official Grok CLI" "grok"', prereqs)
+
+        providers = (ROOT / "docs" / "PROVIDERS.md").read_text()
+        self.assertIn("Claude Opus-class", providers)
+        self.assertIn("plain `grok`", providers)
+        self.assertIn('npm install -g @xai-official/grok', providers)
+        self.assertIn("grok-4.5", providers)
 
     def test_expired_anthropic_subscription_is_not_routable(self):
         providers = {cfg.get("provider") for cfg in self.m["executors"].values()}

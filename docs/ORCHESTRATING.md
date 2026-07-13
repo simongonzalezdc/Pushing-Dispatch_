@@ -19,11 +19,12 @@ diagnostic probe, not preference-based routing.
 | Need | Normal route |
 |---|---|
 | Typo, lint, tiny mechanical edit | `codex-luna` |
-| First attempt for any task | `codex-luna` (xhigh) |
+| First attempt for ordinary work | `codex-luna` (xhigh) |
 | Explicit retry after unusable Luna result | `codex-terra` (high) |
 | Exceptional final ladder | `codex-sol` (low, then medium, then high; stop) |
-| Long context | `kimi-k27` |
-| Visual work | Codex, Kimi, or AGY; never GLM |
+| Long context | Matrix-ranked availability route; `kimi-k27` is the dedicated long-context fallback |
+| Retired Claude Opus-class work | `grok-build` (hard implementation, deep architecture, adversarial review, breakout, consult) |
+| Visual work | Codex, Grok, Kimi, or AGY; never GLM |
 | Gemini | AGY only |
 | MiniMax M3 backup | GJC only |
 | Free overflow | `kilo-free-auto` only |
@@ -96,4 +97,4 @@ pushing-dispatch validate-matrix dispatch_matrix.toml
 pushing-dispatch doctor --probe
 ```
 
-All ten active wrappers must pass the live probe.
+All eleven active wrappers must pass the live probe.

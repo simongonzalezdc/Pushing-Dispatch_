@@ -34,7 +34,7 @@ MECHANICAL_KEYWORDS = re.compile(
 )
 HARD_CODING_KEYWORDS = re.compile(
     r"(architect|debug|optimi[sz]e|complex logic|concurren|race condition|"
-    r"hard implementation|multi[- ]module|distributed system)",
+    r"hard implementation|multi[- ]module|distributed system|adversarial review)",
     re.IGNORECASE,
 )
 VISION_REQUIREMENT_KEYWORDS = re.compile(

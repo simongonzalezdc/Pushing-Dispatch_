@@ -8,10 +8,10 @@ model from the harness name, and do not restore a retired lane from an old doc.
 
 | Executor | Harness / access | Model | Vision | Intended role |
 |---|---|---|---|---|
-| `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna (xhigh) | Yes | First attempt for every task |
+| `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna (xhigh) | Yes | First attempt for ordinary work |
 | `codex-terra` | Codex CLI, ChatGPT subscription | GPT-5.6 Terra (high) | Yes | Explicit fallback after an unusable Luna result |
 | `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low default; high ceiling) | Yes | Exceptional fallback; explicitly escalate low → medium → high |
-| `grok-build` | Official Grok CLI | Grok 4.5 (`grok-4.5`) | Yes | Native xAI coding and review lane |
+| `grok-build` | Official Grok CLI | Grok 4.5 (`grok-4.5`) | Yes | Claude Opus-class replacement |
 | `zai-glm` | Claude Code harness via `claude-glm52` | GLM 5.2 | **No** | Strong non-visual worker |
 | `kimi-k27` | Native `kimi-cli` only | `kimi-code/kimi-for-coding` (Kimi K2.7) | Yes | Long context and implementation |
 | `minimax-m3` | GJC backup path | `minimax-code/minimax-m3` | No | Backup coding lane |
@@ -22,9 +22,9 @@ model from the harness name, and do not restore a retired lane from an old doc.
 
 ## Routing Rules
 
-- Luna handles trivial mechanical work.
-- Luna xhigh is the normal first attempt. Terra high is the explicit fallback after an unusable Luna result.
-- Sol handles hard implementation, architecture, review, and consult work.
+- Luna xhigh is the normal first attempt for ordinary and trivial work. Terra high is the explicit Codex fallback after an unusable Luna result.
+- Grok 4.5 replaces retired Claude Opus-class work. Hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer `grok-build`.
+- Sol is an exceptional Codex fallback only: escalate low, medium, then high and stop after high.
 - Kimi K2.7 is available only through native Kimi CLI.
 - Gemini is available only through AGY; Gemini CLI and direct-API wrappers are retired.
 - MiniMax M3 is accessed through GJC as a backup.
@@ -46,6 +46,16 @@ Opus, Sonnet, and Haiku are not Dispatch executors.
 - Grok uses the official CLI's browser/OAuth session or `XAI_API_KEY`.
 - Kimi, AGY, GJC, Kilo, and LM Studio use their native harness authentication.
 - Do not paste credentials into the matrix or documentation.
+
+### Grok Build
+
+Install the official xAI CLI with `npm install -g @xai-official/grok`, then run
+`grok login --oauth` (or `grok login --device-auth` on a headless host). Confirm
+the session with `grok models`; run plain `grok` to open the interactive TUI or
+`grok -p "Explain this repo"` for one-shot use. The active executor pins `grok-4.5`. Dispatch
+requires both the `grok` binary and either its OAuth auth file or `XAI_API_KEY`
+before treating the lane as available. The wrapper uses `--prompt-file` for
+large briefs and applies `workspace` or `read-only` sandbox profiles by mode.
 
 ## Verify Current State
 

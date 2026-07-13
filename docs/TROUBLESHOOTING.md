@@ -45,7 +45,7 @@ the Z.AI credential used by `bin/claude-glm52`.
 ## Visual Task Routed to GLM
 
 GLM has no vision. Make the visual requirement explicit and rerun `route`.
-Vision-capable lanes are Codex Luna/Terra/Sol, Kimi K2.7, and AGY Gemini.
+Vision-capable lanes are Codex Luna/Terra/Sol, Grok Build, Kimi K2.7, and AGY Gemini.
 
 ## Search Fails
 
@@ -58,6 +58,7 @@ required fallback when native search is absent or unreliable. Never invent resul
 - Gemini: AGY only.
 - MiniMax M3: GJC backup path only.
 - Kilo: native CLI, free models only; default `kilo/kilo-auto/free`.
+- `grok-build`: official xAI `grok` CLI only; run `grok models` to verify login and the `grok-4.5` catalog entry.
 
 If a legacy Moonshot, Gemini CLI, direct MiniMax, or paid Kilo path appears,
 stop it and fix the active matrix/wrapper resolution.
@@ -77,4 +78,4 @@ pushing-dispatch doctor --probe
 ```
 
 Green means tests pass, the installed command resolves to the canonical
-checkout, and all ten active executor wrappers pass live probes.
+checkout, and all eleven active executor wrappers pass live probes.

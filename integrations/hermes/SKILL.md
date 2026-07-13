@@ -22,6 +22,7 @@ Pushing Dispatch is the model-selection front door. Hermes remains Liam's reside
 - Kimi CLI: Kimi K2.7.
 - Z.AI: GLM 5.2, text-only.
 - GJC: MiniMax M3 and backup GLM.
+- Grok Build: `grok-build` through xAI's official `grok` CLI, pinned to `grok-4.5`, vision-capable, and preferred for retired Claude Opus-class hard implementation, architecture, adversarial review, breakout, and consult work.
 - Codex subscription: GPT-5.6 Luna, Terra, and Sol.
 - AGY: Gemini Flash and Pro.
 - Kilo: free-auto/currently free models only.

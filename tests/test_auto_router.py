@@ -1,6 +1,10 @@
 import unittest
+import tomllib
 from unittest import mock
+from pathlib import Path
 from dispatch_lib import auto_router
+
+ROOT = Path(__file__).resolve().parent.parent
 
 MATRIX = {
     "executors": {
@@ -58,6 +62,20 @@ class TestRouter(unittest.TestCase):
     def test_hard_task_leads_with_strong_model(self):
         t = "implement and debug complex concurrency logic"
         self.assertEqual(route(t, "task", available=["codex-spark", "opus"]), "codex-spark")
+
+    def test_adversarial_review_routes_to_grok_in_live_matrix(self):
+        with open(ROOT / "dispatch_matrix.toml", "rb") as f:
+            matrix = tomllib.load(f)
+        with mock.patch.object(auto_router, "available_set", return_value={"grok-build", "codex-luna"}), \
+             mock.patch.object(auto_router, "in_cooldown", return_value=False):
+            executor, tier = auto_router.auto_route(
+                "Perform an adversarial review of this security-sensitive patch",
+                "task",
+                matrix_dict=matrix,
+                return_tier=True,
+            )
+        self.assertEqual(tier, "hard_task_candidates")
+        self.assertEqual(executor, "grok-build")
 
     def test_cooldown_skips_executor(self):
         t = "implement and debug complex concurrency logic"
