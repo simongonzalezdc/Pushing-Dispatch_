@@ -533,6 +533,53 @@ ce_run_kimi() {
     ce_finalize_from_text "$(cat "$log_file")"
 }
 
+ce_run_grok() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local prompt_file
+    prompt_file="$(mktemp "${TMPDIR:-/tmp}/dispatch-grok-prompt-XXXXXX")"
+    printf '%s\n' "$CE_FINAL_PROMPT" > "$prompt_file"
+    local cmd=(
+        grok --model "${GROK_MODEL:?GROK_MODEL is required}"
+        --cwd "$CE_CWD"
+        --prompt-file "$prompt_file"
+        --output-format plain
+        --max-turns "${GROK_MAX_TURNS:-25}"
+        --no-subagents
+        --no-memory
+        --no-auto-update
+    )
+
+    if [[ "$CE_READ_ONLY" -eq 0 ]]; then
+        cmd+=(--permission-mode bypassPermissions --sandbox workspace)
+    else
+        cmd+=(--permission-mode plan --sandbox read-only)
+    fi
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute Grok model: $GROK_MODEL"
+        rm -f "$prompt_file" "$CE_ASSEMBLED_BRIEF"
+        return 0
+    fi
+
+    local exit_code=0
+    "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    rm -f "$prompt_file" "$CE_ASSEMBLED_BRIEF"
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "grok exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
 ce_run_gjc() {
     if [[ -z "${CE_CWD:-}" ]]; then
         ce_parse_args "$@"

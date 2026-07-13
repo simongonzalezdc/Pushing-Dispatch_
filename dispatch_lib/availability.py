@@ -51,6 +51,17 @@ def _codex_ready() -> bool:
     return (Path.home() / ".codex" / "auth.json").exists()
 
 
+def _grok_ready() -> bool:
+    """Return whether the official Grok CLI has a usable auth source."""
+    if shutil.which("grok") is None:
+        return False
+    if os.environ.get("XAI_API_KEY"):
+        return True
+    # OAuth login stores its refreshable session here. Presence is sufficient;
+    # the CLI owns token validation and refresh without exposing secret values.
+    return (Path.home() / ".grok" / "auth.json").exists()
+
+
 def _local_ready(provider: str) -> bool:
     if provider == "ollama":
         return shutil.which("ollama") is not None
@@ -115,6 +126,8 @@ def _executor_available(cfg: dict) -> bool:
         return shutil.which("kimi") is not None
     if provider == "gjc":
         return shutil.which("gjc") is not None
+    if provider == "grok-cli":
+        return _grok_ready()
     if provider == "anthropic":
         return _anthropic_ready()
     if provider == "openai-codex":

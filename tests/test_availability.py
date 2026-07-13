@@ -31,6 +31,23 @@ class TestAvailability(unittest.TestCase):
         with mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/gjc"):
             self.assertTrue(availability._executor_available({"provider": "gjc"}))
 
+    def test_grok_provider_uses_cli_presence(self):
+        with mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/grok") as which, \
+             mock.patch("dispatch_lib.availability.Path.exists", return_value=True):
+            self.assertTrue(availability._executor_available({"provider": "grok-cli"}))
+        which.assert_called_once_with("grok")
+
+    def test_grok_provider_is_unavailable_without_auth(self):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+             mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/grok"), \
+             mock.patch("dispatch_lib.availability.Path.exists", return_value=False):
+            self.assertFalse(availability._executor_available({"provider": "grok-cli"}))
+
+    def test_grok_provider_accepts_api_key_auth(self):
+        with mock.patch.dict(os.environ, {"XAI_API_KEY": "present"}, clear=True), \
+             mock.patch("dispatch_lib.availability.shutil.which", return_value="/usr/local/bin/grok"):
+            self.assertTrue(availability._executor_available({"provider": "grok-cli"}))
+
     def setUp(self):
         # Isolate state so resolve()'s cache write never touches the real
         # ~/.local/share/pushing-dispatch/availability.json.

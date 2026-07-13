@@ -11,6 +11,7 @@ model from the harness name, and do not restore a retired lane from an old doc.
 | `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna (xhigh) | Yes | First attempt for every task |
 | `codex-terra` | Codex CLI, ChatGPT subscription | GPT-5.6 Terra (high) | Yes | Explicit fallback after an unusable Luna result |
 | `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low default; high ceiling) | Yes | Exceptional fallback; explicitly escalate low → medium → high |
+| `grok-build` | Official Grok CLI | Grok 4.5 (`grok-4.5`) | Yes | Native xAI coding and review lane |
 | `zai-glm` | Claude Code harness via `claude-glm52` | GLM 5.2 | **No** | Strong non-visual worker |
 | `kimi-k27` | Native `kimi-cli` only | `kimi-code/kimi-for-coding` (Kimi K2.7) | Yes | Long context and implementation |
 | `minimax-m3` | GJC backup path | `minimax-code/minimax-m3` | No | Backup coding lane |
@@ -42,6 +43,7 @@ Opus, Sonnet, and Haiku are not Dispatch executors.
 
 - Codex executors use the logged-in ChatGPT subscription session, not an OpenAI API key.
 - `zai-glm` uses `Z_AI_API_KEY` or the corresponding macOS Keychain / `pass` entry.
+- Grok uses the official CLI's browser/OAuth session or `XAI_API_KEY`.
 - Kimi, AGY, GJC, Kilo, and LM Studio use their native harness authentication.
 - Do not paste credentials into the matrix or documentation.
 

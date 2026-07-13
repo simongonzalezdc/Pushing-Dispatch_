@@ -80,6 +80,7 @@ pushing-dispatch status <worker-id>
 | GPT-5.6 Luna | `codex-luna` | Codex CLI / ChatGPT subscription | 272K |
 | GPT-5.6 Terra | `codex-terra` | Codex CLI / ChatGPT subscription | 272K |
 | GPT-5.6 Sol | `codex-sol` | Codex CLI / ChatGPT subscription | 272K |
+| Grok Build | `grok-build` | Official Grok CLI | 500K |
 | Gemini via AGY | `agy-gemini-*` | AGY agentic harness | 1M |
 | LM Studio / local | `lm-studio` | OpenAI-compatible local | model-dependent |
 

@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # Providers that authenticate via CLI login or run locally (no API key needed).
-CLI_OR_LOCAL = {"anthropic", "openai-codex", "agy", "gjc", "kilo-cli", "kimi-cli", "ollama", "lm-studio"}
+CLI_OR_LOCAL = {"anthropic", "openai-codex", "agy", "gjc", "grok-cli", "kilo-cli", "kimi-cli", "ollama", "lm-studio"}
 
 class TestMatrixShape(unittest.TestCase):
     def setUp(self):
@@ -160,6 +160,31 @@ class TestMatrixShape(unittest.TestCase):
         self.assertEqual(cfg["provider"], "kimi-cli")
         self.assertEqual(cfg["wrapper"], "kimi-cli.sh")
         self.assertIn("vision", cfg.get("capabilities", []))
+
+    def test_grok_uses_official_native_cli(self):
+        grok = self.m["executors"]["grok-build"]
+        self.assertEqual(grok["provider"], "grok-cli")
+        self.assertEqual(grok["wrapper"], "grok-cli.sh")
+        self.assertEqual(grok["model_id"], "grok-4.5")
+        self.assertEqual(grok["context_window"], 500_000)
+        self.assertIn("vision", grok.get("capabilities", []))
+
+        wrapper = ROOT / "bin" / "wrappers" / "grok-cli.sh"
+        result = subprocess.run(
+            [
+                str(wrapper), "--worker-id", "test-grok",
+                "--cwd", "/tmp", "--mode", "task",
+                "--task", "Return Status: DONE", "--dry-run",
+            ],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Grok model: grok-4.5", result.stdout)
+
+        wrapper_lib = (ROOT / "bin" / "wrappers" / "_exec.sh").read_text()
+        self.assertIn('--prompt-file "$prompt_file"', wrapper_lib)
+        self.assertIn('--sandbox workspace', wrapper_lib)
+        self.assertIn('--sandbox read-only', wrapper_lib)
 
     def test_primary_zai_lane_uses_glm_52(self):
         zai = self.m["executors"]["zai-glm"]

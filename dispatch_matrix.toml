@@ -107,6 +107,18 @@ context_window = 272000
 max_turns = 25
 stall_threshold_seconds = 600
 
+[executors.grok-build]
+wrapper = "grok-cli.sh"
+provider = "grok-cli"
+model_id = "grok-4.5"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = ["vision"]
+allowed_seats_in_breakout = ["review", "engineer"]
+default_thinking_tokens = 0
+context_window = 500000
+max_turns = 25
+stall_threshold_seconds = 600
+
 [executors.agy-gemini-pro]
 wrapper = "agy-gemini-pro.sh"
 provider = "agy"
@@ -185,11 +197,11 @@ hard_wall_block_breakout_top = true
 # retry Terra high, then (only if justified) Sol low/medium/high. Availability
 # routing cannot infer whether a semantically valid answer was good enough.
 trivial_candidates        = ["codex-luna", "codex-terra", "codex-sol", "kilo-free-auto", "zai-glm", "lm-studio"]
-standard_candidates       = ["codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-flash", "kilo-free-auto", "minimax-m3"]
-hard_task_candidates      = ["codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
-hard_breakout_candidates  = ["codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
-long_context_candidates   = ["codex-luna", "codex-terra", "codex-sol", "kimi-k27", "zai-glm", "agy-gemini-pro", "minimax-m3"]
-consult_candidates        = ["codex-luna", "codex-terra", "codex-sol", "agy-gemini-pro", "zai-glm", "kimi-k27"]
+standard_candidates       = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "agy-gemini-flash", "kilo-free-auto", "minimax-m3"]
+hard_task_candidates      = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "agy-gemini-pro", "kimi-k27"]
+hard_breakout_candidates  = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "agy-gemini-pro", "kimi-k27"]
+long_context_candidates   = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "kimi-k27", "zai-glm", "agy-gemini-pro", "minimax-m3"]
+consult_candidates        = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-pro", "zai-glm", "kimi-k27"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
