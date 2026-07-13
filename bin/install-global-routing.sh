@@ -15,7 +15,19 @@ set -euo pipefail
 
 REPO="$REPO_ROOT"
 export DISPATCH_MATRIX="\${DISPATCH_MATRIX:-\$REPO/dispatch_matrix.toml}"
-exec python3 "\$REPO/cli.py" "\$@"
+
+python_is_supported() {
+  "\$1" -c 'import sys; raise SystemExit(sys.version_info < (3, 10))' >/dev/null 2>&1
+}
+
+for candidate in "\${DISPATCH_PYTHON:-}" /opt/homebrew/bin/python3 /usr/local/bin/python3 "\$(command -v python3 2>/dev/null || true)"; do
+  if [[ -n "\$candidate" && -x "\$candidate" ]] && python_is_supported "\$candidate"; then
+    exec "\$candidate" "\$REPO/cli.py" "\$@"
+  fi
+done
+
+echo "pushing-dispatch requires Python 3.10 or newer" >&2
+exit 69
 EOF
 
 cat > "$BIN_DIR/dispatch" <<'EOF'
