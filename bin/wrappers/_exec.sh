@@ -292,6 +292,20 @@ ce_run_claude() {
         cmd+=(--bare)
     fi
 
+    # Factory Workcells may supply a digest-bound capability manifest through
+    # the foreground bridge. Restrict the actual Claude harness surface here;
+    # a prompt-only tool policy is not enforcement. These variables are absent
+    # for ordinary Dispatch work and therefore do not change other lanes.
+    if [[ -n "${FACTORY_ALLOWED_TOOLS:-}" ]]; then
+        cmd+=(--tools "$FACTORY_ALLOWED_TOOLS" --allowed-tools "$FACTORY_ALLOWED_TOOLS")
+    fi
+    if [[ "${FACTORY_DISABLE_SKILLS:-0}" -eq 1 ]]; then
+        cmd+=(--disable-slash-commands)
+    fi
+    if [[ "${FACTORY_STRICT_MCP:-0}" -eq 1 ]]; then
+        cmd+=(--strict-mcp-config --no-chrome)
+    fi
+
     if [[ "$CE_MAX_TURNS" -gt 0 ]]; then
         cmd+=(--max-turns "$CE_MAX_TURNS")
     fi
