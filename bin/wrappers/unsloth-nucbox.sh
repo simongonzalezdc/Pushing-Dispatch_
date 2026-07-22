@@ -16,14 +16,12 @@ export OPENAI_COMPAT_API_KEY="${UNSLOTH_API_KEY:-local-unsloth}"
 export OPENAI_COMPAT_MAX_TOKENS="${OPENAI_COMPAT_MAX_TOKENS:-8192}"
 export OPENAI_COMPAT_TEMPERATURE="${OPENAI_COMPAT_TEMPERATURE:-0.2}"
 export OPENAI_COMPAT_TIMEOUT="${OPENAI_COMPAT_TIMEOUT:-300}"
-# T06 fix: force the dispatch terminal-marker protocol (qwen27 doesn't reliably
-# emit "Status: DONE" from the long brief alone). A firm system message is the
-# thinking-preserving lever (grammar is dropped with thinking ON — verified on our build).
-export OPENAI_COMPAT_SYSTEM="${UNSLOTH_SYSTEM:-You are an autonomous dispatch worker. MANDATORY OUTPUT PROTOCOL (non-negotiable): the VERY LAST line of every response must be exactly:
-Status: DONE
-Emit that exact line once the task is complete, with nothing after it. If you cannot complete the task, the last line must be exactly:
-Status: DONE_WITH_CONCERNS
-Never omit this marker and never place any text after it.}"
+# T06 fix (code-review revised): reinforce the brief's OWN output protocol via the
+# system role (more salient for a reasoning model than the same text buried in a long
+# brief), WITHOUT re-stating or suppressing it. Enumerates ALL markers so NEEDS_GUIDANCE
+# / BLOCKED are not silently forced to DONE. Grammar can't force the marker with thinking
+# ON (verified on our build), so prompt saliency is the thinking-preserving lever.
+export OPENAI_COMPAT_SYSTEM="${UNSLOTH_SYSTEM:-You are an autonomous dispatch worker. Follow the dispatch output protocol defined in your task brief EXACTLY: end every response with the correct Status: marker on its own final line — Status: DONE, Status: DONE_WITH_CONCERNS, Status: NEEDS_GUIDANCE, or Status: BLOCKED — whichever the brief specifies for the situation. Never omit this final marker and never place text after it.}"
 
 ce_parse_args "$@"
 ce_run_openai_compatible
