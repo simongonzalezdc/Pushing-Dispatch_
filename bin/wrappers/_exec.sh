@@ -292,6 +292,20 @@ ce_run_claude() {
         cmd+=(--bare)
     fi
 
+    # Factory Workcells may supply a digest-bound capability manifest through
+    # the foreground bridge. Restrict the actual Claude harness surface here;
+    # a prompt-only tool policy is not enforcement. These variables are absent
+    # for ordinary Dispatch work and therefore do not change other lanes.
+    if [[ -n "${FACTORY_ALLOWED_TOOLS:-}" ]]; then
+        cmd+=(--tools "$FACTORY_ALLOWED_TOOLS" --allowed-tools "$FACTORY_ALLOWED_TOOLS")
+    fi
+    if [[ "${FACTORY_DISABLE_SKILLS:-0}" -eq 1 ]]; then
+        cmd+=(--disable-slash-commands)
+    fi
+    if [[ "${FACTORY_STRICT_MCP:-0}" -eq 1 ]]; then
+        cmd+=(--strict-mcp-config --no-chrome)
+    fi
+
     if [[ "$CE_MAX_TURNS" -gt 0 ]]; then
         cmd+=(--max-turns "$CE_MAX_TURNS")
     fi
@@ -515,7 +529,7 @@ ce_run_kimi() {
     local cmd=(kimi --model "${KIMI_MODEL:?KIMI_MODEL is required}" --prompt "$CE_FINAL_PROMPT")
 
     if [[ "$CE_DRY_RUN" -eq 1 ]]; then
-        echo "DRY RUN - Would execute Kimi model alias: $KIMI_MODEL"
+        echo "DRY RUN - Would execute Kimi K3 through the Kimi CLI alias: $KIMI_MODEL"
         return 0
     fi
 
@@ -527,7 +541,7 @@ ce_run_kimi() {
     fi
     rm -f "$CE_ASSEMBLED_BRIEF"
     if [[ $exit_code -ne 0 ]]; then
-        ce_finalize_status "errored" 4 "kimi exited with code $exit_code"
+        ce_finalize_status "errored" 4 "Kimi CLI exited with code $exit_code"
         return 4
     fi
     ce_finalize_from_text "$(cat "$log_file")"
@@ -648,9 +662,14 @@ model = os.environ["OPENAI_COMPAT_MODEL"]
 token = os.environ["OPENAI_COMPAT_API_KEY"]
 prompt = os.environ["OPENAI_COMPAT_PROMPT"]
 
+messages = []
+_system = os.environ.get("OPENAI_COMPAT_SYSTEM", "").strip()
+if _system:
+    messages.append({"role": "system", "content": _system})
+messages.append({"role": "user", "content": prompt})
 body = {
     "model": model,
-    "messages": [{"role": "user", "content": prompt}],
+    "messages": messages,
     "stream": False,
 }
 
