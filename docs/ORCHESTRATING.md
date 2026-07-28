@@ -34,17 +34,27 @@ diagnostic probe, not preference-based routing.
 GLM 5.2 runs through the Claude Code harness and has no vision. If any lane's
 native search fails or is unreliable, use the global DuckDuckGo `ddg` MCP.
 
-### Cloud orchestrator → Ornith leaf (copy-paste)
+### Cloud orchestrator → Ornith leaf (every cloud model)
 
-Use this when the top session should **not** do the coding itself, but hand a
-bounded leaf to NUCBox Ornith with progressive skills (obra superpowers + Matt
-Pocock suite) already wired:
+**Owning YES/NO card (do not fork):** fleet  
+`launchpad/docs/agents/ORNITH-GUIDELINES.md` § *Cloud-orchestrator card*.  
+Pack: `includes: ornith-leaf` · ops: `ops/unsloth-nucbox/README.md`.
+
+| Dispatch **YES** | Dispatch **NO** (use cloud) |
+|------------------|-----------------------------|
+| Bounded local coding/ops + proof | Architect / ralplan |
+| RED→GREEN tests, one-file patches | Independent critic / PR review |
+| Mechanical local sweeps | Security / auth / migrations |
+| Sliced m3 leaf from a campaign | Vision / web / long-context / breakout-top |
+| | Typos → `kilo-free-auto` |
+
+**m3 discriminator (all required):** bounded · localized · reversible · verifying.
 
 ```bash
-# 1) Prefer auto (routes local coding keywords → unsloth-nucbox when available)
+# 1) Prefer auto (local-coding keywords → unsloth-nucbox when available)
 pushing-dispatch route --mode task --task "local coding: <one-sentence goal + acceptance>"
 
-# 2) Explicit leaf (when you already decided local)
+# 2) Explicit leaf
 pushing-dispatch task start \
   --executor unsloth-nucbox \
   --cwd "$PWD" \
@@ -64,10 +74,8 @@ EOF
 )"
 ```
 
-**Admit only** m3-class work: bounded · localized · reversible · verifying.
-**Never** use Ornith as sole architect / critic / security / vision / web judge.
-Ops README: `ops/unsloth-nucbox/README.md`. Fleet rules: launchpad
-`docs/agents/ORNITH-GUIDELINES.md`. Health:
+**Ops:** **serialize** Ornith leaves (one at a time; GPU `parallel=1`). Progressive
+skills (obra + Matt) load by catalog then `read`. Health:
 `ssh nucbox '~/unsloth-ops/bin/ornith-workhorse-verify.sh'` (expect `fail=0`).
 
 The auto-router admits only deterministic, bounded task families to local

@@ -15,11 +15,15 @@ Sticky **m3-class** local executor on NUCBox Ornith via Unsloth Studio OpenAI pr
 
 ## Policy
 
-Full fleet rules: **`launchpad/docs/agents/ORNITH-GUIDELINES.md`**.
+**Owning source for every cloud model:** fleet  
+**`launchpad/docs/agents/ORNITH-GUIDELINES.md`** § *Cloud-orchestrator card*  
+Pack: `includes: ornith-leaf`
 
-- Admit only bounded · localized · reversible · verifying work  
+- Admit only **bounded · localized · reversible · verifying** work  
 - Never architect / critic / security / vision / web as sole judge  
+- **Serialize** leaves (one at a time)  
 - Sampling forced at proxy (`UNSLOTH_ORNITH_SAMPLING=force`)  
+- Leaf maxTokens default **4096** (do not re-raise to 16k casually)  
 - Do not dual-load another 27B/35B agent port (`:8892` retired)
 
 ## Ops

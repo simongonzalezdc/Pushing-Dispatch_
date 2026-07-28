@@ -21,3 +21,7 @@ description = "Nested dispatch deep dive: permissions, budget cascade, depth cap
 [packs.orchestrator-protocol]
 path = "orchestrator-protocol.md"
 description = "How the orchestrator model should use the dispatch system"
+
+[packs.ornith-leaf]
+path = "ornith-leaf.md"
+description = "Cloud→Ornith admission: m3-class YES/NO, handoff, serialize leaf jobs"
