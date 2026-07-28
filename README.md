@@ -6,17 +6,17 @@ An orchestrator model dispatches worker agents with custom briefs and custom sys
 
 ## Why
 
-AI coding agents work best when you separate **judgment** from **execution**. The orchestrator stays in one seat, makes decisions, and fans out mechanical work to the cheapest model that can handle each subtask.
+AI coding agents work best when you separate **judgment** from **execution**. The orchestrator stays in one seat, makes decisions, and fans out mechanical work to an appropriate executor selected by the routing policy for each subtask.
 
-The problem: every provider has a different CLI, different tool-use semantics, different context loading. Three models means three sets of bugs.
+The problem: every provider has a different CLI and different tool-use semantics. Multiple models mean multiple sets of integration bugs.
 
-The fix: most providers now expose Anthropic-compatible API endpoints. Route them all through one harness. One shared library handles argument parsing, context loading, stream parsing, status writing. Each provider is a ~20-line wrapper that sets an API URL and auth token.
+The fix: route supported providers through their appropriate agentic harnesses and shared dispatch protocols. One shared library handles argument parsing, context loading, stream parsing, status writing, and worker lifecycle. Each provider is a thin wrapper that selects its endpoint and execution path.
 
 ## The Four Pillars
 
 ### 1. The Harness Flip
 
-Agentic providers use the strongest supported harness. Claude Code defaults to Z.AI GLM 5.2; GJC provides GLM 5.2 and MiniMax M3 backup paths; Kimi remains exclusive to `kimi-cli`; Grok Build uses xAI's official `grok` CLI. One status protocol and context-loading pattern span the executors.
+Providers use their supported agentic harnesses through a common dispatch layer. One status protocol and one context-loading pattern span the executors.
 
 Adding a new provider = one shell wrapper + one TOML entry.
 
@@ -28,9 +28,9 @@ Workers see only what they need. A lint script enforces that shared config stays
 
 ### 3. Matrix-Driven Routing
 
-A single TOML config (`dispatch_matrix.toml`) encodes every executor's capabilities, allowed modes, cost caps, and routing preferences. The auto-router reads the brief (size, keywords, complexity) and picks the cheapest model that can handle it.
+A single TOML config (`dispatch_matrix.toml`) encodes every executor's capabilities, allowed modes, cost caps, and routing preferences. The auto-router reads the brief (size, keywords, complexity), applies its routing heuristics, and selects the first capable, available executor in the matrix's ordered candidate lists.
 
-No hardcoded if/else chains. The matrix is the source of truth.
+The matrix is the source of truth for executor capabilities, allowed modes, cost caps, and routing preferences; the auto-router supplies the small mode and keyword classification layer.
 
 ### 4. Nested Dispatch with Safety Rails
 
@@ -42,57 +42,35 @@ Kill propagation walks the tree bottom-up. No auto-retry on failure. Ever.
 
 ```bash
 # 1. Clone and configure
-git clone https://git.kyanitelabs.tech/simon/pushing-dispatch.git
-cd pushing-dispatch
+git clone <repository-url>
+cd <checkout-directory>
 cp dispatch_matrix.toml.example dispatch_matrix.toml
 
-# 2. Install global routing commands and check prerequisites
-bash bin/install-global-routing.sh
+# 2. Check prerequisites
 bash bin/check-prereqs.sh
 
-# Optional Grok lane: install xAI's official CLI and authenticate
-npm install -g @xai-official/grok
-grok login --oauth
-grok                       # open the interactive Grok Build TUI
-grok -p "Explain this repo" # one-shot/headless prompt
-
-# 3. Store provider credentials in the macOS Keychain
-bash bin/sync-credentials.sh
+# 3. Configure at least one supported provider using its documented credential mechanism
 
 # 4. Write a brief
 cat > /tmp/my-brief.md << 'EOF'
 ---
 title: Fix lint warnings
+executor: <configured-executor>
 ---
 Fix all ESLint warnings in src/utils.js
 EOF
 
-# 5. Ask Dispatch which executor is best/cost-efficient, or let it auto-pick
-pushing-dispatch route --mode task --task-file /tmp/my-brief.md
-pushing-dispatch task start --executor auto --task-file /tmp/my-brief.md --cwd /path/to/project
+# 5. Dispatch
+python cli.py task start --executor <configured-executor> --task-file /tmp/my-brief.md --cwd /path/to/project
 
 # 6. Check status
-pushing-dispatch list --active
-pushing-dispatch status <worker-id>
+python cli.py list --active
+python cli.py status <worker-id>
 ```
 
 ## Supported Providers
 
-| Provider | Executor | Endpoint | Context Window |
-|----------|----------|----------|----------------|
-| Kimi K2.7 | `kimi-k27` | Native Kimi CLI (`kimi-for-coding` managed alias) | 256K |
-| Z.ai GLM 5.2 | `zai-glm` | Claude Code / Anthropic-compat | 1M |
-| MiniMax M3 | `minimax-m3` | GJC | 512K |
-| GPT-5.6 Luna | `codex-luna` | Codex CLI / ChatGPT subscription | 272K |
-| GPT-5.6 Terra | `codex-terra` | Codex CLI / ChatGPT subscription | 272K |
-| GPT-5.6 Sol | `codex-sol` | Codex CLI / ChatGPT subscription | 272K |
-| Grok Build | `grok-build` | Official Grok CLI | 500K |
-| Gemini via AGY | `agy-gemini-*` | AGY agentic harness | 1M |
-| LM Studio / local | `lm-studio` | OpenAI-compatible local | model-dependent |
-
-See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provider.
-
-The `grok-build` lane is pinned to `grok-4.5`, supports vision, and accepts either the official CLI's OAuth session or `XAI_API_KEY`. It is the replacement for retired Claude Opus-class work: hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer Grok. Ordinary tasks remain Luna-first. Dispatch marks Grok unavailable when neither auth source exists.
+Executor names, provider capabilities, routing modes, and setup requirements are defined by the checked-in example matrix and the configured provider wrappers. See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details.
 
 ## Repo Structure
 
@@ -112,23 +90,21 @@ pushing-dispatch/
     nested.py                     # Tree-walk, kill cascade, spend rollup
     path_conventions.py           # Standardized artifact paths
     permissions.py                # Nested dispatch permissions
-    status_writer.py              # Atomic worker status files
-    stream_parser.py              # Stream-json event parsing
+    status_writer.py               # Atomic worker status files
+    stream_parser.py               # Stream-json event parsing
   bin/
     wrappers/                     # Provider wrappers
       _exec.sh                    # Shared execution library
       executor_prompt.md          # Worker prompt template
-      codex-terra.sh, zai.sh, ... # One per active executor/harness
+      *.sh                        # Provider and harness wrappers
     check-prereqs.sh              # Environment verification
     smoke-test.sh                 # First-run validation
   dispatch_packs/                 # Context packs for brief assembly
     _baseline.md                  # Universal worker rules
     _registry.toml                # Pack name -> file mapping
     *.md                          # Detail packs
-  hooks/                          # Claude Code hooks
-    auto_poll.sh                  # Auto-polling injection
+  hooks/                          # Agent hooks
   commands/                       # Slash commands
-    dispatch-poll.md              # Polling cycle
   docs/                           # Documentation
   examples/                       # Worked example briefs
 ```
@@ -139,46 +115,29 @@ pushing-dispatch/
 - [docs/ORCHESTRATING.md](docs/ORCHESTRATING.md) -- complete orchestrator guide
 - [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) -- per-user customization recipes
 - [docs/PROVIDERS.md](docs/PROVIDERS.md) -- provider-specific configuration
-- [docs/HERMES.md](docs/HERMES.md) -- Liam/Hermes orchestration integration
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) -- common gotchas
 - [CONTRIBUTING.md](CONTRIBUTING.md) -- how to contribute
 
 ## For LLM Agents
 
 This repo includes orientation files for AI coding agents:
-- [CLAUDE.md](CLAUDE.md) -- for Claude Code sessions
-- [AGENTS.md](AGENTS.md) -- for OpenAI Codex / generic agents
-- [GEMINI.md](GEMINI.md) -- legacy orientation (AGY is the active Gemini harness)
+- [CLAUDE.md](CLAUDE.md) -- Claude Code orientation
+- [AGENTS.md](AGENTS.md) -- OpenAI Codex / generic agent orientation
+- [GEMINI.md](GEMINI.md) -- Gemini tooling orientation
 
 ## Core Principle
 
-Judgment stays in one place (the orchestrator seat). Execution fans out to the cheapest model that can handle each subtask. The brief is the contract. The matrix is the source of truth. Everything else is plumbing.
+Judgment stays in one place (the orchestrator seat). Execution fans out to an appropriate executor selected by the routing policy for each subtask. The brief is the contract. The matrix is the source of truth. Everything else is plumbing.
 
 ## Quick start with Claude Code
 
 The fastest setup path: open a fresh Claude Code session, paste this:
 
 ```
-Read SETUP_WITH_CLAUDE.md from the canonical Forgejo checkout and walk me through setup end to end.
+Read SETUP_WITH_CLAUDE.md from this checkout and walk me through setup end to end.
 ```
 
-The session will check your prereqs, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.
-
-## Self-healing & availability
-
-Routing is availability-aware: `route` and `task start --executor auto` only
-return an executor that is actually reachable. Set up once with:
-
-```bash
-bash bin/sync-credentials.sh   # consolidate provider keys into the Keychain
-pushing-dispatch doctor        # live table of reachable / cooldown / re-login lanes
-```
-
-When a worker hits an auth, rate-limit, or network error its lane is demoted
-into a cooldown and the router automatically reroutes to the next candidate;
-the lane recovers on cooldown expiry or the next success. State persists across
-sessions in `availability.json` and `lane_health.json`. Each dispatch's outcome
-is appended to `outcomes.jsonl` (the substrate for the opt-in learning loop).
+The session will check your prerequisites, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.
 
 ## License
 
