@@ -6,17 +6,17 @@ An orchestrator model dispatches worker agents with custom briefs and custom sys
 
 ## Why
 
-AI coding agents work best when you separate **judgment** from **execution**. The orchestrator stays in one seat, makes decisions, and fans out mechanical work to the cheapest model that can handle each subtask.
+AI coding agents work best when you separate **judgment** from **execution**. The orchestrator stays in one seat, makes decisions, and fans out mechanical work to an appropriate executor selected by the routing policy for each subtask.
 
-The problem: every provider has a different CLI, different tool-use semantics, different context loading. Three models means three sets of bugs.
+The problem: every provider has a different CLI and different tool-use semantics. Multiple models mean multiple sets of integration bugs.
 
-The fix: most providers now expose Anthropic-compatible API endpoints. Route them all through one harness. One shared library handles argument parsing, context loading, stream parsing, status writing. Each provider is a ~20-line wrapper that sets an API URL and auth token.
+The fix: route supported providers through their appropriate agentic harnesses and shared dispatch protocols. One shared library handles argument parsing, context loading, stream parsing, status writing, and worker lifecycle. Each provider is a thin wrapper that selects its endpoint and execution path.
 
 ## The Four Pillars
 
 ### 1. The Harness Flip
 
-Every provider (Anthropic, Moonshot/Kimi, DeepSeek, MiniMax, local Ollama) runs through the same Claude Code harness via Anthropic-compatible endpoints. One set of tools, one status protocol, one context-loading pattern.
+Providers use their supported agentic harnesses through a common dispatch layer. One status protocol and one context-loading pattern span the executors.
 
 Adding a new provider = one shell wrapper + one TOML entry.
 
@@ -28,9 +28,9 @@ Workers see only what they need. A lint script enforces that shared config stays
 
 ### 3. Matrix-Driven Routing
 
-A single TOML config (`dispatch_matrix.toml`) encodes every executor's capabilities, allowed modes, cost caps, and routing preferences. The auto-router reads the brief (size, keywords, complexity) and picks the cheapest model that can handle it.
+A single TOML config (`dispatch_matrix.toml`) encodes every executor's capabilities, allowed modes, cost caps, and routing preferences. The auto-router reads the brief (size, keywords, complexity), applies its routing heuristics, and selects the first capable, available executor in the matrix's ordered candidate lists.
 
-No hardcoded if/else chains. The matrix is the source of truth.
+The matrix is the source of truth for executor capabilities, allowed modes, cost caps, and routing preferences; the auto-router supplies the small mode and keyword classification layer.
 
 ### 4. Nested Dispatch with Safety Rails
 
@@ -42,30 +42,26 @@ Kill propagation walks the tree bottom-up. No auto-retry on failure. Ever.
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/YOUR_ORG/pushing-dispatch.git
-cd pushing-dispatch
+git clone <repository-url>
+cd <checkout-directory>
 cp dispatch_matrix.toml.example dispatch_matrix.toml
 
 # 2. Check prerequisites
 bash bin/check-prereqs.sh
 
-# 3. Set API keys (at minimum, one provider)
-export ANTHROPIC_API_KEY="sk-ant-..."
-# Or for third-party providers:
-export MOONSHOT_API_KEY="sk-..."
-export DEEPSEEK_API_KEY="sk-..."
+# 3. Configure at least one supported provider using its documented credential mechanism
 
 # 4. Write a brief
 cat > /tmp/my-brief.md << 'EOF'
 ---
 title: Fix lint warnings
-executor: sonnet
+executor: <configured-executor>
 ---
 Fix all ESLint warnings in src/utils.js
 EOF
 
 # 5. Dispatch
-python cli.py task start --executor sonnet --task-file /tmp/my-brief.md --cwd /path/to/project
+python cli.py task start --executor <configured-executor> --task-file /tmp/my-brief.md --cwd /path/to/project
 
 # 6. Check status
 python cli.py list --active
@@ -74,15 +70,7 @@ python cli.py status <worker-id>
 
 ## Supported Providers
 
-| Provider | Executor | Endpoint | Context Window |
-|----------|----------|----------|----------------|
-| Anthropic (Claude Opus) | `opus` | Native | 200K |
-| Anthropic (Claude Sonnet) | `sonnet` | Native | 200K |
-| Anthropic (Claude Haiku) | `haiku` | Native | 200K |
-| Moonshot (Kimi K2.6) | `kimi` | Anthropic-compat | 256K |
-| DeepSeek | `deepseek` | Anthropic-compat | 128K |
-
-See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provider.
+Executor names, provider capabilities, routing modes, and setup requirements are defined by the checked-in example matrix and the configured provider wrappers. See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details.
 
 ## Repo Structure
 
@@ -102,23 +90,21 @@ pushing-dispatch/
     nested.py                     # Tree-walk, kill cascade, spend rollup
     path_conventions.py           # Standardized artifact paths
     permissions.py                # Nested dispatch permissions
-    status_writer.py              # Atomic worker status files
-    stream_parser.py              # Stream-json event parsing
+    status_writer.py               # Atomic worker status files
+    stream_parser.py               # Stream-json event parsing
   bin/
     wrappers/                     # Provider wrappers
       _exec.sh                    # Shared execution library
       executor_prompt.md          # Worker prompt template
-      sonnet.sh, opus.sh, ...     # One per provider
+      *.sh                        # Provider and harness wrappers
     check-prereqs.sh              # Environment verification
     smoke-test.sh                 # First-run validation
   dispatch_packs/                 # Context packs for brief assembly
     _baseline.md                  # Universal worker rules
     _registry.toml                # Pack name -> file mapping
     *.md                          # Detail packs
-  hooks/                          # Claude Code hooks
-    auto_poll.sh                  # Auto-polling injection
+  hooks/                          # Agent hooks
   commands/                       # Slash commands
-    dispatch-poll.md              # Polling cycle
   docs/                           # Documentation
   examples/                       # Worked example briefs
 ```
@@ -135,23 +121,23 @@ pushing-dispatch/
 ## For LLM Agents
 
 This repo includes orientation files for AI coding agents:
-- [CLAUDE.md](CLAUDE.md) -- for Claude Code sessions
-- [AGENTS.md](AGENTS.md) -- for OpenAI Codex / generic agents
-- [GEMINI.md](GEMINI.md) -- for Gemini CLI sessions
+- [CLAUDE.md](CLAUDE.md) -- Claude Code orientation
+- [AGENTS.md](AGENTS.md) -- OpenAI Codex / generic agent orientation
+- [GEMINI.md](GEMINI.md) -- Gemini tooling orientation
 
 ## Core Principle
 
-Judgment stays in one place (the orchestrator seat). Execution fans out to the cheapest model that can handle each subtask. The brief is the contract. The matrix is the source of truth. Everything else is plumbing.
+Judgment stays in one place (the orchestrator seat). Execution fans out to an appropriate executor selected by the routing policy for each subtask. The brief is the contract. The matrix is the source of truth. Everything else is plumbing.
 
 ## Quick start with Claude Code
 
 The fastest setup path: open a fresh Claude Code session, paste this:
 
 ```
-Read SETUP_WITH_CLAUDE.md from https://github.com/PUSHINGSQUARES/Pushing-Dispatch_ and walk me through setup end to end.
+Read SETUP_WITH_CLAUDE.md from this checkout and walk me through setup end to end.
 ```
 
-The session will check your prereqs, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.
+The session will check your prerequisites, help you pick providers, generate your matrix config, run a smoke test, and wire up the advisor pattern in your project. See [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) for the full runbook.
 
 ## License
 
