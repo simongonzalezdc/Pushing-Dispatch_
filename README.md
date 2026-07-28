@@ -72,6 +72,10 @@ python cli.py status <worker-id>
 
 Executor names, provider capabilities, routing modes, and setup requirements are defined by the checked-in example matrix and the configured provider wrappers. See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details.
 
+### Local fleet leaf (when present)
+
+When this checkout includes the NUCBox/Ornith overlay, see [ops/unsloth-nucbox/README.md](ops/unsloth-nucbox/README.md) for the sticky local coding leaf and related launch notes. Routing still comes from the matrix and provider docs; do not treat local fleet material as required on every mirror snapshot.
+
 ## Repo Structure
 
 ```
