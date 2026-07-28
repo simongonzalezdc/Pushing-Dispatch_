@@ -27,8 +27,8 @@ LEAF_EXECUTORS = {"codex-luna", "minimax-m3", "agy-gemini-flash", "kilo-free-aut
 
 # Provider cost tiers: metered providers charge per-token (budget-capped),
 # subscription providers have flat-rate access (unbounded per-call cost).
-METERED_PROVIDERS = frozenset({"zai", "kimi-cli", "gjc", "agy"})
-SUBSCRIPTION_PROVIDERS = frozenset({"openai-codex"})
+METERED_PROVIDERS = frozenset({"agy"})
+SUBSCRIPTION_PROVIDERS = frozenset({"openai-codex", "zai", "gjc", "kimi-cli"})
 
 # Highest-cost subscription executor blocked from metered parents.
 HIGH_COST_SUBSCRIPTION = frozenset({"codex-sol"})
@@ -36,7 +36,8 @@ HIGH_COST_SUBSCRIPTION = frozenset({"codex-sol"})
 # Executor -> provider mapping. Mirrors dispatch_matrix.toml for fast lookup
 # without a full matrix parse in the hot path.
 _EXECUTOR_PROVIDERS = {
-    "kimi-k27": "kimi-cli",
+    "kimi-k3-cli": "kimi-cli",
+    "kimi-k3-ollama": "ollama-cloud",
     "zai-glm": "zai",
     "minimax-m3": "gjc",
     "codex-luna": "openai-codex",
@@ -125,7 +126,8 @@ def _default_permissions() -> dict:
     return {
         "codex-sol.codex-terra": True,
         "codex-sol.codex-luna": True,
-        "codex-sol.kimi-k27": True,
+        "codex-sol.kimi-k3-cli": True,
+        "codex-sol.kimi-k3-ollama": True,
         "codex-sol.zai-glm": True,
         "codex-sol.agy-gemini-pro": True,
         "codex-sol.agy-gemini-flash": True,
@@ -135,9 +137,9 @@ def _default_permissions() -> dict:
         "codex-terra.codex-luna": True,
         "codex-terra.kilo-free-auto": True,
         "codex-terra.lm-studio": True,
-        "kimi-k27.codex-luna": True,
-        "kimi-k27.kilo-free-auto": True,
-        "kimi-k27.lm-studio": True,
+        "kimi-k3-cli.codex-luna": True,
+        "kimi-k3-cli.kilo-free-auto": True,
+        "kimi-k3-cli.lm-studio": True,
         "zai-glm.codex-luna": True,
         "zai-glm.agy-gemini-flash": True,
         "zai-glm.minimax-m3": True,

@@ -41,7 +41,7 @@ Use includes: for shared context rather than repeating it.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `title` | No | Human-readable title |
-| `executor` | No | Override auto-routing (e.g. `codex-luna`, `kimi-k27`) |
+| `executor` | No | Override auto-routing (e.g. `codex-luna`, `kimi-k3-cli`, `kimi-k3-ollama`) |
 | `workspace` | No | Project/workspace name for context |
 | `includes` | No | List of pack names to resolve and prepend |
 | `nested_dispatch` | No | Enable nested dispatch with constraints |

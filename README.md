@@ -70,7 +70,37 @@ python cli.py status <worker-id>
 
 ## Supported Providers
 
-Executor names, provider capabilities, routing modes, and setup requirements are defined by the checked-in example matrix and the configured provider wrappers. See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details.
+| Provider | Executor | Endpoint | Context Window |
+|----------|----------|----------|----------------|
+| Kimi K3 subscription | `kimi-k3-cli` | Official Kimi CLI only | 1M |
+| Kimi K3 on Ollama Cloud | `kimi-k3-ollama` | Ollama Cloud only; live-catalog gated | 1M |
+| Z.ai GLM 5.2 | `zai-glm` | Claude Code / Anthropic-compat | 1M |
+| MiniMax M3 | `minimax-m3` | GJC | 512K |
+| GPT-5.6 Luna | `codex-luna` | Codex CLI / ChatGPT subscription | 272K |
+| GPT-5.6 Terra | `codex-terra` | Codex CLI / ChatGPT subscription | 272K |
+| GPT-5.6 Sol | `codex-sol` | Codex CLI / ChatGPT subscription | 272K |
+| Grok Build | `grok-build` | Official Grok CLI | 500K |
+| Gemini via AGY | `agy-gemini-*` | AGY agentic harness | 1M |
+| Dell validated tiny-work cascade | `ollama-xps-gpu` | Ollama Qwen 3.5 2.3B → resident NUC validator | 65,536 configured |
+| NUCBox resident coding leaf | `unsloth-nucbox` | Ornith-1.0-35B MTP (sticky `:8890`) | 32,768 |
+| NUCBox on-demand general | `qwen35-35b-general` | llama.cpp Qwen 3.5 35B-A3B | 32,768 |
+| NUCBox on-demand review | `qwen35-27b-review` | llama.cpp Qwen 3.5 27B | 32,768 |
+| NUCBox on-demand coding | `qwen36-35b-coding` | llama.cpp Qwen 3.6 35B-A3B | 32,768 |
+
+See [docs/PROVIDERS.md](docs/PROVIDERS.md) for configuration details per provider
+and [docs/LOCAL_INFERENCE_POLICY.md](docs/LOCAL_INFERENCE_POLICY.md) for the
+fleet-wide local-model benchmark, admission, and Ornith sticky-leaf policy.
+
+The sticky Ornith leaf (`unsloth-nucbox`) leads bounded local coding/general
+work. The Dell lane is restricted to atomic mechanical tasks and rejects any
+output that the resident NUC validator does not accept. Local specialist
+headroom: 24K for general, 16K for coding (Ornith 32k slot), 5K for review.
+On-demand dual-load cells on `:8892` stay defined but unavailable while Ornith
+is sticky. Broad/risky, oversized, visual, breakout, consult, and long-context
+work stays on its stronger existing tier.
+The independent-review lane caps answers at 512 tokens so a concise finding
+cannot consume the entire ten-minute workcell lease.
+Their provider-metered cost is not known; electricity economics is deferred.
 
 ## Repo Structure
 
@@ -115,6 +145,8 @@ pushing-dispatch/
 - [docs/ORCHESTRATING.md](docs/ORCHESTRATING.md) -- complete orchestrator guide
 - [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) -- per-user customization recipes
 - [docs/PROVIDERS.md](docs/PROVIDERS.md) -- provider-specific configuration
+- [docs/LOCAL_INFERENCE_POLICY.md](docs/LOCAL_INFERENCE_POLICY.md) -- governed local-model admission and Ornith sticky leaf
+- [docs/HERMES.md](docs/HERMES.md) -- Liam/Hermes orchestration integration
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) -- common gotchas
 - [CONTRIBUTING.md](CONTRIBUTING.md) -- how to contribute
 

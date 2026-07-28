@@ -30,3 +30,9 @@ Thumbs.db
 
 # Temporary files
 *.tmp
+
+# Host-local agent state / sessions
+.gjc/
+
+# Host-absolute skill symlinks (regenerate on machine; catalog is committed)
+ops/unsloth-nucbox/pi-agent/skills/

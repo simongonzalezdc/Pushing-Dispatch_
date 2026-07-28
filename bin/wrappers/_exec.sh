@@ -711,7 +711,21 @@ except urllib.error.HTTPError as exc:
     print(f"HTTP {exc.code}: {detail}", file=sys.stderr)
     raise SystemExit(1)
 
-print(json.dumps({"type": "system", "model": model, "provider": os.environ.get("CE_TOOL_NAME", "openai-compatible")}))
+actual_model = data.get("model")
+expected_response_model = os.environ.get("OPENAI_COMPAT_EXPECT_RESPONSE_MODEL", "").strip()
+if expected_response_model and actual_model != expected_response_model:
+    print(
+        "response model identity mismatch: "
+        f"expected {expected_response_model!r}, got {actual_model!r}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+print(json.dumps({
+    "type": "system",
+    "model": actual_model or model,
+    "provider": os.environ.get("CE_TOOL_NAME", "openai-compatible"),
+}))
 
 text = ""
 choices = data.get("choices") or []
@@ -743,6 +757,204 @@ PY
     fi
 
     ce_finalize_from_text "$final_text"
+}
+
+ce_verify_pi_local_identity() {
+    local health_url="${PI_LOCAL_HEALTH_URL:?PI_LOCAL_HEALTH_URL is required}"
+    local expected_model="${PI_LOCAL_EXPECT_MODEL:?PI_LOCAL_EXPECT_MODEL is required}"
+    # Studio/proxy catalogs list many models; require expected id present and loaded
+    # when the endpoint reports a loaded flag (sticky Ornith on :8890).
+    python3 - "$health_url" "$expected_model" <<'PY'
+import json
+import sys
+import urllib.request
+
+url, expected = sys.argv[1:3]
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+except Exception:
+    print(
+        f"model identity mismatch: expected {expected!r}, endpoint identity unavailable",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+rows = [item for item in payload.get("data", payload.get("models", [])) if isinstance(item, dict)]
+match = None
+for item in rows:
+    mid = str(item.get("id") or item.get("model") or item.get("name") or "")
+    if mid == expected or mid == f"{expected}:latest":
+        match = item
+        break
+if match is None:
+    ids = sorted(
+        str(i.get("id") or i.get("model") or i.get("name"))
+        for i in rows
+        if (i.get("id") or i.get("model") or i.get("name"))
+    )
+    print(
+        f"model identity mismatch: expected {expected!r} present, catalog={ids!r}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+# If Studio reports loaded flags, require the expected model be the resident one.
+if "loaded" in match and match.get("loaded") is not True:
+    print(
+        f"model identity mismatch: {expected!r} present but loaded={match.get('loaded')!r}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+PY
+}
+
+ce_run_pi_local() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    # Skills / context progressive disclosure:
+    # - progressive (default for Ornith): Pi injects skill name+description+path only;
+    #   model `read`s full SKILL.md when needed. Skills live under PI_LOCAL_AGENT_DIR/skills.
+    # - off: --no-skills (legacy slim leaf)
+    # - full: same as progressive (Pi format is already progressive; kept as alias)
+    local skills_mode="${PI_LOCAL_SKILLS_MODE:-off}"
+    local context_mode="${PI_LOCAL_CONTEXT_FILES:-off}"
+    local cmd=(
+        pi
+        --provider "${PI_LOCAL_PROVIDER:?PI_LOCAL_PROVIDER is required}"
+        --model "${PI_LOCAL_MODEL:?PI_LOCAL_MODEL is required}"
+        --thinking off
+        --no-session
+        --no-extensions
+        --no-prompt-templates
+        --tools "${PI_LOCAL_TOOLS:-read,bash,edit,write,grep,find,ls}"
+        --append-system-prompt "${OPENAI_COMPAT_SYSTEM:-}"
+        --print "$CE_FINAL_PROMPT"
+    )
+    if [[ "$skills_mode" == "off" ]]; then
+        cmd+=(--no-skills)
+    fi
+    if [[ "$context_mode" == "off" ]]; then
+        cmd+=(--no-context-files)
+    fi
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute Pi local model: $PI_LOCAL_PROVIDER/$PI_LOCAL_MODEL"
+        echo "Agent config: $PI_LOCAL_AGENT_DIR"
+        return 0
+    fi
+
+    if [[ ! -f "$PI_LOCAL_AGENT_DIR/models.json" ]]; then
+        echo "Missing Pi local model registry: $PI_LOCAL_AGENT_DIR/models.json" >&2
+        ce_finalize_status "errored" 4 "missing Pi local model registry"
+        return 4
+    fi
+
+    if ! ce_verify_pi_local_identity; then
+        rm -f "$CE_ASSEMBLED_BRIEF"
+        ce_finalize_status "errored" 4 "Pi local endpoint model identity mismatch"
+        return 4
+    fi
+
+    local runtime_agent_dir="$PI_LOCAL_AGENT_DIR"
+    local temporary_agent_dir=""
+    if [[ -n "${PI_LOCAL_BASE_URL:-}" ]]; then
+        temporary_agent_dir="$(mktemp -d "${TMPDIR:-/tmp}/dispatch-pi-agent-XXXXXX")"
+        # Copy registry files; re-link skills so progressive catalog survives the temp dir.
+        cp -R "$PI_LOCAL_AGENT_DIR/." "$temporary_agent_dir/"
+        if [[ -d "$PI_LOCAL_AGENT_DIR/skills" ]]; then
+            rm -rf "$temporary_agent_dir/skills"
+            ln -sfn "$PI_LOCAL_AGENT_DIR/skills" "$temporary_agent_dir/skills"
+        fi
+        python3 - "$temporary_agent_dir/models.json" "$PI_LOCAL_PROVIDER" "$PI_LOCAL_BASE_URL" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+provider = sys.argv[2]
+base_url = sys.argv[3]
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["providers"][provider]["baseUrl"] = base_url
+path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+        runtime_agent_dir="$temporary_agent_dir"
+    fi
+
+    local exit_code=0
+    (
+        cd "$CE_CWD"
+        # Pi exposes no max-turns option. A process alarm bounds the local leaf.
+        PI_CODING_AGENT_DIR="$runtime_agent_dir" \
+            perl -e 'alarm shift; exec @ARGV' "${PI_LOCAL_TIMEOUT_SECONDS:-300}" "${cmd[@]}"
+    ) 2>&1 | tee "$log_file" || exit_code=$?
+    if [[ -n "$temporary_agent_dir" ]]; then
+        rm -rf "$temporary_agent_dir"
+    fi
+    rm -f "$CE_ASSEMBLED_BRIEF"
+
+    if [[ $exit_code -ne 0 ]]; then
+        echo "Worker $CE_WORKER_ID: Pi local harness exited with code $exit_code." >&2
+        ce_finalize_status "errored" 4 "Pi local harness exited with code $exit_code"
+        return 4
+    fi
+
+    if ! ce_verify_pi_local_identity; then
+        ce_finalize_status "errored" 4 "Pi local endpoint model identity changed during work"
+        return 4
+    fi
+
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
+ce_run_nuc_ondemand() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    local receipt_dir="$CE_DISPATCH_ROOT/receipts/nuc-workcells"
+    mkdir -p "$log_dir" "$receipt_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local receipt_file="$receipt_dir/${CE_WORKER_ID}.json"
+    local prompt_file
+    prompt_file="$(mktemp "${TMPDIR:-/tmp}/dispatch-nuc-workcell-prompt-XXXXXX")"
+    printf '%s\n' "$CE_FINAL_PROMPT" > "$prompt_file"
+
+    local args=(
+        --profile "${NUC_WORKCELL_PROFILE:?NUC_WORKCELL_PROFILE is required}"
+        --prompt-file "$prompt_file"
+        --cwd "$CE_CWD"
+        --log-file "$log_file"
+        --receipt-file "$receipt_file"
+    )
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        args+=(--dry-run)
+    fi
+
+    local exit_code=0
+    PYTHONPATH="$CE_REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+        python3 -m dispatch_lib.nuc_ondemand "${args[@]}" || exit_code=$?
+    rm -f "$prompt_file" "$CE_ASSEMBLED_BRIEF"
+
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "on-demand NUC workcell failed or could not prove restoration"
+        return 4
+    fi
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        return 0
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
 }
 
 ce_run_gemini() {

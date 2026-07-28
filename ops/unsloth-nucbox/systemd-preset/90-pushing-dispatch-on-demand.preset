@@ -1,0 +1,5 @@
+disable llama-qwen35-35b.service
+disable llama-qwen35-27b.service
+disable qwen36-moe-llama.service
+disable llama-27b.service
+disable llama-mtp.service

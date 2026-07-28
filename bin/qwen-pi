@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Launch an interactive Pi session against an identity-verified NUC Qwen lane."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+from dispatch_lib.nuc_ondemand import PROFILES, RemoteBackend  # noqa: E402
+
+
+def pi_models(profile, api_key: str) -> dict:
+    return {
+        "providers": {
+            profile.name: {
+                "baseUrl": profile.base_url,
+                "api": "openai-completions",
+                "apiKey": api_key,
+                "compat": {
+                    "supportsDeveloperRole": False,
+                    "supportsReasoningEffort": False,
+                    "supportsUsageInStreaming": False,
+                    "maxTokensField": "max_tokens",
+                    "thinkingFormat": "qwen",
+                },
+                "models": [
+                    {
+                        "id": profile.expected_model,
+                        "name": profile.name,
+                        "reasoning": True,
+                        "input": ["text"],
+                        "contextWindow": profile.context_window,
+                        "maxTokens": profile.max_output_tokens,
+                        "cost": {
+                            "input": 0,
+                            "output": 0,
+                            "cacheRead": 0,
+                            "cacheWrite": 0,
+                        },
+                    }
+                ],
+            }
+        }
+    }
+
+
+def pi_settings(source_dir: Path, profile) -> dict:
+    settings = json.loads((source_dir / "settings.json").read_text())
+    keep = (
+        "pi-mcp-adapter",
+        "pi-permission-system",
+        "@samfp/pi-memory",
+        "pi-continue",
+        "pi-tool-display",
+        "context-mode",
+        "pi-web-access",
+        "pi-chrome",
+        "pi-redact",
+    )
+    settings["packages"] = [
+        package
+        for package in settings.get("packages", [])
+        if any(name in str(package) for name in keep)
+    ]
+    settings["defaultProvider"] = profile.name
+    settings["defaultModel"] = profile.expected_model
+    settings["defaultThinkingLevel"] = "off"
+    settings["enabledModels"] = [f"{profile.name}/{profile.expected_model}"]
+    return settings
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "lane",
+        nargs="?",
+        choices=("general", "code"),
+        default="general",
+        help="general = Qwen 3.5 35B; code = Qwen 3.6 35B",
+    )
+    parser.add_argument("pi_args", nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    profile_name = {
+        "general": "qwen35-35b-general",
+        "code": "qwen36-35b-coding",
+    }[args.lane]
+    profile = PROFILES[profile_name]
+    backend = RemoteBackend()
+    activated = False
+    restored = False
+
+    try:
+        backend.preflight(profile)
+        backend.acquire(profile)
+        activated = True
+        backend.activate(profile)
+        identity = backend.identity(profile)
+        if identity.get("model") != profile.expected_model:
+            raise RuntimeError("local model identity was not proven")
+        api_key = backend.api_key(profile)
+
+        with tempfile.TemporaryDirectory(prefix="qwen-pi-") as temporary:
+            agent_dir = Path(temporary)
+            source_dir = Path.home() / ".pi" / "agent"
+            (agent_dir / "models.json").write_text(
+                json.dumps(pi_models(profile, api_key), indent=2) + "\n"
+            )
+            (agent_dir / "settings.json").write_text(
+                json.dumps(pi_settings(source_dir, profile), indent=2) + "\n"
+            )
+            for name in ("auth.json", "npm", "local-extensions", "skills"):
+                source = source_dir / name
+                target = agent_dir / name
+                if source.exists():
+                    target.symlink_to(source, target_is_directory=source.is_dir())
+
+            env = os.environ.copy()
+            env["PI_CODING_AGENT_DIR"] = str(agent_dir)
+            command = [
+                "PI",
+                "--provider",
+                profile.name,
+                "--model",
+                profile.expected_model,
+                "--thinking",
+                "off",
+                "--no-skills",
+                "--session-dir",
+                str(source_dir / "sessions"),
+                *args.pi_args,
+            ]
+            print(
+                f"LOCAL MODEL VERIFIED: {profile.family} / {profile.expected_model}",
+                flush=True,
+            )
+            return subprocess.run(command, env=env).returncode
+    finally:
+        if activated:
+            try:
+                backend.restore(profile)
+                result = backend.verify_restored(profile)
+                restored = result.get("restored") is True
+                if restored:
+                    backend.cancel_auto_restore(profile)
+                    backend.release(profile)
+            finally:
+                print(
+                    "NUC baseline restored." if restored else "WARNING: restoration not proven.",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

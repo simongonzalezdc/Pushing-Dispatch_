@@ -21,8 +21,8 @@ Source of truth inspected:
 | `anthropic` subscription | `claude-opus-4-8` | `opus` | Claude Code login/config |
 | `anthropic` subscription | `claude-sonnet-4-6` | `sonnet` | Claude Code login/config |
 | `anthropic` subscription | `claude-haiku-4-5-20251001` | `haiku` | Claude Code login/config |
-| Kimi custom provider | `kimi-for-coding` | `kimi-coding` | `KIMI_API_KEY` |
-| Moonshot/Kimi provider | `kimi-k2.6` | `kimi-moonshot` | `MOONSHOT_API_KEY` |
+| Kimi K3 subscription | `kimi-code/k3` | `kimi-k3-cli` | Official Kimi CLI session only |
+| Kimi K3 on Ollama Cloud | `kimi-k3` | `kimi-k3-ollama` | `OLLAMA_API_KEY` only |
 | DeepSeek provider | `deepseek-v4-flash` | `deepseek` | `DEEPSEEK_API_KEY` |
 | Z.ai / GLM custom provider | `glm-5.1` | `zai-glm` | `Z_AI_API_KEY` |
 | Z.ai / GLM custom provider | `glm-4.5-air` | `zai-air` | `Z_AI_API_KEY` |
@@ -44,8 +44,8 @@ Source of truth inspected:
 
 ## What Changed
 
-- Kimi is no longer the old Moonshot wrapper. Manifest's Kimi Coding lane uses
-  `https://api.kimi.com/coding`, model `kimi-for-coding`, and `KIMI_API_KEY`.
+- Kimi K3 subscription access uses only the official Kimi CLI as `kimi-k3-cli`.
+  The separate `kimi-k3-ollama` lane uses Ollama Cloud's OpenAI-compatible endpoint and `OLLAMA_API_KEY`; credentials never cross between them.
 - Moonshot/Kimi and direct DeepSeek are routable again as `kimi-moonshot` and
   `deepseek`, instead of being orphaned wrapper scripts.
 - Z.ai is now first-class through `https://api.z.ai/api/anthropic`.

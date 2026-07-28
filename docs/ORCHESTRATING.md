@@ -18,20 +18,65 @@ diagnostic probe, not preference-based routing.
 
 | Need | Normal route |
 |---|---|
-| Typo, lint, tiny mechanical edit | `codex-luna` |
-| First attempt for ordinary work | `codex-luna` (xhigh) |
+| Atomic typo, one-file lint/format, or local rename | `ollama-xps-gpu`, accepted only after resident NUC validation |
+| Unclassified ordinary work | `zai-glm`; resident Qwen and prepaid/cloud fallbacks follow |
 | Explicit retry after unusable Luna result | `codex-terra` (high) |
 | Exceptional final ladder | `codex-sol` (low, then medium, then high; stop) |
-| Long context | Matrix-ranked availability route; `kimi-k27` is the dedicated long-context fallback |
+| Long context | `kimi-k3-cli` first through the Kimi subscription; `kimi-k3-ollama` next when Ollama Cloud exposes K3; then the availability-ranked fallback ladder |
 | Retired Claude Opus-class work | `grok-build` (hard implementation, deep architecture, adversarial review, breakout, consult) |
-| Visual work | Codex, Grok, Kimi, or AGY; never GLM |
+| Visual work | Codex, Grok, Kimi K3 through either explicitly isolated lane, or AGY; never GLM |
 | Gemini | AGY only |
 | MiniMax M3 backup | GJC only |
 | Free overflow | `kilo-free-auto` only |
-| Local/private | `lm-studio` |
+| Bounded local coding (m3-class, tools + proof) | **`unsloth-nucbox`** (Ornith sticky on `:8890`); then cloud fallbacks |
+| Bounded general/review dual-load workcells | Retired while Ornith is resident (`qwen35-*` / `qwen36-35b-coding` need `:8892`) |
 
 GLM 5.2 runs through the Claude Code harness and has no vision. If any lane's
 native search fails or is unreliable, use the global DuckDuckGo `ddg` MCP.
+
+### Cloud orchestrator → Ornith leaf (copy-paste)
+
+Use this when the top session should **not** do the coding itself, but hand a
+bounded leaf to NUCBox Ornith with progressive skills (obra superpowers + Matt
+Pocock suite) already wired:
+
+```bash
+# 1) Prefer auto (routes local coding keywords → unsloth-nucbox when available)
+pushing-dispatch route --mode task --task "local coding: <one-sentence goal + acceptance>"
+
+# 2) Explicit leaf (when you already decided local)
+pushing-dispatch task start \
+  --executor unsloth-nucbox \
+  --cwd "$PWD" \
+  --task "$(cat <<'EOF'
+# Task
+<bounded one-file or small-module change>
+
+# Constraints
+- Stay inside the named paths.
+- Prefer skill: systematic-debugging | test-driven-development | verification-before-completion when matching.
+- Run the focused test/check and report command + result.
+- End with Status: DONE (or DONE_WITH_CONCERNS / NEEDS_GUIDANCE / BLOCKED).
+
+# Acceptance
+<falsifiable check>
+EOF
+)"
+```
+
+**Admit only** m3-class work: bounded · localized · reversible · verifying.
+**Never** use Ornith as sole architect / critic / security / vision / web judge.
+Ops README: `ops/unsloth-nucbox/README.md`. Fleet rules: launchpad
+`docs/agents/ORNITH-GUIDELINES.md`. Health:
+`ssh nucbox '~/unsloth-ops/bin/ornith-workhorse-verify.sh'` (expect `fail=0`).
+
+The auto-router admits only deterministic, bounded task families to local
+specialist tiers. Broad, risky, repository-wide, long-context, visual, breakout,
+and consult work keeps its stronger existing tier. Ornith (`unsloth-nucbox`) is
+the sticky resident workhorse (32,768 context, 16,000 routing ceiling for coding).
+On-demand dual-load workcells on `:8892` remain defined but unavailable while
+Ornith is sticky. The unused headroom covers baseline, progressive skill catalog,
+instructions, and output; never substitute advertised training context.
 
 ## Briefs
 

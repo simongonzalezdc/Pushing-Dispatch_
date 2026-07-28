@@ -15,7 +15,8 @@ CHARS_PER_TOKEN = 4
 
 # Default context windows by provider (tokens).
 DEFAULT_CONTEXT_WINDOWS = {
-    "kimi-k27": 262_144,
+    "kimi-k3-cli": 1_048_576,
+    "kimi-k3-ollama": 1_048_576,
     "zai-glm": 1_000_000,
     "minimax-m3": 512_000,
     "codex-luna": 272_000,

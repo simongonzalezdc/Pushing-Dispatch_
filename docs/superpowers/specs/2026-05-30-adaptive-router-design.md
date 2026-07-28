@@ -16,7 +16,7 @@ structural failures:
    and the macOS Keychain service `dopamine-depot` (e.g. `dopamine-depot:gemini`,
    `dopamine-depot:minimax`). A dispatched worker runs in a non-interactive
    subprocess that never sources the shell, so those keys are invisible. Only
-   OpenAI (Codex `auth.json`), Anthropic (Claude Code login), Kimi CLI, and
+   OpenAI (Codex `auth.json`), Anthropic (Claude Code login), Ollama Cloud Kimi K3, and
    Ollama are reachable at dispatch time.
 2. **No availability awareness in routing.** `auto_route()` returns single
    hard-coded candidates per signal and will return an executor whose key is
