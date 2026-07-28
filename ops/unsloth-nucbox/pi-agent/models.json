@@ -15,10 +15,10 @@
         {
           "id": "SC117/Ornith-1.0-35B-MTP-APEX-GGUF",
           "name": "NUCBox Ornith 1.0 35B MTP (sticky workhorse)",
-          "reasoning": true,
+          "reasoning": false,
           "input": ["text"],
           "contextWindow": 32768,
-          "maxTokens": 16384,
+          "maxTokens": 4096,
           "cost": {
             "input": 0,
             "output": 0,
