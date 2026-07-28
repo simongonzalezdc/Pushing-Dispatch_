@@ -19,7 +19,8 @@ Code binary as `claude-real` for harness maintenance only.
 
 - Codex CLI with the ChatGPT subscription for Luna, Terra, and Sol.
 - Claude Code plus Z.AI credentials for GLM 5.2.
-- Native Kimi CLI for Kimi K2.7.
+- Official Kimi CLI for Kimi K3 through the user's Kimi subscription; this is the only allowed subscription path.
+- Ollama Cloud for a separate Kimi K3 lane. It stays unavailable until Ollama's live catalog exposes `kimi-k3`, and only this lane may become Hermes' native K3 provider.
 - GJC for MiniMax M3.
 - AGY for Gemini.
 - Native Kilo CLI for free-only routing.

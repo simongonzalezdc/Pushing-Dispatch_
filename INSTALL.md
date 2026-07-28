@@ -21,8 +21,8 @@
 
 ### Optional (for specific providers)
 
-- **Kimi CLI** (`kimi-cli`) -- required for the native `kimi-k27` lane
-  - Install: `pip install kimi-cli`
+- **Official Kimi CLI** -- required for the `kimi-k3-cli` subscription lane; authenticate with `kimi login` and verify with `kimi doctor`
+- **Ollama Cloud key** -- required for the separate `kimi-k3-ollama` lane; store it as `OLLAMA_API_KEY` or Keychain account `ollama_api_key`
 - **Official Grok CLI** (`grok`) -- required for the `grok-build` / Grok 4.5 lane
   - Install: `npm install -g @xai-official/grok`
   - Authenticate: `grok login --oauth` (or `grok login --device-auth` headlessly)

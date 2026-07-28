@@ -13,24 +13,46 @@ model from the harness name, and do not restore a retired lane from an old doc.
 | `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low default; high ceiling) | Yes | Exceptional fallback; explicitly escalate low → medium → high |
 | `grok-build` | Official Grok CLI | Grok 4.5 (`grok-4.5`) | Yes | Claude Opus-class replacement |
 | `zai-glm` | Claude Code harness via `claude-glm52` | GLM 5.2 | **No** | Strong non-visual worker |
-| `kimi-k27` | Native `kimi-cli` only | `kimi-code/kimi-for-coding` (Kimi K2.7) | Yes | Long context and implementation |
+| `kimi-k3-cli` | Official Kimi CLI, Kimi subscription | `kimi-code/k3` (Kimi K3) | Yes | Primary 1M-context K3 subscription lane |
+| `kimi-k3-ollama` | Ollama Cloud only | `kimi-k3` (Kimi K3) | Yes | Live-gated Ollama route and future Hermes main model |
 | `minimax-m3` | GJC backup path | `minimax-code/minimax-m3` | No | Backup coding lane |
 | `agy-gemini-pro` | AGY only | Gemini 3.1 Pro (High) | Yes | Deep/visual Gemini lane |
 | `agy-gemini-flash` | AGY only | Gemini 3.5 Flash (Medium) | Yes | Fast/visual Gemini lane |
 | `kilo-free-auto` | Native Kilo CLI | `kilo/kilo-auto/free` | No | Free overflow only |
-| `lm-studio` | Local LM Studio | `qwen3.6-35b-a3b-mtp` | No | Local/private fallback |
+| `ollama-xps-gpu` | Dell Ollama plus resident-NUC validator | Qwen 3.5 2.3B Q8_0 | No | Tiny mechanical work; validation required |
+| `unsloth-nucbox` | Resident NUC Unsloth `:8890` | Ornith-1.0-35B MTP APEX | No | Sticky m3-class coding leaf, 32,768 context; progressive skills |
+| `qwen35-35b-general` | On-demand NUC llama.cpp | Qwen 3.5 35B-A3B Q4_K_M | No | Auto-routed bounded general work, 32,768 context |
+| `qwen35-27b-review` | On-demand NUC llama.cpp | Qwen 3.5 27B Q4_K_M | No | Auto-routed bounded independent review, 32,768 context, read-only tool admission, and a 512-token answer cap |
+| `qwen36-35b-coding` | On-demand NUC llama.cpp | Qwen 3.6 35B-A3B Q4_K_M | No | Auto-routed bounded coding work, 32,768 context with 8-thread thermal cap |
 
 ## Routing Rules
 
-- Luna xhigh is the normal first attempt for ordinary and trivial work. Terra high is the explicit Codex fallback after an unusable Luna result.
+- Unclassified standard work currently starts with `zai-glm`; local task-family
+  tiers are evaluated first when deterministic signals match. Within the Codex
+  fallback ladder, Luna precedes Terra and Sol.
 - Grok 4.5 replaces retired Claude Opus-class work. Hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer `grok-build`.
 - Sol is an exceptional Codex fallback only: escalate low, medium, then high and stop after high.
-- Kimi K2.7 is available only through native Kimi CLI.
+- Kimi subscription access always uses `kimi-k3-cli` through the official Kimi CLI. Ollama access always uses `kimi-k3-ollama`, remains unroutable until the live catalog exposes `kimi-k3`, and is the only K3 lane eligible to run natively inside Hermes. Credentials never cross between lanes.
 - Gemini is available only through AGY; Gemini CLI and direct-API wrappers are retired.
 - MiniMax M3 is accessed through GJC as a backup.
 - Kilo is free-only. Its safe default is `kilo/kilo-auto/free`; monthly named free models must be verified live before use. Never silently fall through to a paid Kilo model.
 - GLM 5.2 has no vision. Image, screenshot, PDF-render, and visual tasks must use a vision-capable lane.
 - When native search is missing or unreliable, use the globally configured DuckDuckGo `ddg` MCP. Never fabricate search results.
+- Atomic mechanical work routes to the Dell only when the brief is genuinely
+  narrow; repository-wide, multi-file, risky, architectural, migration, and
+  security-sensitive signals escalate before the mechanical keyword check.
+- Bounded general, review, and coding briefs route respectively to
+  `qwen35-35b-general`, `qwen35-27b-review`, and `qwen36-35b-coding`.
+  Deterministic input ceilings are 24K, 5K, and 5K tokens. Oversized work
+  returns to the standard/long-context tiers instead of overflowing a local
+  serving slot.
+- Automatic local admission is task-class scoped, not blanket model promotion.
+  Breakout, consult, hard/risky, visual, and long-context tiers are unchanged.
+  Economics remains deferred and unproven.
+
+## Local Qwen NUC Safety
+
+Only one model is resident at a time. Studio and proxy are disabled. GPU performance level is low. Preflight rejects Tctl above 85°C. Runtime guard stops at 90°C. Every on-demand request must restore the resident qwen27 plus watchdog and leave all on-demand targets inactive and disabled.
 
 ## Claude Code Means GLM 5.2 Here
 

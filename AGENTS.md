@@ -29,7 +29,7 @@ Four pillars:
 - `zai-glm` is GLM 5.2. GJC provides explicit GLM 5.2 and MiniMax M3 backup paths.
 - GLM has no vision capability. Visual tasks must route to a matrix-declared `vision` executor, never GLM.
 - If any model's normal search path fails or produces unusable results, use the global DuckDuckGo `ddg` MCP fallback; never invent search results or citations.
-- Kimi K2.7 is the single `kimi-k27` lane, exclusively through native `kimi-cli` using its managed `kimi-for-coding` alias; never Claude Code or GJC.
+- Kimi K3 has two isolated access lanes: `kimi-k3-cli` uses the official Kimi CLI and only the user's Kimi subscription session; `kimi-k3-ollama` uses only Ollama Cloud credentials and stays unavailable until Ollama's live catalog exposes K3. Never cross credentials or silently substitute one lane for the other. Hermes may use only the Ollama Cloud lane as a native provider.
 - Gemini is exclusive to AGY; do not route Gemini through Gemini CLI or the legacy direct API wrappers.
 - `grok-build` uses xAI's official `grok` CLI with Grok 4.5, vision, native OAuth or `XAI_API_KEY`, and explicit CLI sandbox profiles. It replaces retired Claude Opus-class work: hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer Grok. Never substitute an unofficial Grok client.
 - Ordinary work remains Luna at Extra High-first. Within the Codex fallback ladder, retry an unusable Luna result with Terra at High; use Sol only when genuinely necessary, escalating Light, Medium, then High and stopping after High. Auto-routing cannot judge semantic answer quality. Every model prompt must state when to stop. GPT-5.5, Codex OSS, NUCBox Gemma, and Anthropic Opus are retired.

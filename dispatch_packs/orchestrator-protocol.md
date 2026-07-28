@@ -20,14 +20,24 @@ Stay inline when:
 
 | Signal | Executor | Why |
 |--------|----------|-----|
-| Long context (>50K tokens) | Matrix-ranked candidates | Kimi K2.7 remains the dedicated long-context fallback |
+| Bounded local coding / small verify loop | **`unsloth-nucbox`** (Ornith) | Free sticky NUC leaf; progressive obra+Matt skills; m3-class only |
+| Long context (>50K tokens) | Matrix-ranked candidates | `kimi-k3-cli` first through the Kimi subscription; isolated `kimi-k3-ollama` next when Ollama exposes it |
 | Mechanical refactor | `codex-luna` | Fast subscription lane |
-| First attempt for ordinary work | `codex-luna` | Run at xhigh; strongest default speed/cost balance |
+| First attempt for ordinary work | `codex-luna` / `zai-glm` via `auto` | Route, don't hand-pick |
 | Unusable Luna result | `codex-terra` | Explicit retry at high; do not call `auto` again |
 | Genuinely frontier fallback | `codex-sol` | Explicit low → medium → high ladder; stop after high |
 | Retired Claude Opus-class work | `grok-build` | Hard implementation, deep architecture, adversarial review, breakout, consult |
 | Visual work | Codex, Grok, Kimi, or AGY | GLM has no vision |
 | Free overflow | `kilo-free-auto` | Kilo free models only |
+
+### Ornith one-liner (local leaf)
+
+```bash
+pushing-dispatch task start --executor unsloth-nucbox --cwd "$PWD" \
+  --task "local coding: <bounded goal + acceptance>. Prefer progressive skills when matching. Status: DONE"
+```
+
+Do **not** seat Ornith as breakout top, architect, critic, security, vision, or web sole judge. See `docs/ORCHESTRATING.md` § Cloud orchestrator → Ornith leaf.
 
 ## Writing a Brief
 

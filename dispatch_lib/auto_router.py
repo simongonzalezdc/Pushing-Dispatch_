@@ -28,13 +28,51 @@ LONG_CONTEXT_KEYWORDS = re.compile(
     r"(summarize|summarise|analyze|analyse|review|audit)\s+(all|every|each|the entire)",
     re.IGNORECASE,
 )
-MECHANICAL_KEYWORDS = re.compile(
-    r"(rename|refactor|lint|format|fix(?:\s+(?:a|the))?\s+typo|add comment|update import)",
+ATOMIC_MECHANICAL_KEYWORDS = re.compile(
+    r"(?:fix|correct)(?:\s+(?:a|the))?\s+(?:single\s+)?typo\b|"
+    r"add(?:\s+(?:a|the))?\s+comment|update(?:\s+(?:a|the))?\s+import",
+    re.IGNORECASE,
+)
+SCOPED_MECHANICAL_KEYWORDS = re.compile(
+    r"\b(rename|lint|format)\b",
+    re.IGNORECASE,
+)
+ATOMIC_SCOPE_KEYWORDS = re.compile(
+    r"\b(one|single|this|exact|local)\b|\b(identifier|variable|function|line|file)\b",
+    re.IGNORECASE,
+)
+COMPLEX_OR_RISKY_KEYWORDS = re.compile(
+    r"\b(authentication|authorization|cryptograph\w*|security[- ]sensitive|"
+    r"production|deployment|distributed|subsystem|migration|breaking change|"
+    r"database|schema|monorepo|multi[- ]file|cross[- ]module|repository[- ]wide|"
+    r"project[- ]wide)\b|"
+    r"\b(?:entire|whole)\s+(?:codebase|repository|repo|project)\b|"
+    r"\b(?:all|every)\s+(?:the\s+)?files?\b|"
+    r"\bacross\b.{0,80}\b(?:files?|modules?|codebase|repository|repo|project)\b|"
+    r"\b(?:two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|[2-9]\d*)\s+files?\b",
     re.IGNORECASE,
 )
 HARD_CODING_KEYWORDS = re.compile(
     r"(architect|debug|optimi[sz]e|complex logic|concurren|race condition|"
     r"hard implementation|multi[- ]module|distributed system|adversarial review)",
+    re.IGNORECASE,
+)
+LOCAL_CODING_KEYWORDS = re.compile(
+    r"\b(implement|code|patch|edit|modify|refactor)\b|"
+    r"\blocal\s+coding\b|\bself[- ]scaffold\b|\bnucbox\b|\bornith\b|"
+    r"\b(?:fix|repair)\b.{0,40}\b(?:bug|test|function|script|config(?:uration)?)\b|"
+    r"\b(?:add|update)\b.{0,40}\b(?:test|function|validator|script|config(?:uration)?)\b|"
+    r"\bpure\s+function\b|\bunit\s+tests?\b|\bsingle[- ]file\b",
+    re.IGNORECASE,
+)
+LOCAL_REVIEW_KEYWORDS = re.compile(
+    r"\b(review|verify|validate|compare|check)\b|"
+    r"\bcontradiction\w*\b|\bgrounded findings?\b",
+    re.IGNORECASE,
+)
+LOCAL_GENERAL_KEYWORDS = re.compile(
+    r"\b(summarize|summarise|analyze|analyse|extract|draft|classify|rewrite|"
+    r"document|synthesize|synthesise|audit)\b",
     re.IGNORECASE,
 )
 VISION_REQUIREMENT_KEYWORDS = re.compile(
@@ -76,15 +114,42 @@ def _tier(brief_text, mode, route_cfg):
     # a consult is advisory/review work and should prefer the consult tier.
     if mode == "consult":
         return "consult_candidates", ["default_consult"]
-    if HARD_CODING_KEYWORDS.search(brief_text):
+    if HARD_CODING_KEYWORDS.search(brief_text) or COMPLEX_OR_RISKY_KEYWORDS.search(brief_text):
         if mode == "breakout":
             return "hard_breakout_candidates", ["hard_coding_breakout_executor", "default_breakout"]
         return "hard_task_candidates", ["hard_coding_task_executor", "default_task"]
     if mode == "breakout":
         return "hard_breakout_candidates", ["default_breakout"]
     trivial_threshold = int(route_cfg.get("trivial_threshold_tokens", 5_000))
-    if tokens < trivial_threshold and MECHANICAL_KEYWORDS.search(brief_text):
+    inherently_atomic = ATOMIC_MECHANICAL_KEYWORDS.search(brief_text)
+    explicitly_scoped = (
+        SCOPED_MECHANICAL_KEYWORDS.search(brief_text)
+        and ATOMIC_SCOPE_KEYWORDS.search(brief_text)
+    )
+    if tokens < trivial_threshold and (inherently_atomic or explicitly_scoped):
         return "trivial_candidates", ["trivial_executor", "default_task"]
+    if mode == "task":
+        local_coding_max = int(route_cfg.get("local_coding_max_tokens", 0))
+        if (
+            route_cfg.get("local_coding_candidates")
+            and tokens <= local_coding_max
+            and LOCAL_CODING_KEYWORDS.search(brief_text)
+        ):
+            return "local_coding_candidates", ["default_task"]
+        local_review_max = int(route_cfg.get("local_review_max_tokens", 0))
+        if (
+            route_cfg.get("local_review_candidates")
+            and tokens <= local_review_max
+            and LOCAL_REVIEW_KEYWORDS.search(brief_text)
+        ):
+            return "local_review_candidates", ["default_task"]
+        local_general_max = int(route_cfg.get("local_general_max_tokens", 0))
+        if (
+            route_cfg.get("local_general_candidates")
+            and tokens <= local_general_max
+            and LOCAL_GENERAL_KEYWORDS.search(brief_text)
+        ):
+            return "local_general_candidates", ["default_task"]
     return "standard_candidates", ["default_task"]
 
 
@@ -110,15 +175,32 @@ def missing_capabilities(matrix, executor, required):
 
 def auto_route(brief_text, mode, matrix_path=None, explicit_executor=None,
                matrix_dict=None, return_tier=False):
+    matrix = matrix_dict if matrix_dict is not None else _load_matrix(matrix_path)
+    required = required_capabilities(brief_text)
     if explicit_executor and explicit_executor != "auto":
+        cfg = matrix.get("executors", {}).get(explicit_executor)
+        if cfg is None:
+            raise NoExecutorAvailable(f"Explicit executor '{explicit_executor}' is not declared in the dispatch matrix.")
+        if not _mode_allowed(matrix, explicit_executor, mode):
+            raise NoExecutorAvailable(
+                f"Explicit executor '{explicit_executor}' does not allow mode={mode}."
+            )
+        missing = missing_capabilities(matrix, explicit_executor, required)
+        if missing:
+            raise NoExecutorAvailable(
+                f"Explicit executor '{explicit_executor}' is missing required capability: {', '.join(missing)}."
+            )
+        if explicit_executor not in available_set(matrix) or in_cooldown(explicit_executor):
+            raise NoExecutorAvailable(
+                f"Explicit executor '{explicit_executor}' is unavailable. "
+                "Run 'pushing-dispatch doctor' to see which providers need attention."
+            )
         return (explicit_executor, "explicit") if return_tier else explicit_executor
 
-    matrix = matrix_dict if matrix_dict is not None else _load_matrix(matrix_path)
     route_cfg = matrix.get("auto_route", {})
 
     avail = available_set(matrix)
     list_key, legacy = _tier(brief_text, mode, route_cfg)
-    required = required_capabilities(brief_text)
 
     # Search order: tier candidates first, then a broad safety net of every
     # mode-capable executor in matrix order.

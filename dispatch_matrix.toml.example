@@ -18,16 +18,31 @@ schema_version = 1
 #           context_window, max_turns, stall_threshold_seconds,
 #           hard_wall_block_breakout_top, hard_wall_block_task_top
 
-[executors.kimi-k27]
-wrapper = "kimi-cli.sh"
+[executors.kimi-k3-cli]
+wrapper = "kimi-k3-cli.sh"
 provider = "kimi-cli"
-model_id = "kimi-code/kimi-for-coding"
+model_id = "kimi-code/k3"
 allowed_modes = ["breakout", "task", "consult"]
 capabilities = ["vision"]
 allowed_seats_in_breakout = ["engineer", "review"]
 default_thinking_tokens = 0
 thinking_hard_ceiling = 16000
-context_window = 262144
+context_window = 1048576
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.kimi-k3-ollama]
+key_env = "OLLAMA_API_KEY"
+key_account = "ollama_api_key"
+wrapper = "kimi-k3-ollama-cloud.sh"
+provider = "ollama-cloud"
+model_id = "kimi-k3"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = ["vision"]
+allowed_seats_in_breakout = ["engineer", "review"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 16000
+context_window = 1048576
 max_turns = 25
 stall_threshold_seconds = 600
 
@@ -161,7 +176,9 @@ stall_threshold_seconds = 600
 [executors.lm-studio]
 wrapper = "lm-studio.sh"
 provider = "lm-studio"
-model_id = "qwen3.6-35b-a3b-mtp"
+model_id = "qwen3.5-35b-a3b"
+health_url = "http://100.113.174.74:4000/health/readiness"
+disabled = true
 allowed_modes = ["task", "consult"]
 capabilities = []
 allowed_seats_in_breakout = ["leaf", "engineer"]
@@ -171,17 +188,96 @@ max_turns = 10
 stall_threshold_seconds = 300
 hard_wall_block_breakout_top = true
 
-# Uncomment to add a local Ollama executor:
-# [executors.ollama-local]
-# wrapper = "ollama.sh"
-# provider = "ollama"
-# model_id = "llama3:8b"
-# allowed_modes = ["task"]
-# allowed_seats_in_breakout = ["leaf"]
-# default_thinking_tokens = 0
-# context_window = 8000
-# max_turns = 5
-# stall_threshold_seconds = 120
+[executors.ollama-xps-gpu]
+wrapper = "cascade-local.sh"
+provider = "ollama"
+model_id = "qwen35-2b-max"
+health_url = "http://100.74.110.12:11434/v1/models"
+validator_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
+validator_health_url = "http://100.113.174.74:8892/v1/models"
+probe_task = "Correct only the typo in this exact text. Output only the corrected text: teh cat sat."
+allowed_modes = ["task"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 65536
+max_turns = 8
+stall_threshold_seconds = 180
+hard_wall_block_breakout_top = true
+
+
+[executors.unsloth-nucbox]
+wrapper = "unsloth-nucbox.sh"
+provider = "ollama"
+# Sticky Ornith workhorse on Studio proxy :8890 (replaces retired dual :8892 qwen27).
+# m3-class only — bounded/localized/reversible/verifying. Never architect/critic/security/vision/web.
+model_id = "SC117/Ornith-1.0-35B-MTP-APEX-GGUF"
+harness_command = "pi"
+health_url = "http://100.113.174.74:8890/v1/models"
+allowed_modes = ["task"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 32768
+max_turns = 12
+stall_threshold_seconds = 600
+hard_wall_block_breakout_top = true
+
+[executors.qwen35-35b-general]
+wrapper = "qwen35-35b-general.sh"
+provider = "unsloth-openai"
+model_id = "Qwen3.5-35B-A3B-Q4_K_M.gguf"
+on_demand = true
+workcell_profile = "qwen35-35b-general"
+activation_health_url = "http://100.113.174.74:8892/v1/models"
+activation_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
+allowed_modes = ["task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 32768
+max_turns = 8
+stall_threshold_seconds = 900
+hard_wall_block_breakout_top = true
+
+[executors.qwen35-27b-review]
+wrapper = "qwen35-27b-review.sh"
+provider = "unsloth-openai"
+model_id = "Qwen3.5-27B-Q4_K_M.gguf"
+on_demand = true
+workcell_profile = "qwen35-27b-review"
+activation_health_url = "http://100.113.174.74:8892/v1/models"
+activation_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
+allowed_modes = ["task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 32768
+max_turns = 8
+stall_threshold_seconds = 900
+hard_wall_block_breakout_top = true
+
+[executors.qwen36-35b-coding]
+wrapper = "qwen36-35b-coding.sh"
+provider = "unsloth-openai"
+model_id = "qwen3.6:35b"
+on_demand = true
+workcell_profile = "qwen36-35b-coding"
+activation_health_url = "http://100.113.174.74:8892/v1/models"
+activation_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
+allowed_modes = ["task"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 32768
+max_turns = 8
+stall_threshold_seconds = 900
+hard_wall_block_breakout_top = true
 
 # ============================================================
 # Auto-routing heuristics
@@ -193,23 +289,30 @@ hard_wall_block_breakout_top = true
 # Ordered candidate lists per tier. The router returns the first executor that
 # is mode-allowed AND available AND not in cooldown.
 # Grok 4.5 replaces retired Claude Opus-class work: hard tasks, breakouts, and
-# consults prefer `grok-build`. Ordinary tasks remain Luna-first. Within Codex,
+# consults prefer `grok-build`. Unclassified standard work remains Z.ai-first.
+# Within Codex,
 # an unsatisfactory Luna result advances explicitly to Terra high and then, only
 # if justified, Sol low/medium/high. Availability routing cannot infer whether a
 # semantically valid answer was good enough.
-trivial_candidates        = ["codex-luna", "codex-terra", "codex-sol", "kilo-free-auto", "zai-glm", "lm-studio"]
-standard_candidates       = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "agy-gemini-flash", "kilo-free-auto", "minimax-m3"]
-hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
-hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k27"]
-long_context_candidates   = ["codex-luna", "codex-terra", "codex-sol", "grok-build", "kimi-k27", "zai-glm", "agy-gemini-pro", "minimax-m3"]
-consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "agy-gemini-pro", "zai-glm", "kimi-k27"]
+trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "unsloth-nucbox", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+standard_candidates       = ["zai-glm", "unsloth-nucbox", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
+local_general_candidates  = ["unsloth-nucbox", "qwen35-35b-general", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+local_review_candidates   = ["qwen35-27b-review", "unsloth-nucbox", "zai-glm", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
+local_coding_candidates   = ["unsloth-nucbox", "qwen36-35b-coding", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
+hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k3-cli", "kimi-k3-ollama"]
+hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k3-cli", "kimi-k3-ollama"]
+long_context_candidates   = ["kimi-k3-cli", "kimi-k3-ollama", "codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "agy-gemini-pro", "minimax-m3"]
+consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "agy-gemini-pro", "zai-glm", "kimi-k3-cli", "kimi-k3-ollama"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
-long_context_executor = "kimi-k27"
+long_context_executor = "kimi-k3-cli"
 long_context_threshold_tokens = 50000
-trivial_executor = "codex-luna"
+trivial_executor = "ollama-xps-gpu"
 trivial_threshold_tokens = 5000
+local_general_max_tokens = 24000
+local_review_max_tokens = 5000
+local_coding_max_tokens = 16000
 hard_coding_breakout_executor = "grok-build"
 hard_coding_task_executor = "grok-build"
 default_breakout = "grok-build"
@@ -240,7 +343,8 @@ max_depth = 2
 # Self-dispatch is always denied regardless of matrix entries.
 "codex-sol.codex-terra" = true
 "codex-sol.codex-luna" = true
-"codex-sol.kimi-k27" = true
+"codex-sol.kimi-k3-cli" = true
+"codex-sol.kimi-k3-ollama" = true
 "codex-sol.zai-glm" = true
 "codex-sol.agy-gemini-pro" = true
 "codex-sol.agy-gemini-flash" = true
@@ -250,9 +354,9 @@ max_depth = 2
 "codex-terra.codex-luna" = true
 "codex-terra.kilo-free-auto" = true
 "codex-terra.lm-studio" = true
-"kimi-k27.codex-luna" = true
-"kimi-k27.kilo-free-auto" = true
-"kimi-k27.lm-studio" = true
+"kimi-k3-cli.codex-luna" = true
+"kimi-k3-cli.kilo-free-auto" = true
+"kimi-k3-cli.lm-studio" = true
 "zai-glm.codex-luna" = true
 "zai-glm.agy-gemini-flash" = true
 "zai-glm.minimax-m3" = true

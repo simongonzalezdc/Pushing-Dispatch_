@@ -59,7 +59,15 @@ def outcomes_path() -> Path:
     return dispatch_root() / "outcomes.jsonl"
 
 
+def utilization_dir() -> Path:
+    return dispatch_root() / "utilization"
+
+
+def utilization_snapshot_path(idempotency_key: str) -> Path:
+    return utilization_dir() / "snapshots" / f"{idempotency_key}.json"
+
+
 def ensure_dirs():
     """Create all required directories."""
-    for d in [status_dir(), log_dir(), question_dir()]:
+    for d in [status_dir(), log_dir(), question_dir(), utilization_dir() / "snapshots"]:
         d.mkdir(parents=True, exist_ok=True)

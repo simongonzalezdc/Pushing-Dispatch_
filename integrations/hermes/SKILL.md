@@ -19,7 +19,8 @@ Pushing Dispatch is the model-selection front door. Hermes remains Liam's reside
 
 ## Canonical lanes
 
-- Kimi CLI: Kimi K2.7.
+- Kimi subscription: Kimi K3 through the external `kimi-k3-cli` Dispatch lane only; never as a native Hermes HTTP provider.
+- Ollama Cloud: separate `kimi-k3-ollama` lane, live-catalog gated. This is the only K3 access path Hermes may promote to its native main model.
 - Z.AI: GLM 5.2, text-only.
 - GJC: MiniMax M3 and backup GLM.
 - Grok Build: `grok-build` through xAI's official `grok` CLI, pinned to `grok-4.5`, vision-capable, and preferred for retired Claude Opus-class hard implementation, architecture, adversarial review, breakout, and consult work.

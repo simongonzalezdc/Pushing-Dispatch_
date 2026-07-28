@@ -1,0 +1,8 @@
+{
+  "defaultThinkingLevel": "off",
+  "transport": "auto",
+  "hideThinkingBlock": true,
+  "packages": [],
+  "steeringMode": "one-at-a-time",
+  "quietStartup": true
+}

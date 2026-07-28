@@ -1,0 +1,32 @@
+{
+  "providers": {
+    "unsloth-nucbox": {
+      "baseUrl": "http://100.113.174.74:8890/v1",
+      "api": "openai-completions",
+      "apiKey": "local-unsloth",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false,
+        "supportsUsageInStreaming": false,
+        "maxTokensField": "max_tokens",
+        "thinkingFormat": "qwen"
+      },
+      "models": [
+        {
+          "id": "SC117/Ornith-1.0-35B-MTP-APEX-GGUF",
+          "name": "NUCBox Ornith 1.0 35B MTP (sticky workhorse)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 32768,
+          "maxTokens": 16384,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      ]
+    }
+  }
+}

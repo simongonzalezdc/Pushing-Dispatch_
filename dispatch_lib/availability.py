@@ -14,6 +14,8 @@ import os
 import shutil
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from .path_conventions import availability_path
@@ -62,8 +64,60 @@ def _grok_ready() -> bool:
     return (Path.home() / ".grok" / "auth.json").exists()
 
 
-def _local_ready(provider: str) -> bool:
-    if provider == "ollama":
+def _health_url_ready(cfg: dict) -> bool:
+    health_url = cfg.get("health_url")
+    if not health_url:
+        return True
+    try:
+        with urllib.request.urlopen(health_url, timeout=2) as response:
+            if not 200 <= response.status < 300:
+                return False
+            if not health_url.rstrip("/").endswith("/models"):
+                return True
+            expected_model = str(cfg.get("model_id", "")).strip()
+            if not expected_model:
+                return False
+            payload = json.load(response)
+            model_ids = {
+                item.get("id") or item.get("model") or item.get("name")
+                for item in payload.get("data", payload.get("models", []))
+                if isinstance(item, dict)
+            }
+            return any(
+                actual == expected_model or actual == f"{expected_model}:latest"
+                for actual in model_ids
+            )
+    except (json.JSONDecodeError, TypeError, urllib.error.URLError, TimeoutError, OSError):
+        return False
+
+
+def _local_ready(provider: str, cfg: dict) -> bool:
+    if cfg.get("on_demand") is True:
+        activation_url = str(cfg.get("activation_health_url", "")).strip()
+        activation_model = str(cfg.get("activation_model_id", "")).strip()
+        if not activation_url or not activation_model:
+            return False
+        if not _health_url_ready({
+            "health_url": activation_url,
+            "model_id": activation_model,
+        }):
+            return False
+    elif not _health_url_ready(cfg):
+        return False
+    validator_url = str(cfg.get("validator_health_url", "")).strip()
+    validator_model = str(cfg.get("validator_model_id", "")).strip()
+    if bool(validator_url) != bool(validator_model):
+        return False
+    if validator_url and not _health_url_ready({
+        "health_url": validator_url,
+        "model_id": validator_model,
+    }):
+        return False
+    if provider in ("ollama", "unsloth-openai"):
+        # A remote fleet executor is defined by its endpoint, not by whether the
+        # caller happens to have an Ollama CLI installed.
+        if cfg.get("health_url"):
+            return True
         return shutil.which("ollama") is not None
     if provider == "lm-studio":
         # Endpoint reachability is checked by health/smoke paths. Availability
@@ -82,6 +136,39 @@ def _local_ready(provider: str) -> bool:
             or _keychain_has("pushing-dispatch", "pipeline_local_llm_api_key")
         )
     return False
+
+
+def _ollama_cloud_model_ready(cfg: dict) -> bool:
+    """Fail closed unless the configured Ollama Cloud model is live."""
+    if not _key_present(cfg.get("key_env"), cfg.get("key_account")):
+        return False
+    model = str(cfg.get("model_id", "")).strip()
+    if not model:
+        return False
+    request = urllib.request.Request(
+        f"https://ollama.com/v1/models/{model}",
+        headers={"Authorization": f"Bearer {_load_ollama_cloud_key(cfg)}"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return 200 <= response.status < 300
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False
+
+
+def _load_ollama_cloud_key(cfg: dict) -> str:
+    """Load only the Ollama credential; never inspect Kimi credentials."""
+    env_var = cfg.get("key_env") or "OLLAMA_API_KEY"
+    if os.environ.get(env_var):
+        return os.environ[env_var]
+    if shutil.which("security") and cfg.get("key_account"):
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", "pushing-dispatch", "-a", cfg["key_account"], "-w"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    return ""
 
 
 def _codex_config_has(env_var) -> bool:
@@ -117,6 +204,8 @@ def _key_present(env_var, account) -> bool:
 
 
 def _executor_available(cfg: dict) -> bool:
+    if cfg.get("disabled") is True:
+        return False
     provider = cfg.get("provider", "")
     if provider == "agy":
         return shutil.which("agy") is not None
@@ -132,8 +221,10 @@ def _executor_available(cfg: dict) -> bool:
         return _anthropic_ready()
     if provider == "openai-codex":
         return _codex_ready()
-    if provider in ("ollama", "lm-studio"):
-        return _local_ready(provider)
+    if provider == "ollama-cloud":
+        return _ollama_cloud_model_ready(cfg)
+    if provider in ("ollama", "lm-studio", "unsloth-openai"):
+        return _local_ready(provider, cfg)
     return _key_present(cfg.get("key_env"), cfg.get("key_account"))
 
 

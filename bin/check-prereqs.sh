@@ -107,7 +107,7 @@ check_required "Claude Code GLM 5.2 harness" "claude" "install bin/claude-glm52 
 
 echo ""
 echo "Optional tools:"
-check_optional "kimi-cli" "kimi" "Kimi native mode"
+check_optional "Kimi CLI" "kimi" "Kimi K3 subscription lane"
 check_optional "Codex CLI" "codex" "GPT-5.6 Luna/Terra/Sol subscription dispatch"
 check_optional "AGY" "agy" "Gemini dispatch"
 check_optional "GJC" "gjc" "MiniMax M3 backup dispatch"

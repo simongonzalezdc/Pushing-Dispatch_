@@ -7,7 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # Providers that authenticate via CLI login or run locally (no API key needed).
-CLI_OR_LOCAL = {"anthropic", "openai-codex", "agy", "gjc", "grok-cli", "kilo-cli", "kimi-cli", "ollama", "lm-studio"}
+CLI_OR_LOCAL = {
+    "anthropic", "openai-codex", "agy", "gjc", "grok-cli", "kilo-cli",
+    "kimi-cli", "ollama", "lm-studio", "unsloth-openai",
+}
 
 class TestMatrixShape(unittest.TestCase):
     def setUp(self):
@@ -17,6 +20,8 @@ class TestMatrixShape(unittest.TestCase):
     def test_auto_route_has_ordered_lists(self):
         ar = self.m["auto_route"]
         for key in ("trivial_candidates", "standard_candidates",
+                    "local_general_candidates", "local_review_candidates",
+                    "local_coding_candidates",
                     "hard_task_candidates", "hard_breakout_candidates",
                     "long_context_candidates", "consult_candidates"):
             self.assertIsInstance(ar[key], list, key)
@@ -54,7 +59,6 @@ class TestMatrixShape(unittest.TestCase):
         serialized = str(self.m).lower()
         self.assertNotIn("gpt-5.5", serialized)
         self.assertNotIn("codex-oss", serialized)
-        self.assertNotIn("nucbox", serialized)
 
     def test_codex_reasoning_policy_prefers_luna_then_terra(self):
         executors = self.m["executors"]
@@ -80,10 +84,107 @@ class TestMatrixShape(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertEqual(ar[key][0], "grok-build")
 
-        # Ordinary work still starts with Luna; the Grok preference is scoped
-        # to work that previously justified an Opus-class lane.
-        self.assertEqual(ar["trivial_candidates"][0], "codex-luna")
-        self.assertEqual(ar["standard_candidates"][0], "codex-luna")
+        # Reversible volume work consumes local/prepaid capacity first; Grok's
+        # first-position preference remains scoped to hard and consult lanes.
+        self.assertEqual(ar["trivial_candidates"][0], "ollama-xps-gpu")
+        self.assertEqual(ar["standard_candidates"][0], "zai-glm")
+        self.assertEqual(ar["long_context_candidates"][0], "kimi-k3-cli")
+
+    def test_dell_lane_is_always_gated_by_exact_nuc_validation(self):
+        dell = self.m["executors"]["ollama-xps-gpu"]
+        self.assertEqual(dell["wrapper"], "cascade-local.sh")
+        self.assertEqual(dell["model_id"], "qwen35-2b-max")
+        self.assertTrue(dell["health_url"].endswith("/v1/models"))
+        self.assertEqual(
+            dell["validator_model_id"],
+            "unsloth/Qwen3.6-27B-MTP-GGUF",
+        )
+        self.assertTrue(dell["validator_health_url"].endswith("/v1/models"))
+        self.assertIn("Correct only the typo", dell["probe_task"])
+
+    def test_nonresident_qwen35_alias_is_not_routable(self):
+        self.assertTrue(self.m["executors"]["lm-studio"]["disabled"])
+        for key, candidates in self.m["auto_route"].items():
+            if key.endswith("_candidates"):
+                self.assertNotIn("lm-studio", candidates, key)
+
+    def test_nuc_context_window_matches_effective_parallel_slot(self):
+        # Ornith sticky workhorse on :8890 (32k agent context).
+        self.assertEqual(
+            self.m["executors"]["unsloth-nucbox"]["context_window"],
+            32_768,
+        )
+        self.assertEqual(
+            self.m["executors"]["unsloth-nucbox"]["model_id"],
+            "SC117/Ornith-1.0-35B-MTP-APEX-GGUF",
+        )
+
+    def test_unsloth_uses_bounded_agentic_pi_harness(self):
+        wrapper = (ROOT / "bin" / "wrappers" / "unsloth-nucbox.sh").read_text()
+        wrapper_lib = (ROOT / "bin" / "wrappers" / "_exec.sh").read_text()
+        executor = self.m["executors"]["unsloth-nucbox"]
+
+        self.assertIn("ce_run_pi_local", wrapper)
+        self.assertNotIn("ce_run_openai_compatible", wrapper)
+        self.assertEqual(executor["harness_command"], "pi")
+        self.assertIn("PI_LOCAL_TIMEOUT_SECONDS", wrapper_lib)
+        self.assertIn("--no-context-files", wrapper_lib)
+        self.assertTrue(
+            (ROOT / "ops" / "unsloth-nucbox" / "pi-agent" / "models.json").is_file()
+        )
+
+        result = subprocess.run(
+            [
+                str(ROOT / "bin" / "wrappers" / "unsloth-nucbox.sh"),
+                "--worker-id", "test-unsloth-pi",
+                "--cwd", "/tmp",
+                "--mode", "task",
+                "--task", "Return Status: DONE",
+                "--dry-run",
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Would execute Pi local model", result.stdout)
+
+    def test_on_demand_qwen_workcells_remain_configured_behind_ornith(self):
+        """On-demand :8892 workcells stay defined, but Ornith leads coding/general."""
+        expected = {
+            "qwen35-35b-general": ("Qwen3.5-35B-A3B-Q4_K_M.gguf", "qwen35-35b-general"),
+            "qwen35-27b-review": ("Qwen3.5-27B-Q4_K_M.gguf", "qwen35-27b-review"),
+            "qwen36-35b-coding": ("qwen3.6:35b", "qwen36-35b-coding"),
+        }
+        for executor, (model, profile) in expected.items():
+            with self.subTest(executor=executor):
+                cfg = self.m["executors"][executor]
+                self.assertTrue(cfg["on_demand"])
+                self.assertEqual(cfg["model_id"], model)
+                self.assertEqual(cfg["workcell_profile"], profile)
+
+        # Sticky Ornith leads the primary local coding + general tiers.
+        self.assertEqual(self.m["auto_route"]["local_coding_candidates"][0], "unsloth-nucbox")
+        self.assertEqual(self.m["auto_route"]["local_general_candidates"][0], "unsloth-nucbox")
+        # Review still prefers the specialist on-demand cell when available.
+        self.assertEqual(self.m["auto_route"]["local_review_candidates"][0], "qwen35-27b-review")
+
+        self.assertEqual(
+            self.m["executors"]["qwen36-35b-coding"]["context_window"],
+            32_768,
+        )
+        self.assertEqual(
+            self.m["executors"]["qwen35-27b-review"]["context_window"],
+            32_768,
+        )
+
+    def test_local_specialist_tiers_leave_context_headroom(self):
+        ar = self.m["auto_route"]
+        self.assertLessEqual(ar["local_general_max_tokens"], 24_000)
+        self.assertLessEqual(ar["local_review_max_tokens"], 6_000)
+        # Ornith coding ceiling: 16k of 32k slot leaves headroom for system+skills+output.
+        self.assertLessEqual(ar["local_coding_max_tokens"], 16_000)
+        self.assertGreaterEqual(ar["local_coding_max_tokens"], 5_000)
 
     def test_sol_wrapper_enforces_high_ceiling(self):
         wrapper = ROOT / "bin" / "wrappers" / "codex-sol.sh"
@@ -190,16 +291,25 @@ class TestMatrixShape(unittest.TestCase):
         self.assertEqual(cfg["provider"], "gjc")
         self.assertEqual(cfg["model_id"], "minimax-code/minimax-m3")
 
-    def test_kimi_is_exclusive_to_native_cli(self):
+    def test_kimi_k3_routes_keep_cli_and_ollama_credentials_isolated(self):
         kimi = {
             name: cfg for name, cfg in self.m["executors"].items()
             if "kimi" in name or "kimi" in cfg.get("model_id", "").lower()
         }
-        self.assertEqual(set(kimi), {"kimi-k27"})
-        cfg = kimi["kimi-k27"]
-        self.assertEqual(cfg["provider"], "kimi-cli")
-        self.assertEqual(cfg["wrapper"], "kimi-cli.sh")
-        self.assertIn("vision", cfg.get("capabilities", []))
+        self.assertEqual(set(kimi), {"kimi-k3-cli", "kimi-k3-ollama"})
+        cli = kimi["kimi-k3-cli"]
+        self.assertEqual(cli["provider"], "kimi-cli")
+        self.assertEqual(cli["wrapper"], "kimi-k3-cli.sh")
+        self.assertEqual(cli["model_id"], "kimi-code/k3")
+        self.assertNotIn("key_env", cli)
+        ollama = kimi["kimi-k3-ollama"]
+        self.assertEqual(ollama["provider"], "ollama-cloud")
+        self.assertEqual(ollama["wrapper"], "kimi-k3-ollama-cloud.sh")
+        self.assertEqual(ollama["model_id"], "kimi-k3")
+        self.assertEqual(ollama["key_env"], "OLLAMA_API_KEY")
+        for cfg in (cli, ollama):
+            self.assertEqual(cfg["context_window"], 1_048_576)
+            self.assertIn("vision", cfg.get("capabilities", []))
 
     def test_grok_uses_official_native_cli(self):
         grok = self.m["executors"]["grok-build"]

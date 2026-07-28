@@ -46,10 +46,12 @@ from dispatch_lib.nested import (
 from dispatch_lib.matrix_validator import validate
 from dispatch_lib.context_budget import check_budget_for_file
 from dispatch_lib.auto_router import (
-    auto_route, detect_mode_from_keywords, required_capabilities,
+    auto_route, detect_mode_from_keywords, required_capabilities, NoExecutorAvailable,
     missing_capabilities, _tier, _candidates,
 )
 from dispatch_lib import availability, lane_health
+from dispatch_lib.scheduler import run_cycle
+from dispatch_lib.telemetry_export import render_html
 
 try:
     import tomllib
@@ -196,16 +198,18 @@ def cmd_start(args, mode: str):
     matrix = _load_matrix()
     matrix_path = _find_matrix_path()
 
-    tier = "explicit"
-    if getattr(args, "executor", "auto") in ("", None, "auto"):
-        brief_text = _brief_text_from_args(args)
+    brief_text = _brief_text_from_args(args)
+    try:
         args.executor, tier = auto_route(
             brief_text=brief_text,
             mode=mode,
             matrix_path=matrix_path,
-            explicit_executor=None,
+            explicit_executor=getattr(args, "executor", None),
             return_tier=True,
         )
+    except NoExecutorAvailable as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(2)
 
     # Validate executor
     valid_executors = _executor_choices(matrix) if matrix else []
@@ -449,13 +453,17 @@ def cmd_route(args):
     matrix_path = args.matrix or _find_matrix_path()
     brief_text = _brief_text_from_args(args)
     mode = args.mode or detect_mode_from_keywords(brief_text) or "task"
-    executor, tier = auto_route(
-        brief_text=brief_text,
-        mode=mode,
-        matrix_path=matrix_path,
-        explicit_executor=args.executor,
-        return_tier=True,
-    )
+    try:
+        executor, tier = auto_route(
+            brief_text=brief_text,
+            mode=mode,
+            matrix_path=matrix_path,
+            explicit_executor=args.executor,
+            return_tier=True,
+        )
+    except NoExecutorAvailable as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
     if args.json:
         payload = {
             "executor": executor,
@@ -545,9 +553,13 @@ def _probe_executor(name, cfg, repo_root):
     # codex-switch fallback exists, account selection mutates the SHARED
     # ~/.codex/auth.json (stale-snapshot stomp); probes must stay read-only
     # on credentials. Probes therefore exercise the default auth lineage.
+    probe_task = cfg.get(
+        "probe_task",
+        "Reply with exactly two lines:\nOK\nStatus: DONE",
+    )
     cmd = [
         wrapper_path,
-        "--task", "Reply with exactly two lines:\nOK\nStatus: DONE",
+        "--task", probe_task,
         "--worker-id", worker_id,
         "--mode", mode,
         "--max-turns", "3",
@@ -577,6 +589,16 @@ def _probe_executor(name, cfg, repo_root):
     return {"executor": name, "probe": "ERROR", "detail": f"rc={proc.returncode}"}
 
 
+def _automatic_probe_targets(rows, executors):
+    """Return cheap resident lanes only; on-demand residency requires opt-in."""
+    return [
+        row["executor"] for row in rows
+        if row["available"]
+        and executors.get(row["executor"], {}).get("provider") != "openai-codex"
+        and executors.get(row["executor"], {}).get("on_demand") is not True
+    ]
+
+
 def cmd_doctor(args):
     """Print live executor availability and lane health."""
     matrix_path = args.matrix or _find_matrix_path()
@@ -601,10 +623,7 @@ def cmd_doctor(args):
             # account's single-use OAuth refresh token and can race interactive
             # sessions (the 2026-06-12 auth.json lockout). Name them explicitly
             # to probe anyway.
-            targets = [
-                r["executor"] for r in rows
-                if r["available"] and executors.get(r["executor"], {}).get("provider") != "openai-codex"
-            ]
+            targets = _automatic_probe_targets(rows, executors)
         repo_root = os.path.dirname(os.path.abspath(matrix_path))
         for n in targets:
             probe_results[n] = _probe_executor(n, executors[n], repo_root)
@@ -862,6 +881,44 @@ def cmd_checkpoint_continue(args):
     print(worker_id)
 
 
+def cmd_utilization(args):
+    """Run one complete, replay-safe utilization control-plane cycle."""
+    matrix = _load_matrix()
+    if not matrix:
+        print("No matrix found.", file=sys.stderr)
+        sys.exit(2)
+    entitlements = {}
+    if args.entitlements:
+        try:
+            entitlements = json.loads(Path(args.entitlements).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"Invalid entitlement evidence: {exc}", file=sys.stderr)
+            sys.exit(2)
+    availability_rows = availability.resolve(matrix, use_cache=not args.probe)
+    matrix_path = _find_matrix_path()
+    result = run_cycle(
+        matrix,
+        availability_rows,
+        entitlements,
+        router=lambda brief: auto_route(brief_text=brief, mode="task", matrix_path=matrix_path),
+    )
+    output = Path(args.output).expanduser().resolve()
+    render_html(result["snapshots"], output, result["assignments"])
+    payload = {
+        "output": str(output),
+        "executors": len(result["snapshots"]),
+        "created": result["created"],
+        "replayed": result["replayed"],
+        "jobs": len(result["jobs"]),
+        "assignments": result["assignments"],
+        "automatic_external_actions": False,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(f"Rendered {payload['executors']} executors to {output}")
+
+
 def cmd_compact(args):
     """Compact the session registry (remove old terminal entries)."""
     path = registry_path()
@@ -1002,6 +1059,16 @@ def main():
              "openai-codex (whose OAuth refresh is single-use; name explicitly "
              "to probe).")
 
+    utilization_parser = subparsers.add_parser("utilization", help="Run utilization control-plane cycle")
+    utilization_parser.add_argument("--entitlements", help="JSON evidence keyed by executor")
+    utilization_parser.add_argument(
+        "--output",
+        default="/Users/simongonzalezdecruz/workspaces/inference-utilization-control-plane.html",
+        help="Read-only HTML output path",
+    )
+    utilization_parser.add_argument("--probe", action="store_true", help="Refresh availability instead of using cache")
+    utilization_parser.add_argument("--json", action="store_true", help="JSON summary")
+
     # compact
     subparsers.add_parser("compact", help="Compact registry")
 
@@ -1033,6 +1100,8 @@ def main():
         cmd_validate_matrix(args)
     elif args.command == "doctor":
         cmd_doctor(args)
+    elif args.command == "utilization":
+        cmd_utilization(args)
     elif args.command == "compact":
         cmd_compact(args)
 
