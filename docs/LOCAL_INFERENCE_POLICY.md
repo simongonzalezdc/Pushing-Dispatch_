@@ -69,9 +69,11 @@ Known configured consumers and adapters are:
 
 - **NUC Ornith (`unsloth-nucbox`):** `SC117/Ornith-1.0-35B-MTP-APEX-GGUF` APEX-I-Compact on Unsloth Studio proxy **`:8890`**, context **32768**, MTP n=2, sampling force 0.6/0.95/20/presence 0.
 - **Admission:** m3-class only — bounded · localized · reversible · verifying. Leaf seat only (no breakout-top). Never sole architect/critic/security/vision/web.
-- **Fleet guidelines:** `launchpad/docs/agents/ORNITH-GUIDELINES.md`
-- **Ops README:** `ops/unsloth-nucbox/README.md`
-- **Health:** `ssh nucbox '~/unsloth-ops/bin/ornith-workhorse-verify.sh'` (expect fail=0)
+- **Cloud YES/NO card (owning source):** `launchpad/docs/agents/ORNITH-GUIDELINES.md` § Cloud-orchestrator card  
+- **Dispatch pack:** `includes: ornith-leaf` · `docs/ORCHESTRATING.md`  
+- **Ops README:** `ops/unsloth-nucbox/README.md`  
+- **Serialize:** one `unsloth-nucbox` job at a time (`parallel=1`); maxTokens leaf default **4096**  
+- **Health:** `ssh nucbox '~/unsloth-ops/bin/ornith-workhorse-verify.sh'` (expect fail=0)  
 - **Retired for dual-load:** dedicated agent **`:8892`** and on-demand workcells that activate via `:8892` remain unavailable while Ornith is the single big resident model.
 
 ### Legacy / specialized (dated; re-probe)

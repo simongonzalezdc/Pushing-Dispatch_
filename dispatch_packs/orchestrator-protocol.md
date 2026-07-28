@@ -32,12 +32,21 @@ Stay inline when:
 
 ### Ornith one-liner (local leaf)
 
+**Canon YES/NO:** fleet `launchpad/docs/agents/ORNITH-GUIDELINES.md` § Cloud-orchestrator card. Pack: `includes: ornith-leaf`.
+
 ```bash
+pushing-dispatch route --mode task --task "local coding: <bounded goal + acceptance>"
 pushing-dispatch task start --executor unsloth-nucbox --cwd "$PWD" \
-  --task "local coding: <bounded goal + acceptance>. Prefer progressive skills when matching. Status: DONE"
+  --task "local coding: <bounded goal + acceptance>. Status: DONE"
 ```
 
-Do **not** seat Ornith as breakout top, architect, critic, security, vision, or web sole judge. See `docs/ORCHESTRATING.md` § Cloud orchestrator → Ornith leaf.
+| YES | NO |
+|-----|----|
+| Bounded local coding/ops + proof | Architect / critic / security / vision / web sole |
+| RED→GREEN tests, one-file patches | Breakout-top, multi-module hard, long-context |
+| Sliced m3 leaf from cloud campaign | Free typos (`kilo-free-auto`), chat Q&A |
+
+**Serialize** Ornith jobs (one leaf at a time). See `docs/ORCHESTRATING.md` § Cloud orchestrator → Ornith leaf.
 
 ## Writing a Brief
 

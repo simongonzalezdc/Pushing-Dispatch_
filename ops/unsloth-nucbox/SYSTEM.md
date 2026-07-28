@@ -19,4 +19,6 @@ Never omit the marker; never put text after it.
 
 ## Hard limits
 No force-push, no secret print, no deploy unless the brief says so.
-m3-class only — escalate architect/critic/security/vision/web to cloud.
+m3-class only (bounded · localized · reversible · verifying) — escalate architect/critic/security/vision/web/breakout-top to cloud.
+You are a **leaf**, not an orchestrator: do not fan out nested heavy workers.
+Cloud YES/NO card lives at fleet `launchpad/docs/agents/ORNITH-GUIDELINES.md` (for humans/orchestrators; you execute the brief).
