@@ -808,6 +808,136 @@ if "loaded" in match and match.get("loaded") is not True:
 PY
 }
 
+# Extract product tokens from DISPATCH_PRODUCT_TOKENS or the assembled brief.
+# "none" / "-" / product_class: chat disables the gate.
+ce_resolve_product_tokens() {
+    local tokens="${DISPATCH_PRODUCT_TOKENS:-}"
+    local cls="${DISPATCH_PRODUCT_CLASS:-}"
+    if [[ -z "$tokens" && -n "${CE_FINAL_PROMPT:-}" ]]; then
+        tokens="$(printf '%s\n' "$CE_FINAL_PROMPT" | sed -nE 's/^[[:space:]]*[Pp]roduct[_ ]?[Tt]okens?:[[:space:]]*//p; s/^[[:space:]]*PRODUCT_TOKENS=//p' | head -1 | tr -d '\r')"
+        if [[ -z "$cls" ]]; then
+            cls="$(printf '%s\n' "$CE_FINAL_PROMPT" | sed -nE 's/^[[:space:]]*[Pp]roduct[_ ]?[Cc]lass:[[:space:]]*//p' | head -1 | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+        fi
+        if [[ -z "$tokens" ]]; then
+            tokens="$(printf '%s\n' "$CE_FINAL_PROMPT" | grep -oE '\b(ULTRAQA_[A-Z0-9_]+|MEASURE_OK|PING_OK)\b' | sort -u | paste -sd, - || true)"
+        fi
+    fi
+    tokens="$(printf '%s' "$tokens" | tr -d '[:space:]')"
+    if [[ "$cls" == "chat" || "$tokens" == "none" || "$tokens" == "-" ]]; then
+        DISPATCH_PRODUCT_TOKENS_RESOLVED=""
+        return 0
+    fi
+    DISPATCH_PRODUCT_TOKENS_RESOLVED="$tokens"
+}
+
+# After Status: DONE, require at least one declared product token in log or receipt.
+ce_require_product_tokens() {
+    local blob="$1"
+    ce_resolve_product_tokens
+    local tokens="${DISPATCH_PRODUCT_TOKENS_RESOLVED:-}"
+    if [[ -z "$tokens" ]]; then
+        return 0
+    fi
+    local IFS=','
+    local t found=0
+    for t in $tokens; do
+        [[ -z "$t" ]] && continue
+        if printf '%s' "$blob" | grep -Fq -- "$t"; then
+            found=1
+            break
+        fi
+    done
+    if [[ $found -eq 0 ]]; then
+        echo "Worker $CE_WORKER_ID failed: missing product token(s) [$tokens] (Status alone is not enough)." >&2
+        ce_finalize_status "errored" 4 "missing product token(s): $tokens"
+        return 4
+    fi
+    echo "Worker $CE_WORKER_ID: product token gate passed ($tokens)" >&2
+    return 0
+}
+
+# Short generation canary against PI_LOCAL_BASE_URL (proxy path Dispatch uses).
+# On failure, optional raw diagnostic via PI_LOCAL_RAW_DIAG_URL.
+ce_pi_local_gen_canary() {
+    local base="${PI_LOCAL_BASE_URL:-}"
+    local model="${PI_LOCAL_MODEL:-}"
+    local marker="${PI_LOCAL_GEN_CANARY_MARKER:-PING_OK}"
+    local timeout="${PI_LOCAL_GEN_CANARY_TIMEOUT:-25}"
+    if [[ -z "$base" || -z "$model" ]]; then
+        echo "gen canary skip: missing PI_LOCAL_BASE_URL or PI_LOCAL_MODEL" >&2
+        return 0
+    fi
+    local url="${base%/}/chat/completions"
+    local body
+    body="$(python3 -c 'import json,sys; print(json.dumps({"model":sys.argv[1],"messages":[{"role":"user","content":sys.argv[2]}],"max_tokens":16,"temperature":0}))' "$model" "Reply with exactly: $marker")"
+    local attempt=1 max_attempts=2 out=""
+    while [[ $attempt -le $max_attempts ]]; do
+        out="$(curl -sS --max-time "$timeout" -H 'Content-Type: application/json' -d "$body" "$url" 2>/dev/null || true)"
+        if printf '%s' "$out" | python3 -c 'import sys,json
+try:
+ d=json.load(sys.stdin)
+ m=(d.get("choices") or [{}])[0].get("message",{}) or {}
+ c=(m.get("content") or "")+(m.get("reasoning_content") or "")
+ raise SystemExit(0 if str(c).strip() else 1)
+except Exception:
+ raise SystemExit(1)' 2>/dev/null; then
+            echo "gen canary PASS: proxy $url produced content" >&2
+            return 0
+        fi
+        attempt=$((attempt+1))
+        sleep 1
+    done
+    echo "gen canary FAIL: proxy path did not return content within ${timeout}s x${max_attempts}" >&2
+    local raw="${PI_LOCAL_RAW_DIAG_URL:-}"
+    if [[ -n "$raw" ]]; then
+        local raw_out
+        raw_out="$(curl -sS --max-time 20 -H 'Content-Type: application/json' -d "$body" "${raw%/}/chat/completions" 2>/dev/null || true)"
+        if printf '%s' "$raw_out" | python3 -c 'import sys,json
+try:
+ d=json.load(sys.stdin)
+ m=(d.get("choices") or [{}])[0].get("message",{}) or {}
+ c=(m.get("content") or "")+(m.get("reasoning_content") or "")
+ raise SystemExit(0 if str(c).strip() else 1)
+except Exception:
+ raise SystemExit(1)' 2>/dev/null; then
+            echo "gen canary DIAG: raw llama OK — Studio/proxy path is the problem (restart unsloth-studio + unsloth-openai-proxy)" >&2
+        else
+            echo "gen canary DIAG: raw llama also failed — model/server issue" >&2
+        fi
+    fi
+    return 1
+}
+
+# Merge Pi stdout log + optional cwd receipt for dual-path Status finalize.
+# Receipt path: $cwd/.dispatch-leaf-status (last line should be Status: DONE).
+# Product-token hard gate when tokens declared (see ce_require_product_tokens).
+ce_finalize_from_pi_local_artifacts() {
+    local log_file="$1"
+    local cwd="$2"
+    local blob=""
+    if [[ -f "$log_file" ]]; then
+        blob="$(cat "$log_file")"
+    fi
+    local receipt="${cwd%/}/.dispatch-leaf-status"
+    if [[ -f "$receipt" ]]; then
+        echo "Worker $CE_WORKER_ID: merging leaf status receipt $receipt" >&2
+        blob+=$'\n'"$(cat "$receipt")"
+    fi
+    # Status gate first
+    local st_rc=0
+    ce_finalize_from_text "$blob" || st_rc=$?
+    if [[ $st_rc -ne 0 ]]; then
+        return $st_rc
+    fi
+    # Product-token layer only on DONE green
+    if echo "$blob" | grep -Eq '^[[:space:]*_`#>-]*Status:[[:space:]]*\*?\*?DONE(_WITH_CONCERNS)?\b'; then
+        if ! ce_require_product_tokens "$blob"; then
+            return 4
+        fi
+    fi
+    return 0
+}
+
 ce_run_pi_local() {
     if [[ -z "${CE_CWD:-}" ]]; then
         ce_parse_args "$@"
@@ -815,6 +945,9 @@ ce_run_pi_local() {
 
     ce_assemble_brief_with_packs
     ce_assemble_prompt
+
+    # Reinforce terminal protocol for Ornith/Pi leaves (stdout + dual receipt).
+    CE_FINAL_PROMPT="${CE_FINAL_PROMPT}"$'\n\n'"MANDATORY finalize: print Status: DONE (or DONE_WITH_CONCERNS / NEEDS_GUIDANCE / BLOCKED) on its own final line. ALSO overwrite .dispatch-leaf-status in the working directory with that same single Status line (dual finalize if stdout capture fails)."
 
     local log_dir="$CE_DISPATCH_ROOT/logs"
     mkdir -p "$log_dir"
@@ -830,6 +963,7 @@ ce_run_pi_local() {
         pi
         --provider "${PI_LOCAL_PROVIDER:?PI_LOCAL_PROVIDER is required}"
         --model "${PI_LOCAL_MODEL:?PI_LOCAL_MODEL is required}"
+        --mode text
         --thinking off
         --no-session
         --no-extensions
@@ -863,6 +997,15 @@ ce_run_pi_local() {
         return 4
     fi
 
+    # Pre-start generation canary (proxy path). Refuse leaf if gen is dead.
+    if [[ "${PI_LOCAL_GEN_CANARY:-0}" == "1" ]]; then
+        if ! ce_pi_local_gen_canary; then
+            rm -f "$CE_ASSEMBLED_BRIEF"
+            ce_finalize_status "errored" 4 "Pi local gen canary failed (proxy completions unhealthy)"
+            return 4
+        fi
+    fi
+
     local runtime_agent_dir="$PI_LOCAL_AGENT_DIR"
     local temporary_agent_dir=""
     if [[ -n "${PI_LOCAL_BASE_URL:-}" ]]; then
@@ -888,13 +1031,46 @@ PY
         runtime_agent_dir="$temporary_agent_dir"
     fi
 
+    # Line-buffer when GNU stdbuf/gstdbuf exists (macOS often lacks it).
+    local buf_prefix=()
+    if command -v stdbuf >/dev/null 2>&1; then
+        buf_prefix=(stdbuf -oL -eL)
+    elif command -v gstdbuf >/dev/null 2>&1; then
+        buf_prefix=(gstdbuf -oL -eL)
+    fi
+
     local exit_code=0
+    # Clear dual-path receipt so a stale Status cannot green a failed run.
+    rm -f "${CE_CWD%/}/.dispatch-leaf-status"
+    # Empty-log early fail: if still 0 bytes after N seconds, kill the Pi leaf (avoid full alarm 142).
+    local empty_secs="${PI_LOCAL_EMPTY_LOG_SECONDS:-90}"
+    local empty_wd_pid=""
+    if [[ "${empty_secs}" -gt 0 ]]; then
+        (
+            sleep "$empty_secs"
+            if [[ ! -s "$log_file" ]]; then
+                echo "Worker $CE_WORKER_ID: empty-log watchdog fired after ${empty_secs}s (0-byte log) — killing Pi leaf" >&2
+                pkill -f "pi --provider ${PI_LOCAL_PROVIDER}" 2>/dev/null || true
+            fi
+        ) &
+        empty_wd_pid=$!
+    fi
     (
         cd "$CE_CWD"
+        export PYTHONUNBUFFERED=1
         # Pi exposes no max-turns option. A process alarm bounds the local leaf.
+        # buf_prefix + --mode text: reduce empty-log false exit-4 on multi-tool jobs.
         PI_CODING_AGENT_DIR="$runtime_agent_dir" \
-            perl -e 'alarm shift; exec @ARGV' "${PI_LOCAL_TIMEOUT_SECONDS:-300}" "${cmd[@]}"
+            perl -e 'alarm shift; exec @ARGV' "${PI_LOCAL_TIMEOUT_SECONDS:-300}" \
+            "${buf_prefix[@]}" "${cmd[@]}"
     ) 2>&1 | tee "$log_file" || exit_code=$?
+    if [[ -n "$empty_wd_pid" ]]; then
+        kill "$empty_wd_pid" 2>/dev/null || true
+        wait "$empty_wd_pid" 2>/dev/null || true
+    fi
+    if [[ $exit_code -ne 0 && ! -s "$log_file" ]]; then
+        echo "Worker $CE_WORKER_ID: Pi local empty log + non-zero exit (likely hang/alarm 142 or gen path dead)." >&2
+    fi
     if [[ -n "$temporary_agent_dir" ]]; then
         rm -rf "$temporary_agent_dir"
     fi
@@ -911,7 +1087,7 @@ PY
         return 4
     fi
 
-    ce_finalize_from_text "$(cat "$log_file")"
+    ce_finalize_from_pi_local_artifacts "$log_file" "$CE_CWD"
 }
 
 ce_run_nuc_ondemand() {

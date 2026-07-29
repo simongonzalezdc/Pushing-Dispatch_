@@ -45,6 +45,10 @@ from dispatch_lib.nested import (
 )
 from dispatch_lib.matrix_validator import validate
 from dispatch_lib.context_budget import check_budget_for_file
+from dispatch_lib.leaf_serialize import (
+    SERIALIZE_EXECUTORS,
+    check_executor_available,
+)
 from dispatch_lib.auto_router import (
     auto_route, detect_mode_from_keywords, required_capabilities, NoExecutorAvailable,
     missing_capabilities, _tier, _candidates,
@@ -222,6 +226,19 @@ def cmd_start(args, mode: str):
     if not passed:
         print(f"Error: {reason}", file=sys.stderr)
         sys.exit(exit_code)
+
+    # Single-seat leaves (Ornith): fail-fast if another job is already running.
+    if args.executor in SERIALIZE_EXECUTORS:
+        ok, busy_reason = check_executor_available(args.executor)
+        if not ok:
+            print(f"Error: {busy_reason}", file=sys.stderr)
+            print(
+                "Hint: wait for the active Ornith leaf to finish, or "
+                f"`pushing-dispatch list --active` / kill the holder. "
+                f"(serialize policy for {args.executor})",
+                file=sys.stderr,
+            )
+            sys.exit(4)
 
     # Generate worker ID
     slug = getattr(args, "slug", None) or Path(args.task_file).stem if args.task_file else mode

@@ -14,6 +14,16 @@ This file is intentionally mirror-safe:
 - Concrete base URLs, Tailscale names, CGNAT addresses, and machine-local paths belong in operator-private config or host-local overlays — not in the shared README.
 - If sibling files (launchers, systemd drop-ins, pi-agent settings, skill blocks) are absent from a given mirror, treat them as not shipped on that snapshot rather than as broken documentation.
 
+## Operator role (Ornith sticky leaf)
+
+- Admit only **bounded · localized · reversible · verifying** work
+- Never architect / critic / security / vision / web as sole judge
+- **Serialize** leaves (one at a time; second start **fail-fasts** with busy error)
+- Sampling forced at proxy (`UNSLOTH_ORNITH_SAMPLING=force`)
+- Leaf maxTokens default **4096** (do not re-raise to 16k casually)
+- Do not dual-load another 27B/35B agent port (`:8892` retired)
+- Super S+ gates (live on wrapper): pre-start gen canary, product-token hard finalize, dual Status receipt, empty-log watchdog
+
 ## How agents should use it
 
 1. Prefer the live matrix / Dispatch routing for executor selection.
