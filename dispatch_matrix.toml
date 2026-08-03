@@ -81,7 +81,6 @@ stall_threshold_seconds = 300
 # duplicated minimax M3). See fix/dispatch-lane-health.
 
 [executors.codex-luna]
-account = "icloud"
 wrapper = "codex-luna.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-luna"
@@ -95,7 +94,6 @@ max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.codex-terra]
-account = "icloud"
 wrapper = "codex-terra.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-terra"
@@ -109,7 +107,6 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.codex-sol]
-account = "icloud"
 wrapper = "codex-sol.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-sol"

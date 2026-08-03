@@ -41,10 +41,10 @@ class TestMatrixShape(unittest.TestCase):
                 self.assertIn("key_env", cfg, name)
                 self.assertIn("key_account", cfg, name)
 
-    def test_openai_executors_have_account_hint(self):
+    def test_openai_executors_use_current_single_account(self):
         for name, cfg in self.m["executors"].items():
             if cfg.get("provider") == "openai-codex":
-                self.assertIn("account", cfg, name)
+                self.assertNotIn("account", cfg, name)
 
     def test_codex_subscription_uses_only_gpt56_family(self):
         codex = {
