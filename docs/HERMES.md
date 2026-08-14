@@ -18,7 +18,7 @@ This prevents provider drift and avoids falsely representing ChatGPT subscriptio
 ```yaml
 model:
   provider: zai
-  default: glm-5.2
+  default: glm-5.3
   base_url: https://api.z.ai/api/coding/paas/v4
   api_mode: chat_completions
 
@@ -30,7 +30,7 @@ providers:
     api_key: ''
     api_mode: chat_completions
     base_url: https://api.z.ai/api/coding/paas/v4
-    model: glm-5.2
+    model: glm-5.3
     reasoning_effort: high
 
 fallback_providers: []
@@ -38,7 +38,7 @@ custom_providers: []
 
 delegation:
   provider: zai
-  model: glm-5.2
+  model: glm-5.3
   orchestrator_enabled: true
 ```
 

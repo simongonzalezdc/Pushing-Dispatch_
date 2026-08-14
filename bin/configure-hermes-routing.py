@@ -20,7 +20,7 @@ def canonicalize(config: dict) -> dict:
     model = dict(config.get("model") or {})
     model.update(
         provider="zai",
-        default="glm-5.2",
+        default="glm-5.3",
         base_url=ZAI_BASE_URL,
         api_mode="chat_completions",
     )
@@ -35,7 +35,7 @@ def canonicalize(config: dict) -> dict:
         api_key="",
         api_mode="chat_completions",
         base_url=ZAI_BASE_URL,
-        model="glm-5.2",
+        model="glm-5.3",
         reasoning_effort="high",
     )
     config["providers"] = {"ollama-local": ollama, "zai": zai}
@@ -45,7 +45,7 @@ def canonicalize(config: dict) -> dict:
     delegation = dict(config.get("delegation") or {})
     delegation.update(
         provider="zai",
-        model="glm-5.2",
+        model="glm-5.3",
         base_url=ZAI_BASE_URL,
         api_key="",
         api_mode="chat_completions",

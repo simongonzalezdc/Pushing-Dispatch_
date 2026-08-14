@@ -124,10 +124,10 @@ class HermesConfigTests(unittest.TestCase):
                 yaml.safe_dump(
                     {
                         "model": {"provider": "nous", "default": "openai/gpt-5.5"},
-                        "providers": {"nous": {}, "zai": {"model": "glm-5.1"}},
+                        "providers": {"nous": {}, "zai": {"model": "glm-5.3"}},
                         "fallback_providers": [{"provider": "zai", "model": "glm-4.6"}],
                         "custom_providers": [{"name": "nucbox-gemma4"}],
-                        "delegation": {"provider": "zai", "model": "glm-5.1", "max_iterations": 48},
+                        "delegation": {"provider": "zai", "model": "glm-5.3", "max_iterations": 48},
                         "unrelated": {"preserved": True},
                     }
                 )
@@ -142,12 +142,12 @@ class HermesConfigTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             updated = yaml.safe_load(config.read_text())
             self.assertEqual(updated["model"]["provider"], "zai")
-            self.assertEqual(updated["model"]["default"], "glm-5.2")
+            self.assertEqual(updated["model"]["default"], "glm-5.3")
             self.assertEqual(set(updated["providers"]), {"zai", "ollama-local"})
-            self.assertEqual(updated["providers"]["zai"]["model"], "glm-5.2")
+            self.assertEqual(updated["providers"]["zai"]["model"], "glm-5.3")
             self.assertEqual(updated["fallback_providers"], [])
             self.assertEqual(updated["custom_providers"], [])
-            self.assertEqual(updated["delegation"]["model"], "glm-5.2")
+            self.assertEqual(updated["delegation"]["model"], "glm-5.3")
             self.assertEqual(updated["delegation"]["max_iterations"], 48)
             self.assertTrue(updated["unrelated"]["preserved"])
             self.assertEqual(config.stat().st_mode & 0o777, 0o600)
@@ -185,7 +185,7 @@ class HermesConfigTests(unittest.TestCase):
             skill = hermes / "skills" / "pushing-dispatch" / "SKILL.md"
             self.assertIn("hermes-dispatch start", skill.read_text())
             updated = yaml.safe_load(config.read_text())
-            self.assertEqual(updated["model"]["default"], "glm-5.2")
+            self.assertEqual(updated["model"]["default"], "glm-5.3")
             self.assertEqual(updated["delegation"]["max_iterations"], 12)
 
 

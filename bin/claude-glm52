@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Canonical Claude Code launcher: Claude Code harness, Z.AI GLM 5.2 model.
+# Canonical Claude Code launcher: Claude Code harness, Z.AI GLM 5.3 model.
 
 set -euo pipefail
 
@@ -10,12 +10,12 @@ if [[ ! -x "$real_claude" ]]; then
 fi
 
 export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
-export ANTHROPIC_MODEL="glm-5.2"
-export ANTHROPIC_SMALL_FAST_MODEL="glm-5.2"
-export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2"
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.2"
-export CLAUDE_CODE_SUBAGENT_MODEL="glm-5.2"
+export ANTHROPIC_MODEL="glm-5.3"
+export ANTHROPIC_SMALL_FAST_MODEL="glm-5.3"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.3"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.3"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.3"
+export CLAUDE_CODE_SUBAGENT_MODEL="glm-5.3"
 
 # A stale Anthropic OAuth session must never shadow the selected Z.AI provider.
 unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY

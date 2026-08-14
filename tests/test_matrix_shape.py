@@ -338,7 +338,7 @@ class TestMatrixShape(unittest.TestCase):
 
     def test_primary_zai_lane_uses_glm_52(self):
         zai = self.m["executors"]["zai-glm"]
-        self.assertEqual(zai["model_id"], "glm-5.2")
+        self.assertEqual(zai["model_id"], "glm-5.3")
         self.assertEqual(zai["context_window"], 1_000_000)
         self.assertNotIn("vision", zai.get("capabilities", []))
 

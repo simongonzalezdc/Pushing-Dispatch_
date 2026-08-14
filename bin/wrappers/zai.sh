@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# zai.sh - Agentic Z.ai / GLM 5.2 worker via Claude Code.
+# zai.sh - Agentic Z.ai / GLM 5.3 worker via Claude Code.
 #
 # Uses Z.ai's Anthropic-compatible endpoint so Claude Code supplies the
 # file, shell, and editing tool loop. A one-shot chat-completions call can
 # only describe work; it cannot execute a Dispatch task.
 #   base URL: https://api.z.ai/api/anthropic
-#   model:    glm-5.2 by default, override ANTHROPIC_MODEL for variants
+#   model:    glm-5.3 by default, override ANTHROPIC_MODEL for variants
 #   key:      Z_AI_API_KEY
 
 set -euo pipefail
@@ -17,7 +17,7 @@ export CE_TOOL_NAME="zai"
 export CE_BARE_MODE=1
 
 export ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-https://api.z.ai/api/anthropic}"
-export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-glm-5.2}"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-glm-5.3}"
 
 export CE_THINKING_TOKENS="${CE_THINKING_TOKENS:-32768}"
 export CE_MAX_TURNS="${CE_MAX_TURNS:-25}"

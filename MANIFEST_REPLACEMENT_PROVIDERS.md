@@ -24,7 +24,7 @@ Source of truth inspected:
 | Kimi K3 subscription | `kimi-code/k3` | `kimi-k3-cli` | Official Kimi CLI session only |
 | Kimi K3 on Ollama Cloud | `kimi-k3` | `kimi-k3-ollama` | `OLLAMA_API_KEY` only |
 | DeepSeek provider | `deepseek-v4-flash` | `deepseek` | `DEEPSEEK_API_KEY` |
-| Z.ai / GLM custom provider | `glm-5.1` | `zai-glm` | `Z_AI_API_KEY` |
+| Z.ai / GLM custom provider | `glm-5.3` | `zai-glm` | `Z_AI_API_KEY` |
 | Z.ai / GLM custom provider | `glm-4.5-air` | `zai-air` | `Z_AI_API_KEY` |
 | MiniMax subscription lane | `MiniMax-M3` | `minimax` | `MINIMAX_API_KEY` |
 | MiniMax coding plan | `MiniMax-M2.5` | `minimax-m25` | `MINIMAX_API_KEY` |

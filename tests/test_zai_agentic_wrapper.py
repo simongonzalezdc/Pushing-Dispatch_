@@ -11,13 +11,13 @@ class ZaiAgenticWrapperTests(unittest.TestCase):
     def test_zai_defaults_to_glm_52(self):
         wrapper = (ROOT / "bin" / "wrappers" / "zai.sh").read_text()
 
-        self.assertIn('ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-glm-5.2}"', wrapper)
+        self.assertIn('ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-glm-5.3}"', wrapper)
 
     def test_global_launcher_forces_glm_52_without_plaintext_key(self):
         launcher = (ROOT / "bin" / "claude-glm52").read_text()
 
         self.assertIn("https://api.z.ai/api/anthropic", launcher)
-        self.assertIn("glm-5.2", launcher)
+        self.assertIn("glm-5.3", launcher)
         self.assertIn("security find-generic-password", launcher)
         self.assertIn('pass show "pushing-dispatch/$account"', launcher)
         self.assertIn("ANTHROPIC_SMALL_FAST_MODEL", launcher)
@@ -68,7 +68,7 @@ class ZaiAgenticWrapperTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout, "symlink-key|glm-5.2")
+            self.assertEqual(result.stdout, "symlink-key|glm-5.3")
 
     def test_claude_stream_json_enables_verbose_mode(self):
         executor = (ROOT / "bin" / "wrappers" / "_exec.sh").read_text()
