@@ -28,7 +28,7 @@ model from the harness name, and do not restore a retired lane from an old doc.
 - Gemini is available only through AGY; Gemini CLI and direct-API wrappers are retired.
 - MiniMax M3 is accessed through GJC as a backup.
 - Kilo is free-only. Its safe default is `kilo/kilo-auto/free`; monthly named free models must be verified live before use. Never silently fall through to a paid Kilo model.
-- GLM 5.3 has no vision. Image, screenshot, PDF-render, and visual tasks must use a vision-capable lane.
+- GLM 5.3 accepts vision input (live-validated 2026-08-14; quality audit pending). Until that audit, vision-critical image/screenshot/PDF-render work stays on a dedicated vision-capable lane; GLM may take visual tasks only as non-critical pilots.
 - When native search is missing or unreliable, use the globally configured DuckDuckGo `ddg` MCP. Never fabricate search results.
 
 ## Claude Code Means GLM 5.3 Here
