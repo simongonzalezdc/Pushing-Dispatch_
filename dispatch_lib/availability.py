@@ -203,10 +203,23 @@ def _key_present(env_var, account) -> bool:
     return False
 
 
+def _zai_ready() -> bool:
+    """GLM runs through ZCode; the lane is available only where a zcode
+    binary can actually be resolved (CLI on PATH or the ZCode.app bundle)."""
+    if shutil.which("zcode") is not None:
+        return True
+    return (Path.home() / "Applications/ZCode.app/Contents/Resources/glm/zcode.cjs").exists() or \
+        Path("/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs").exists()
+
+
 def _executor_available(cfg: dict) -> bool:
     if cfg.get("disabled") is True:
         return False
     provider = cfg.get("provider", "")
+    if provider == "zai":
+        return _zai_ready()
+    if provider == "deepseek-dsh":
+        return shutil.which("dsh") is not None
     if provider == "agy":
         return shutil.which("agy") is not None
     if provider == "kilo-cli":

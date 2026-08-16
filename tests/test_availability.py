@@ -178,7 +178,8 @@ class TestAvailability(unittest.TestCase):
         with mock.patch.object(availability, "_anthropic_ready", return_value=False), \
              mock.patch.object(availability, "_codex_ready", return_value=False), \
              mock.patch.object(availability, "_key_present", return_value=True), \
-             mock.patch.object(availability, "_local_ready", return_value=False):
+             mock.patch.object(availability, "_local_ready", return_value=False), \
+             mock.patch.object(availability, "_zai_ready", return_value=True):
             avail = availability.resolve(MATRIX, use_cache=False)
         self.assertTrue(avail["zai-glm"]["available"])
 
@@ -186,7 +187,8 @@ class TestAvailability(unittest.TestCase):
         with mock.patch.object(availability, "_anthropic_ready", return_value=True), \
              mock.patch.object(availability, "_codex_ready", return_value=True), \
              mock.patch.object(availability, "_key_present", return_value=False), \
-             mock.patch.object(availability, "_local_ready", return_value=False):
+             mock.patch.object(availability, "_local_ready", return_value=False), \
+             mock.patch.object(availability, "_zai_ready", return_value=False):
             s = availability.available_set(MATRIX, use_cache=False)
         self.assertIn("opus", s)
         self.assertIn("openai-mini", s)
