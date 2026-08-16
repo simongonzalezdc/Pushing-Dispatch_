@@ -5,7 +5,7 @@ You are working in the `pushing-dispatch` repo: a multi-model dispatch framework
 ## What This Is
 
 A system that lets an orchestrator dispatch workers across the verified Codex,
-GLM 5.2, native Kimi, GJC MiniMax, AGY Gemini, official Grok Build (`grok-build`), Kilo-free, and LM Studio lanes
+GLM 5.3 via ZCode (`zcode -p`; see `docs/ZCODE.md`), native Kimi, GJC MiniMax, AGY Gemini, official Grok Build (`grok-build`), Kilo-free, and LM Studio lanes
 through a unified CLI. Four pillars:
 
 1. **Native harness routing**: each executor uses its verified native or managed harness

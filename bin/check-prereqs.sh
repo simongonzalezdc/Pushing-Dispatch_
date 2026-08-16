@@ -103,7 +103,7 @@ echo "Required tools:"
 check_python_version
 check_bash_version
 check_required "Git" "git" "https://git-scm.com/downloads"
-check_required "Claude Code GLM 5.2 harness" "claude" "install bin/claude-glm52 as the global claude entry point"
+check_required "ZCode GLM harness" "zcode" "install ZCode.app and bin/install-global-routing.sh (canonical GLM CLI)"
 
 echo ""
 echo "Optional tools:"
@@ -113,6 +113,7 @@ check_optional "AGY" "agy" "Gemini dispatch"
 check_optional "GJC" "gjc" "MiniMax M3 backup dispatch"
 check_optional "Kilo CLI" "kilo" "free-only overflow dispatch"
 check_optional "Official Grok CLI" "grok" "Grok Build 4.5 vision-capable dispatch"
+check_optional "Legacy claude-glm52 wrapper" "claude" "only needed until zai-glm is rewired onto ZCode"
 check_optional "pass" "pass" "Password store for API keys"
 
 echo ""

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# zai.sh - Agentic Z.ai / GLM 5.3 worker via Claude Code.
+# zai.sh - LEGACY Dispatch worker: Z.AI GLM via Claude Code.
 #
-# Uses Z.ai's Anthropic-compatible endpoint so Claude Code supplies the
-# file, shell, and editing tool loop. A one-shot chat-completions call can
-# only describe work; it cannot execute a Dispatch task.
+# Canonical agent invocation is ZCode (`zcode -p`). See docs/ZCODE.md.
+# This wrapper still uses Z.ai's Anthropic-compatible endpoint so Claude Code
+# supplies the tool loop for executor `zai-glm` until the lane is rewired.
 #   base URL: https://api.z.ai/api/anthropic
-#   model:    glm-5.3 by default, override ANTHROPIC_MODEL for variants
+#   model:    glm-5.3 by default, override ANTHROPIC_MODEL
 #   key:      Z_AI_API_KEY
 
 set -euo pipefail

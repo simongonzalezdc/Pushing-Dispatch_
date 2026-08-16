@@ -63,10 +63,11 @@ through `dispatch_matrix.toml`.
 Current provider truth:
 
 - Anthropic subscription lanes are retired and absent from the matrix.
-- Claude Code defaults to Z.AI `glm-5.3` through `bin/claude-glm52`.
-- GLM 5.3 accepts vision input (live-validated 2026-08-14); vision-quality audit still pending, keep vision-critical work on the dedicated vision lane until audited. Dispatch must reject GLM for images, screenshots, video, rendered-UI inspection, and every other visual task.
+- **Canonical GLM harness is ZCode** (`zcode -p` / `zcode --prompt`), Z.AI’s own CLI. Model pin `glm-5.3`. Procedure: `docs/ZCODE.md` and `~/.agents/docs/ZCODE-GLM.md`. Do not teach agents to call GLM through Claude Code.
+- `bin/claude-glm52` is **legacy** (Anthropic-compatible wrapper still used by the `zai-glm` executor until that lane is rewired onto ZCode).
+- Do not send visual-QA / screenshot loops to ZCode unless the user asked for eyes. Dedicated vision lanes remain preferred for vision-critical work.
 - When any model's primary search path fails or yields unusable results, retry through the globally configured DuckDuckGo `ddg` MCP. If DDG also fails, report the search failure; never fabricate results, URLs, or citations.
-- GJC is the backup: `gjc --model zai/glm-5.3` or `gjc --model minimax-code/minimax-m3`.
+- GJC is the backup chat path: `gjc --model zai/glm-5.3` or `gjc --model minimax-code/minimax-m3`. Not the GLM harness. Canonical GLM is `zcode -p` — `docs/ZCODE.md`.
 - `claude-minimax` is the direct MiniMax M3 fallback.
 - Kimi K3 is split by access boundary: `kimi-k3-cli` always uses the official Kimi CLI subscription session, while `kimi-k3-ollama` uses only Ollama Cloud and remains unavailable until Ollama's live catalog exposes K3. Hermes may promote only the Ollama lane to its native main model; never exchange credentials or silently substitute lanes.
 - Gemini models are exclusive to AGY (`agy-gemini-flash` and `agy-gemini-pro`); Gemini CLI and legacy direct-API lanes are retired.

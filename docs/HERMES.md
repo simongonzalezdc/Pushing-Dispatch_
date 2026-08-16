@@ -4,8 +4,9 @@ Hermes is Liam's resident orchestrator. Pushing Dispatch is its model-selection 
 
 ## Boundary
 
-- Hermes's primary conversation model is Z.AI GLM 5.2.
-- Hermes-native child agents inherit GLM 5.2 and are appropriate for tightly coupled, in-session decomposition.
+- Hermes's primary conversation model is Z.AI GLM 5.3 (native HTTP provider). That is the in-app chat path, not the CLI.
+- **CLI / headless GLM is ZCode** (`zcode -p`). See `docs/ZCODE.md`. Do not teach Hermes operators to call GLM through Claude Code.
+- Hermes-native child agents inherit GLM 5.3 and are appropriate for tightly coupled, in-session decomposition.
 - External delegated, background, parallel, consultation, coding, research, and specialist workers launch through the `hermes-dispatch` adapter.
 - CLI-backed executors are not duplicated as Hermes HTTP providers. Dispatch owns their authentication, capability checks, availability, and launch behavior.
 
@@ -58,11 +59,11 @@ Use `breakout` or `consult` when that is the actual mode. The committed matrix r
 
 ## Credential bridge
 
-The global Dispatch and Claude launchers use one non-executing reader for the Z.AI aliases `Z_AI_API_KEY`, `ZAI_API_KEY`, or `GLM_API_KEY` from Liam's trusted `$HOME/.hermes/.env`. The reader rejects symlinks, non-owner files, and group/world-readable files. Other Hermes credentials are not imported. Claude Code still clears Anthropic OAuth/API state and always targets Z.AI GLM 5.2.
+The global Dispatch and ZCode/Claude launchers use one non-executing reader for the Z.AI aliases `Z_AI_API_KEY`, `ZAI_API_KEY`, or `GLM_API_KEY` from Liam's trusted `$HOME/.hermes/.env`. The reader rejects symlinks, non-owner files, and group/world-readable files. Other Hermes credentials are not imported. CLI/headless GLM is ZCode (`zcode -p`). The legacy `claude-glm52` wrapper still targets Z.AI GLM 5.3 over the Anthropic-compatible endpoint.
 
 ## Capability rules
 
-- GLM is text-only. Vision routes to a vision-capable Dispatch lane.
+- Do not default visual-QA to GLM/ZCode. Vision-critical work routes to a vision-capable Dispatch lane.
 - Kimi subscription work routes externally through `kimi-k3-cli`. Hermes never imports or uses that subscription session.
 - When Ollama Cloud exposes K3 and an authenticated completion passes, Hermes may set `provider: ollama-cloud` and `default: kimi-k3`; until then it keeps a working primary model.
 - Grok Build routes through the `grok-build` executor and xAI's official CLI; it replaces retired Claude Opus-class hard implementation, architecture, adversarial review, breakout, and consult work. It is not a Hermes HTTP provider.

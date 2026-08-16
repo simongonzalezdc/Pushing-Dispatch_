@@ -14,7 +14,7 @@ This checkout is configured for mixed Claude Code, Codex, metered provider, and 
 | `kimi-coding` | Claude Code via Kimi Coding Anthropic-compatible endpoint | Manifest Kimi Coding lane |
 | `kimi-moonshot` | Claude Code via Moonshot/Kimi Anthropic-compatible endpoint | Legacy Kimi/Moonshot lane |
 | `deepseek` | Claude Code via DeepSeek Anthropic-compatible endpoint | Direct DeepSeek code lane |
-| `zai-glm`, `zai-air` | Claude Code via Z.ai Anthropic-compatible endpoint | Manifest GLM reasoning and fast-edit lanes |
+| `zai-glm`, `zai-air` | **Now: ZCode `zcode -p`.** Table row is historical: Claude Code via Z.ai Anthropic-compatible endpoint | Manifest GLM reasoning and fast-edit lanes |
 | `minimax`, `minimax-m25`, `minimax-m25-highspeed` | Claude Code via MiniMax Anthropic-compatible endpoint | Manifest/Goose MiniMax lanes |
 | `minimax-coding-plan` | MiniMax OpenAI-compatible endpoint | Goose custom MiniMax coding-plan lane |
 | `inception-mercury` | Inception Labs OpenAI-compatible endpoint | Goose custom Mercury-2 lane |

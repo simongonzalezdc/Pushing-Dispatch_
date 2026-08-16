@@ -13,8 +13,8 @@
       },
       "models": [
         {
-          "id": "SC117/Ornith-1.0-35B-MTP-APEX-GGUF",
-          "name": "NUCBox Ornith 1.0 35B MTP (sticky workhorse)",
+          "id": "unsloth/Qwen3.8-27B-GGUF",
+          "name": "NUCBox Qwen3.8-27B UD-Q4_K_XL (sticky workhorse)",
           "reasoning": false,
           "input": ["text"],
           "contextWindow": 32768,

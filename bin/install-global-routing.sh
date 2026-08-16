@@ -42,11 +42,15 @@ set -euo pipefail
 exec "$HOME/.local/bin/pushing-dispatch" "$@"
 EOF
 
-chmod +x "$BIN_DIR/pushing-dispatch" "$BIN_DIR/dispatch"
+install -m 0755 "$REPO_ROOT/bin/zcode" "$BIN_DIR/zcode"
+
+chmod +x "$BIN_DIR/pushing-dispatch" "$BIN_DIR/dispatch" "$BIN_DIR/zcode"
 
 echo "Installed:"
 echo "  $BIN_DIR/pushing-dispatch"
 echo "  $BIN_DIR/dispatch"
+echo "  $BIN_DIR/zcode   # canonical GLM harness (ZCode -p), not Claude Code"
 echo ""
 echo "Verify with:"
 echo "  pushing-dispatch route --mode task --task 'fix a typo'"
+echo "  zcode --version"

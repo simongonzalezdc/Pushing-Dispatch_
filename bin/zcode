@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Canonical GLM CLI: Z.AI ZCode (not Claude Code).
+# See docs/ZCODE.md and ~/.agents/docs/ZCODE-GLM.md
+set -euo pipefail
+
+if [[ -n "${ZCODE_BIN:-}" && -x "${ZCODE_BIN}" ]]; then
+  exec "${ZCODE_BIN}" "$@"
+fi
+
+bundled="/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
+if [[ -f "$bundled" ]]; then
+  exec node "$bundled" "$@"
+fi
+
+echo "ZCode CLI not found. Install ZCode.app or set ZCODE_BIN." >&2
+echo "Expected: $bundled" >&2
+exit 69

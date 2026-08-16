@@ -5,7 +5,7 @@ You are working in the `pushing-dispatch` repo: a multi-model dispatch framework
 ## Architecture
 
 Four pillars:
-1. **Harness flip**: providers use their supported agentic harness; Claude Code defaults to Z.AI GLM 5.2
+1. **Harness flip**: providers use their supported agentic harness; **GLM is ZCode** (`zcode -p`), not Claude Code. `claude-glm52` is legacy for the `zai-glm` executor only.
 2. **Brief-only context**: workers receive only baseline + declared packs + task body
 3. **Matrix-driven routing**: `dispatch_matrix.toml` defines all executor capabilities
 4. **Nested dispatch**: workers can spawn sub-workers with safety rails
@@ -26,8 +26,8 @@ Four pillars:
 
 - Everything derives from the dispatch matrix. No hardcoded executor lists.
 - Anthropic subscription executors are retired; do not restore Opus/Sonnet/Haiku lanes.
-- `zai-glm` is GLM 5.2. GJC provides explicit GLM 5.2 and MiniMax M3 backup paths.
-- GLM has no vision capability. Visual tasks must route to a matrix-declared `vision` executor, never GLM.
+- `zai-glm` is GLM 5.3. **Call it through ZCode** (`docs/ZCODE.md`). GJC `zai/glm-5.3` is a backup chat path, not the harness.
+- Do not default visual-QA to GLM/ZCode. Prefer a matrix-declared vision executor unless the user named GLM for eyes.
 - If any model's normal search path fails or produces unusable results, use the global DuckDuckGo `ddg` MCP fallback; never invent search results or citations.
 - Kimi K3 has two isolated access lanes: `kimi-k3-cli` uses the official Kimi CLI and only the user's Kimi subscription session; `kimi-k3-ollama` uses only Ollama Cloud credentials and stays unavailable until Ollama's live catalog exposes K3. Never cross credentials or silently substitute one lane for the other. Hermes may use only the Ollama Cloud lane as a native provider.
 - Gemini is exclusive to AGY; do not route Gemini through Gemini CLI or the legacy direct API wrappers.

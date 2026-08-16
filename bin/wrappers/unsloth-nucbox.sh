@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# unsloth-nucbox.sh — Ornith sticky local leaf on :8890.
+# unsloth-nucbox.sh — Qwen3.8-27B sticky local leaf on :8890 (Ornith rollback on disk).
 # Progressive skills: catalog injected (name/desc/path only); full SKILL.md via read tool.
 # Pi native --skills discovery is disabled (pulls global package skill bloat past 32k ctx).
 
@@ -10,7 +10,7 @@ source "$SCRIPT_DIR/_exec.sh"
 
 export CE_TOOL_NAME="unsloth-nucbox"
 export PI_LOCAL_PROVIDER="${UNSLOTH_PI_PROVIDER:-unsloth-nucbox}"
-export PI_LOCAL_MODEL="${UNSLOTH_MODEL:-SC117/Ornith-1.0-35B-MTP-APEX-GGUF}"
+export PI_LOCAL_MODEL="${UNSLOTH_MODEL:-unsloth/Qwen3.8-27B-GGUF}"
 export PI_LOCAL_AGENT_DIR="${UNSLOTH_PI_AGENT_DIR:-$SCRIPT_DIR/../../ops/unsloth-nucbox/pi-agent}"
 export PI_LOCAL_BASE_URL="${UNSLOTH_BASE_URL:-http://100.113.174.74:8890/v1}"
 export PI_LOCAL_HEALTH_URL="${PI_LOCAL_BASE_URL%/}/models"

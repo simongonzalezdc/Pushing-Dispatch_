@@ -21,7 +21,7 @@ executor: <configured-executor>
 
 ## Docs
 
-- [docs/PROVIDERS.md](docs/PROVIDERS.md)
+- [docs/PROVIDERS.md](docs/PROVIDERS.md) — executor roster incl. `grok-build`, `zai-glm` (ZCode), Kimi K3 lanes
 - [ops/unsloth-nucbox/README.md](ops/unsloth-nucbox/README.md)
 - [INSTALL.md](INSTALL.md)
 - [docs/ORCHESTRATING.md](docs/ORCHESTRATING.md)

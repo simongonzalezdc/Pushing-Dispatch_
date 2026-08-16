@@ -1,6 +1,10 @@
-# Setup With Claude Code (GLM 5.2 Harness)
+# Setup With Claude Code (legacy GLM wrapper)
 
-Claude Code is the shell/harness for GLM 5.2 on this machine. Anthropic
+**Canonical GLM harness is ZCode**, not this file. See `docs/ZCODE.md` and
+`~/.agents/docs/ZCODE-GLM.md`. `zcode -p` is the one-shot.
+
+This page is the **legacy** Claude Code + Z.AI Anthropic-compatible wrapper
+still used by executor `zai-glm` until that lane is rewired. Anthropic
 subscription models are not active Dispatch lanes.
 
 ## Install the Canonical Checkout
@@ -18,7 +22,7 @@ Code binary as `claude-real` for harness maintenance only.
 ## Required Harnesses
 
 - Codex CLI with the ChatGPT subscription for Luna, Terra, and Sol.
-- Claude Code plus Z.AI credentials for GLM 5.2.
+- ZCode.app (canonical GLM CLI: `zcode -p`). Claude Code plus Z.AI credentials remain the legacy `zai-glm` wrapper.
 - Official Kimi CLI for Kimi K3 through the user's Kimi subscription; this is the only allowed subscription path.
 - Ollama Cloud for a separate Kimi K3 lane. It stays unavailable until Ollama's live catalog exposes `kimi-k3`, and only this lane may become Hermes' native K3 provider.
 - GJC for MiniMax M3.

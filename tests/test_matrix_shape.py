@@ -109,14 +109,14 @@ class TestMatrixShape(unittest.TestCase):
                 self.assertNotIn("lm-studio", candidates, key)
 
     def test_nuc_context_window_matches_effective_parallel_slot(self):
-        # Ornith sticky workhorse on :8890 (32k agent context).
+        # Qwen3.8-27B sticky workhorse on :8890 (32k agent context).
         self.assertEqual(
             self.m["executors"]["unsloth-nucbox"]["context_window"],
             32_768,
         )
         self.assertEqual(
             self.m["executors"]["unsloth-nucbox"]["model_id"],
-            "SC117/Ornith-1.0-35B-MTP-APEX-GGUF",
+            "unsloth/Qwen3.8-27B-GGUF",
         )
 
     def test_unsloth_uses_bounded_agentic_pi_harness(self):
@@ -215,6 +215,15 @@ class TestMatrixShape(unittest.TestCase):
         self.assertIn("Stop conditions", prompt)
         self.assertIn("Do not continue reasoning", prompt)
         self.assertIn("reassess", prompt.lower())
+
+    def test_agent_docs_teach_zcode_as_canonical_glm(self):
+        routing = (ROOT / "GLOBAL_AGENT_ROUTING.md").read_text()
+        providers = (ROOT / "docs" / "PROVIDERS.md").read_text()
+        zcode = (ROOT / "docs" / "ZCODE.md").read_text()
+        self.assertIn("zcode -p", routing)
+        self.assertIn("ZCode", providers)
+        self.assertIn("zcode -p", zcode)
+        self.assertNotIn("Claude Code defaults to Z.AI", routing)
 
     def test_agent_docs_do_not_teach_retired_terra_default(self):
         paths = (

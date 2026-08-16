@@ -29,23 +29,27 @@ bash bin/wrappers/codex-terra.sh --task-file brief.md --cwd "$TMPDIR" --dry-run
 Brief `includes:` directives must start at column zero and reference a pack
 registered in `dispatch_packs/_registry.toml`.
 
-## Wrong Model Appears in Claude Code
+## Wrong Model Appears when you wanted GLM
 
-On this machine Claude Code is the GLM 5.2 harness:
+Canonical check:
 
 ```bash
-command -v claude
-claude --version
-claude-glm52 --version
+command -v zcode
+zcode --version
+zcode --help | head
 ```
 
-Do not select Opus/Sonnet/Haiku as a workaround. Check the `claude` symlink and
-the Z.AI credential used by `bin/claude-glm52`.
+`zcode` must print `--prompt` and `-p, --print`. If missing, install ZCode.app
+and rerun `bash bin/install-global-routing.sh`.
+
+`claude` / `claude-glm52` is the **legacy** `zai-glm` wrapper. Do not select
+Opus/Sonnet/Haiku as a workaround.
 
 ## Visual Task Routed to GLM
 
-GLM has no vision. Make the visual requirement explicit and rerun `route`.
-Vision-capable lanes are Codex Luna/Terra/Sol, Grok Build, Kimi K3, and AGY Gemini.
+Do not default screenshot / visual-QA loops to ZCode. Make the visual
+requirement explicit and rerun `route`. Vision-capable lanes are Codex
+Luna/Terra/Sol, Grok Build, Kimi K3, and AGY Gemini.
 
 ## Search Fails
 

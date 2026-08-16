@@ -47,13 +47,15 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.zai-glm]
+# Canonical human/agent call: ZCode (`zcode -p`). This wrapper is still Claude Code.
+# See docs/ZCODE.md. Do not teach claude-glm52 as the GLM path.
 key_env = "Z_AI_API_KEY"
 key_account = "z_ai_api_key"
 wrapper = "zai.sh"
 provider = "zai"
 model_id = "glm-5.3"
 allowed_modes = ["breakout", "task", "consult"]
-capabilities = []  # GLM does not accept image input through the agentic wrapper.
+capabilities = []  # Do not default visual-QA to this lane.
 allowed_seats_in_breakout = ["engineer", "review"]
 default_thinking_tokens = 32768
 thinking_hard_ceiling = 65536
@@ -207,9 +209,9 @@ hard_wall_block_breakout_top = true
 [executors.unsloth-nucbox]
 wrapper = "unsloth-nucbox.sh"
 provider = "ollama"
-# Sticky Ornith workhorse on Studio proxy :8890 (replaces retired dual :8892 qwen27).
+# Sticky Qwen3.8-27B workhorse on Studio proxy :8890 (Ornith GGUF remains on disk for rollback).
 # m3-class only — bounded/localized/reversible/verifying. Never architect/critic/security/vision/web.
-model_id = "SC117/Ornith-1.0-35B-MTP-APEX-GGUF"
+model_id = "unsloth/Qwen3.8-27B-GGUF"
 harness_command = "pi"
 health_url = "http://100.113.174.74:8890/v1/models"
 allowed_modes = ["task"]
