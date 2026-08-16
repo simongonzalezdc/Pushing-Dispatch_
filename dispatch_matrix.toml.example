@@ -18,12 +18,30 @@ schema_version = 1
 #           context_window, max_turns, stall_threshold_seconds,
 #           hard_wall_block_breakout_top, hard_wall_block_task_top
 
-# Kimi K3 runs on TWO separate accounts (Simon, 2026-08-16): the Kimi CLI
-# subscription (kimi-k3-cli) and Ollama Cloud (kimi-k3-ollama). Both verified
-# live; one is expected to lapse at end of the current billing cycle — maximize
-# parallel usage on BOTH until then, then prune the dead lane.
+# Kimi K3 runs on TWO Kimi Code subscriptions (Simon, 2026-08-16): the OAuth
+# subscription shared by all hosts (kimi-k3-cli) and the API-key subscription
+# (kimi-k3-key, keychain kimi_api_key). Both verified live; ONE of them lapses
+# at end of the current billing period — run both lanes in parallel to maximize
+# usage, then prune whichever dies. (kimi-k3-ollama is a separate Ollama Cloud
+# account, not one of the two Kimi Code subs.)
 [executors.kimi-k3-cli]
 wrapper = "kimi-k3-cli.sh"
+provider = "kimi-cli"
+model_id = "kimi-code/k3"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = ["vision"]
+allowed_seats_in_breakout = ["engineer", "review"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 16000
+context_window = 1048576
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.kimi-k3-key]
+# Second Kimi Code subscription (API-key account).
+key_env = "KIMI_API_KEY"
+key_account = "kimi_api_key"
+wrapper = "kimi-k3-key.sh"
 provider = "kimi-cli"
 model_id = "kimi-code/k3"
 allowed_modes = ["breakout", "task", "consult"]
@@ -337,14 +355,14 @@ hard_wall_block_breakout_top = true
 # if justified, Sol low/medium/high. Availability routing cannot infer whether a
 # semantically valid answer was good enough.
 trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "unsloth-nucbox", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-standard_candidates       = ["zai-glm", "unsloth-nucbox", "kimi-k3-cli", "kimi-k3-ollama", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
+standard_candidates       = ["zai-glm", "unsloth-nucbox", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
 local_general_candidates  = ["unsloth-nucbox", "qwen35-35b-general", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
 local_review_candidates   = ["qwen35-27b-review", "unsloth-nucbox", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
 local_coding_candidates   = ["unsloth-nucbox", "qwen36-35b-coding", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-cli", "kimi-k3-ollama"]
-hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-cli", "kimi-k3-ollama"]
-long_context_candidates   = ["kimi-k3-cli", "kimi-k3-ollama", "codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "deepseek-v4-pro", "agy-gemini-flash", "minimax-m3"]
-consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "deepseek-v4-pro", "zai-glm", "kimi-k3-cli", "kimi-k3-ollama", "agy-gemini-flash"]
+hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama"]
+hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama"]
+long_context_candidates   = ["kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama", "codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "deepseek-v4-pro", "agy-gemini-flash", "minimax-m3"]
+consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "deepseek-v4-pro", "zai-glm", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama", "agy-gemini-flash"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
@@ -386,6 +404,7 @@ max_depth = 2
 "codex-sol.codex-terra" = true
 "codex-sol.codex-luna" = true
 "codex-sol.kimi-k3-cli" = true
+"codex-sol.kimi-k3-key" = true
 "codex-sol.kimi-k3-ollama" = true
 "codex-sol.zai-glm" = true
 "codex-sol.agy-gemini-flash" = true

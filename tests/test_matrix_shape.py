@@ -305,7 +305,7 @@ class TestMatrixShape(unittest.TestCase):
             name: cfg for name, cfg in self.m["executors"].items()
             if "kimi" in name or "kimi" in cfg.get("model_id", "").lower()
         }
-        self.assertEqual(set(kimi), {"kimi-k3-cli", "kimi-k3-ollama"})
+        self.assertEqual(set(kimi), {"kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama"})
         cli = kimi["kimi-k3-cli"]
         self.assertEqual(cli["provider"], "kimi-cli")
         self.assertEqual(cli["wrapper"], "kimi-k3-cli.sh")
