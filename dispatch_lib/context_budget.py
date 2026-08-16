@@ -22,8 +22,10 @@ DEFAULT_CONTEXT_WINDOWS = {
     "codex-luna": 272_000,
     "codex-terra": 272_000,
     "codex-sol": 272_000,
-    "agy-gemini-pro": 1_000_000,
     "agy-gemini-flash": 1_000_000,
+    "dsh": 131_072,
+    "deepseek-v4-pro": 131_072,
+    "deepseek-v4-flash": 131_072,
     "kilo-free-auto": 128_000,
     "lm-studio": 131_072,
 }

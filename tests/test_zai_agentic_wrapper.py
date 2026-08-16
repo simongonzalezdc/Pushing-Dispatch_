@@ -8,10 +8,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ZaiAgenticWrapperTests(unittest.TestCase):
-    def test_zai_defaults_to_glm_52(self):
+    def test_zai_defaults_to_glm_53_via_zcode(self):
         wrapper = (ROOT / "bin" / "wrappers" / "zai.sh").read_text()
 
-        self.assertIn('ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-glm-5.3}"', wrapper)
+        self.assertIn("ce_run_zcode", wrapper)
+        self.assertNotIn("ANTHROPIC_BASE_URL", wrapper)
 
     def test_global_launcher_forces_glm_52_without_plaintext_key(self):
         launcher = (ROOT / "bin" / "claude-glm52").read_text()
@@ -27,13 +28,15 @@ class ZaiAgenticWrapperTests(unittest.TestCase):
         self.assertNotIn('source "$HOME/.hermes/.env"', launcher)
         self.assertNotRegex(launcher, r'''export Z_AI_API_KEY=["'][^$]''')
 
-    def test_zai_uses_agentic_claude_code_transport(self):
+    def test_zai_uses_zcode_transport(self):
         wrapper = (ROOT / "bin" / "wrappers" / "zai.sh").read_text()
+        executor_lib = (ROOT / "bin" / "wrappers" / "_exec.sh").read_text()
 
-        self.assertIn("https://api.z.ai/api/anthropic", wrapper)
-        self.assertIn("ANTHROPIC_AUTH_TOKEN", wrapper)
-        self.assertIn("ce_run_claude", wrapper)
-        self.assertNotIn("ce_run_openai_compatible", wrapper)
+        self.assertIn("ce_run_zcode", executor_lib)
+        self.assertIn('-p "$CE_FINAL_PROMPT"', executor_lib)
+        # Claude Code is no longer the GLM executor transport.
+        self.assertNotIn("ce_run_claude", wrapper)
+        self.assertNotIn("https://api.z.ai/api/anthropic", wrapper)
 
     def test_global_launcher_finds_reader_when_invoked_through_symlink(self):
         import tempfile

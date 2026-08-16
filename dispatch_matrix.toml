@@ -18,6 +18,10 @@ schema_version = 1
 #           context_window, max_turns, stall_threshold_seconds,
 #           hard_wall_block_breakout_top, hard_wall_block_task_top
 
+# Kimi K3 runs on TWO separate accounts (Simon, 2026-08-16): the Kimi CLI
+# subscription (kimi-k3-cli) and Ollama Cloud (kimi-k3-ollama). Both verified
+# live; one is expected to lapse at end of the current billing cycle — maximize
+# parallel usage on BOTH until then, then prune the dead lane.
 [executors.kimi-k3-cli]
 wrapper = "kimi-k3-cli.sh"
 provider = "kimi-cli"
@@ -47,8 +51,8 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.zai-glm]
-# Canonical human/agent call: ZCode (`zcode -p`). This wrapper is still Claude Code.
-# See docs/ZCODE.md. Do not teach claude-glm52 as the GLM path.
+# Canonical: ZCode (`zcode -p`) — wrapper zai.sh execs bin/zcode. GLM-5.3 always.
+# See docs/ZCODE.md. Never route GLM through Claude Code.
 key_env = "Z_AI_API_KEY"
 key_account = "z_ai_api_key"
 wrapper = "zai.sh"
@@ -124,7 +128,7 @@ stall_threshold_seconds = 600
 [executors.grok-build]
 wrapper = "grok-cli.sh"
 provider = "grok-cli"
-model_id = "grok-4.5"
+model_id = "grok-4.6"
 allowed_modes = ["breakout", "task", "consult"]
 capabilities = ["vision"]
 allowed_seats_in_breakout = ["review", "engineer"]
@@ -133,23 +137,13 @@ context_window = 500000
 max_turns = 25
 stall_threshold_seconds = 600
 
-[executors.agy-gemini-pro]
-wrapper = "agy-gemini-pro.sh"
-provider = "agy"
-model_id = "Gemini 3.1 Pro (High)"
-allowed_modes = ["breakout", "task", "consult"]
-capabilities = ["vision"]
-allowed_seats_in_breakout = ["review", "engineer"]
-default_thinking_tokens = 32768
-thinking_hard_ceiling = 32768
-context_window = 1000000
-max_turns = 10
-stall_threshold_seconds = 600
+# AGY policy (Simon, 2026-08-16): Gemini 3.7 Flash is the ONLY allowed AGY
+# model. The gemini-pro lane was removed; do not re-add AGY Pro models.
 
 [executors.agy-gemini-flash]
 wrapper = "agy-gemini-flash.sh"
 provider = "agy"
-model_id = "Gemini 3.5 Flash (Medium)"
+model_id = "Gemini 3.7 Flash (High)"
 allowed_modes = ["breakout", "task", "consult"]
 capabilities = ["vision"]
 allowed_seats_in_breakout = ["leaf", "engineer"]
@@ -159,6 +153,8 @@ context_window = 1000000
 max_turns = 10
 stall_threshold_seconds = 300
 
+# Kilo credit resets on the 15th of each month ($50); check balance before
+# heavy multi-worker fan-outs late in the cycle.
 [executors.kilo-free-auto]
 wrapper = "kilo-free.sh"
 provider = "kilo-cli"
@@ -171,6 +167,53 @@ thinking_hard_ceiling = 0
 context_window = 128000
 max_turns = 15
 stall_threshold_seconds = 600
+
+# DeepSeek Harness one-shot lane; model/provider from ~/.dsh/settings.yaml
+# (currently deepseek-v4-flash @ deepseek-official).
+[executors.dsh]
+wrapper = "dsh-headless.sh"
+provider = "deepseek-dsh"
+model_id = "deepseek-v4-flash"
+allowed_modes = ["task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 131072
+max_turns = 10
+stall_threshold_seconds = 600
+
+[executors.deepseek-v4-pro]
+# Ollama Cloud lane (shares ollama_api_key with kimi-k3-ollama).
+key_env = "OLLAMA_API_KEY"
+key_account = "ollama_api_key"
+wrapper = "deepseek-v4-pro.sh"
+provider = "ollama-cloud"
+model_id = "deepseek-v4-pro:0813"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["engineer", "review"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 131072
+max_turns = 25
+stall_threshold_seconds = 600
+
+[executors.deepseek-v4-flash]
+# Ollama Cloud lane (shares ollama_api_key with kimi-k3-ollama).
+key_env = "OLLAMA_API_KEY"
+key_account = "ollama_api_key"
+wrapper = "deepseek-v4-flash.sh"
+provider = "ollama-cloud"
+model_id = "deepseek-v4-flash:0731"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["leaf", "engineer"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 0
+context_window = 131072
+max_turns = 25
+stall_threshold_seconds = 300
 
 [executors.lm-studio]
 wrapper = "lm-studio.sh"
@@ -293,15 +336,15 @@ hard_wall_block_breakout_top = true
 # an unsatisfactory Luna result advances explicitly to Terra high and then, only
 # if justified, Sol low/medium/high. Availability routing cannot infer whether a
 # semantically valid answer was good enough.
-trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "unsloth-nucbox", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-standard_candidates       = ["zai-glm", "unsloth-nucbox", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
-local_general_candidates  = ["unsloth-nucbox", "qwen35-35b-general", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-local_review_candidates   = ["qwen35-27b-review", "unsloth-nucbox", "zai-glm", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-local_coding_candidates   = ["unsloth-nucbox", "qwen36-35b-coding", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k3-cli", "kimi-k3-ollama"]
-hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "agy-gemini-pro", "kimi-k3-cli", "kimi-k3-ollama"]
-long_context_candidates   = ["kimi-k3-cli", "kimi-k3-ollama", "codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "agy-gemini-pro", "minimax-m3"]
-consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "agy-gemini-pro", "zai-glm", "kimi-k3-cli", "kimi-k3-ollama"]
+trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "unsloth-nucbox", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+standard_candidates       = ["zai-glm", "unsloth-nucbox", "kimi-k3-cli", "kimi-k3-ollama", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
+local_general_candidates  = ["unsloth-nucbox", "qwen35-35b-general", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+local_review_candidates   = ["qwen35-27b-review", "unsloth-nucbox", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
+local_coding_candidates   = ["unsloth-nucbox", "qwen36-35b-coding", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
+hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-cli", "kimi-k3-ollama"]
+hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-cli", "kimi-k3-ollama"]
+long_context_candidates   = ["kimi-k3-cli", "kimi-k3-ollama", "codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "deepseek-v4-pro", "agy-gemini-flash", "minimax-m3"]
+consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "deepseek-v4-pro", "zai-glm", "kimi-k3-cli", "kimi-k3-ollama", "agy-gemini-flash"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
@@ -345,7 +388,6 @@ max_depth = 2
 "codex-sol.kimi-k3-cli" = true
 "codex-sol.kimi-k3-ollama" = true
 "codex-sol.zai-glm" = true
-"codex-sol.agy-gemini-pro" = true
 "codex-sol.agy-gemini-flash" = true
 "codex-sol.minimax-m3" = true
 "codex-sol.kilo-free-auto" = true

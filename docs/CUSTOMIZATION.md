@@ -31,7 +31,7 @@ assumed; the universal fallback is the global DuckDuckGo `ddg` MCP.
 ## Grok Official-CLI Rule
 
 The active Grok executor is `grok-build`, backed only by xAI's official `grok`
-CLI and pinned to `grok-4.5`. Preserve auth-aware availability, prompt-file
+CLI and pinned to `grok-4.6`. Preserve auth-aware availability, prompt-file
 transport, and explicit `workspace`/`read-only` sandboxes when customizing it.
 Do not replace it with the unrelated community `grok-cli` package.
 

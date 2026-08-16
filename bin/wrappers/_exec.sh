@@ -547,6 +547,89 @@ ce_run_kimi() {
     ce_finalize_from_text "$(cat "$log_file")"
 }
 
+# Canonical GLM executor path: Z.AI ZCode (`zcode -p`), per docs/ZCODE.md.
+ce_run_zcode() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+    # zcode's model can drift languages; the status parser needs this exact token.
+    CE_FINAL_PROMPT+=$'\n\nOutput contract: your final line must be exactly "Status: DONE" or "Status: FAIL", in English.'
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+
+    local zcode_bin="${ZCODE_BIN:-}"
+    if [[ -z "$zcode_bin" ]]; then
+        local candidate
+        for candidate in "$CE_SCRIPT_DIR/../zcode" "$HOME/.local/share/pushing-dispatch/repo/bin/zcode" "$(command -v zcode 2>/dev/null || true)"; do
+            if [[ -n "$candidate" && -x "$candidate" ]]; then
+                zcode_bin="$candidate"
+                break
+            fi
+        done
+    fi
+    if [[ -z "$zcode_bin" ]]; then
+        ce_finalize_status "errored" 69 "zcode binary not found (set ZCODE_BIN)"
+        return 69
+    fi
+
+    local cmd=("$zcode_bin" -p "$CE_FINAL_PROMPT")
+    if [[ -n "$CE_CWD" ]]; then
+        cmd+=(--cwd "$CE_CWD")
+    fi
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute ZCode (GLM ${ZCODE_MODEL:-glm-5.3})"
+        return 0
+    fi
+
+    local exit_code=0
+    "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    rm -f "$CE_ASSEMBLED_BRIEF"
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "zcode exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
+# DeepSeek Harness (dsh) one-shot lane; model/provider come from ~/.dsh/settings.yaml.
+ce_run_dsh() {
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+    local cmd=(dsh --profile "${DSH_PROFILE:-headless}" "$CE_FINAL_PROMPT")
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute dsh profile ${DSH_PROFILE:-headless}"
+        return 0
+    fi
+
+    local exit_code=0
+    if [[ -n "$CE_CWD" ]]; then
+        (cd "$CE_CWD" && "${cmd[@]}") 2>&1 | tee "$log_file" || exit_code=$?
+    else
+        "${cmd[@]}" 2>&1 | tee "$log_file" || exit_code=$?
+    fi
+    rm -f "$CE_ASSEMBLED_BRIEF"
+    if [[ $exit_code -ne 0 ]]; then
+        ce_finalize_status "errored" 4 "dsh exited with code $exit_code"
+        return 4
+    fi
+    ce_finalize_from_text "$(cat "$log_file")"
+}
+
 ce_run_grok() {
     if [[ -z "${CE_CWD:-}" ]]; then
         ce_parse_args "$@"

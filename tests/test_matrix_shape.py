@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # Providers that authenticate via CLI login or run locally (no API key needed).
 CLI_OR_LOCAL = {
     "anthropic", "openai-codex", "agy", "gjc", "grok-cli", "kilo-cli",
-    "kimi-cli", "ollama", "lm-studio", "unsloth-openai",
+    "kimi-cli", "ollama", "lm-studio", "unsloth-openai", "deepseek-dsh",
 }
 
 class TestMatrixShape(unittest.TestCase):
@@ -267,7 +267,7 @@ class TestMatrixShape(unittest.TestCase):
         self.assertIn("Claude Opus-class", providers)
         self.assertIn("plain `grok`", providers)
         self.assertIn('npm install -g @xai-official/grok', providers)
-        self.assertIn("grok-4.5", providers)
+        self.assertIn("grok-4.6", providers)
 
     def test_expired_anthropic_subscription_is_not_routable(self):
         providers = {cfg.get("provider") for cfg in self.m["executors"].values()}
@@ -278,7 +278,7 @@ class TestMatrixShape(unittest.TestCase):
             name: cfg for name, cfg in self.m["executors"].items()
             if "gemini" in name or "gemini" in cfg.get("model_id", "").lower()
         }
-        self.assertEqual(set(gemini), {"agy-gemini-pro", "agy-gemini-flash"})
+        self.assertEqual(set(gemini), {"agy-gemini-flash"})
         for name, cfg in gemini.items():
             with self.subTest(executor=name):
                 self.assertEqual(cfg["provider"], "agy")
@@ -324,7 +324,7 @@ class TestMatrixShape(unittest.TestCase):
         grok = self.m["executors"]["grok-build"]
         self.assertEqual(grok["provider"], "grok-cli")
         self.assertEqual(grok["wrapper"], "grok-cli.sh")
-        self.assertEqual(grok["model_id"], "grok-4.5")
+        self.assertEqual(grok["model_id"], "grok-4.6")
         self.assertEqual(grok["context_window"], 500_000)
         self.assertIn("vision", grok.get("capabilities", []))
 
@@ -338,7 +338,7 @@ class TestMatrixShape(unittest.TestCase):
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Grok model: grok-4.5", result.stdout)
+        self.assertIn("Grok model: grok-4.6", result.stdout)
 
         wrapper_lib = (ROOT / "bin" / "wrappers" / "_exec.sh").read_text()
         self.assertIn('--prompt-file "$prompt_file"', wrapper_lib)

@@ -11,12 +11,11 @@ model from the harness name, and do not restore a retired lane from an old doc.
 | `codex-luna` | Codex CLI, ChatGPT subscription | GPT-5.6 Luna (xhigh) | Yes | First attempt for ordinary work |
 | `codex-terra` | Codex CLI, ChatGPT subscription | GPT-5.6 Terra (high) | Yes | Explicit fallback after an unusable Luna result |
 | `codex-sol` | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low default; high ceiling) | Yes | Exceptional fallback; explicitly escalate low → medium → high |
-| `grok-build` | Official Grok CLI | Grok 4.5 (`grok-4.5`) | Yes | Claude Opus-class replacement |
+| `grok-build` | Official Grok CLI | Grok 4.6 (`grok-4.6`) | Yes | Claude Opus-class replacement |
 | `zai-glm` | **Canonical call: ZCode `zcode -p`.** Executor still launches legacy `claude-glm52` until rewired | GLM 5.3 | Prefer dedicated vision lanes | Strong coding worker |
 | `kimi-k3-cli` | Official Kimi CLI, Kimi subscription | `kimi-code/k3` (Kimi K3) | Yes | Primary 1M-context K3 subscription lane |
 | `kimi-k3-ollama` | Ollama Cloud only | `kimi-k3` (Kimi K3) | Yes | Live-gated Ollama route and future Hermes main model |
 | `minimax-m3` | GJC backup path | `minimax-code/minimax-m3` | No | Backup coding lane |
-| `agy-gemini-pro` | AGY only | Gemini 3.1 Pro (High) | Yes | Deep/visual Gemini lane |
 | `agy-gemini-flash` | AGY only | Gemini 3.5 Flash (Medium) | Yes | Fast/visual Gemini lane |
 | `kilo-free-auto` | Native Kilo CLI | `kilo/kilo-auto/free` | No | Free overflow only |
 | `ollama-xps-gpu` | Dell Ollama plus resident-NUC validator | Qwen 3.5 2.3B Q8_0 | No | Tiny mechanical work; validation required |
@@ -30,7 +29,7 @@ model from the harness name, and do not restore a retired lane from an old doc.
 - Unclassified standard work currently starts with `zai-glm`; local task-family
   tiers are evaluated first when deterministic signals match. Within the Codex
   fallback ladder, Luna precedes Terra and Sol.
-- Grok 4.5 replaces retired Claude Opus-class work. Hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer `grok-build`.
+- Grok 4.6 replaces retired Claude Opus-class work. Hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer `grok-build`.
 - Sol is an exceptional Codex fallback only: escalate low, medium, then high and stop after high.
 - Kimi subscription access always uses `kimi-k3-cli` through the official Kimi CLI. Ollama access always uses `kimi-k3-ollama`, remains unroutable until the live catalog exposes `kimi-k3`, and is the only K3 lane eligible to run natively inside Hermes. Credentials never cross between lanes.
 - Gemini is available only through AGY; Gemini CLI and direct-API wrappers are retired.
@@ -78,7 +77,7 @@ for harness maintenance. Do not teach `claude -p` as the GLM path.
 Install the official xAI CLI with `npm install -g @xai-official/grok`, then run
 `grok login --oauth` (or `grok login --device-auth` on a headless host). Confirm
 the session with `grok models`; run plain `grok` to open the interactive TUI or
-`grok -p "Explain this repo"` for one-shot use. The active executor pins `grok-4.5`. Dispatch
+`grok -p "Explain this repo"` for one-shot use. The active executor pins `grok-4.6`. Dispatch
 requires both the `grok` binary and either its OAuth auth file or `XAI_API_KEY`
 before treating the lane as available. The wrapper uses `--prompt-file` for
 large briefs and applies `workspace` or `read-only` sandbox profiles by mode.

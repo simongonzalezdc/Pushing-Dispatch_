@@ -92,7 +92,7 @@ inactive **and disabled**. An inactive-but-enabled on-demand unit is a failed
 restoration because systemd can start it beside the resident model at boot.
 The Dell `ollama-xps-gpu` lane must fail closed when resident NUC validation is
 unavailable or returns anything other than exact `YES`.
-- `grok-build`: official xAI `grok` CLI only; run `grok models` to verify login and the `grok-4.5` catalog entry.
+- `grok-build`: official xAI `grok` CLI only; run `grok models` to verify login and the `grok-4.6` catalog entry.
 
 If a legacy Moonshot, Gemini CLI, direct MiniMax, or paid Kilo path appears,
 stop it and fix the active matrix/wrapper resolution.

@@ -6,7 +6,7 @@ source "$SCRIPT_DIR/_exec.sh"
 
 export CE_TOOL_NAME="grok-build"
 # Official Grok Build model currently exposed by the authenticated CLI.
-export GROK_MODEL="${GROK_MODEL:-grok-4.5}"
+export GROK_MODEL="${GROK_MODEL:-grok-4.6}"
 
 ce_parse_args "$@"
 ce_run_grok
