@@ -88,7 +88,8 @@ class TestMatrixShape(unittest.TestCase):
         # first-position preference remains scoped to hard and consult lanes.
         self.assertEqual(ar["trivial_candidates"][0], "ollama-xps-gpu")
         self.assertEqual(ar["standard_candidates"][0], "zai-glm")
-        self.assertEqual(ar["long_context_candidates"][0], "kimi-k3-cli")
+        # Dying kyanitelabs sub drains first in the kimi block.
+        self.assertEqual(ar["long_context_candidates"][0], "kimi-k3-kyanite")
 
     def test_dell_lane_is_always_gated_by_exact_nuc_validation(self):
         dell = self.m["executors"]["ollama-xps-gpu"]
