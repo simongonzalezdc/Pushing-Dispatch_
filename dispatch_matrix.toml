@@ -382,10 +382,10 @@ standard_candidates       = ["zai-glm", "unsloth-nucbox", "kimi-k3-kyanite", "ki
 local_general_candidates  = ["unsloth-nucbox", "qwen35-35b-general", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
 local_review_candidates   = ["qwen35-27b-review", "unsloth-nucbox", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
 local_coding_candidates   = ["unsloth-nucbox", "qwen36-35b-coding", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-hard_task_candidates      = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama"]
-hard_breakout_candidates  = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama"]
-long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama", "codex-luna", "codex-terra", "codex-sol", "grok-build", "zai-glm", "deepseek-v4-pro", "agy-gemini-flash", "minimax-m3"]
-consult_candidates        = ["grok-build", "codex-luna", "codex-terra", "codex-sol", "deepseek-v4-pro", "zai-glm", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama", "agy-gemini-flash"]
+hard_task_candidates      = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key", "kimi-k3-ollama"]
+hard_breakout_candidates  = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key", "kimi-k3-ollama"]
+long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "agy-gemini-flash", "kimi-k3-ollama", "grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "minimax-m3"]
+consult_candidates        = ["grok-build", "agy-gemini-flash", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key", "kimi-k3-ollama"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
