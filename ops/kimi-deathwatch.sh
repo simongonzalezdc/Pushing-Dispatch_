@@ -4,6 +4,8 @@
 # trivial prompt on BOTH accounts every 30 minutes and logs pass/fail so the
 # first failure identifies the dying subscription. Log-only; no notifications.
 set -uo pipefail
+# cron has a minimal PATH; resolve the binaries we need explicitly.
+export PATH="$HOME/.kimi-code/bin:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 LOG="${KIMI_DEATHWATCH_LOG:-$HOME/.local/share/pushing-dispatch/kimi-deathwatch.log}"
 
 probe() {  # $1 = label, stdin none
