@@ -36,3 +36,8 @@ Thumbs.db
 
 # Host-absolute skill symlinks (regenerate on machine; catalog is committed)
 ops/unsloth-nucbox/pi-agent/skills/
+
+# local secrets/logs
+.kimi-key-cache
+kimi-deathwatch.log
+FLEET-FINDINGS*

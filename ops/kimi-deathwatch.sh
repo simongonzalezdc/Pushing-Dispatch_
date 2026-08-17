@@ -22,7 +22,14 @@ probe() {  # $1 = label, stdin none
 probe "oauth-sub"
 
 # Account 2: API-key subscription (keychain pushing-dispatch/kimi_api_key).
+# cron cannot read the login keychain, so a 600-perm cache file is the fallback.
 if secret="$(security find-generic-password -s pushing-dispatch -a kimi_api_key -w 2>/dev/null)" && [[ -n "$secret" ]]; then
+    printf '%s' "$secret" > "$HOME/.local/share/pushing-dispatch/.kimi-key-cache"
+    chmod 600 "$HOME/.local/share/pushing-dispatch/.kimi-key-cache"
+elif [[ -s "$HOME/.local/share/pushing-dispatch/.kimi-key-cache" ]]; then
+    secret="$(cat "$HOME/.local/share/pushing-dispatch/.kimi-key-cache")"
+fi
+if [[ -n "${secret:-}" ]]; then
     KIMI_API_KEY="$secret" probe "apikey-sub"
 else
     printf '%s apikey-sub SKIP no-key\n' "$(date '+%F %T')" >>"$LOG"
