@@ -41,3 +41,7 @@ ops/unsloth-nucbox/pi-agent/skills/
 .kimi-key-cache
 kimi-deathwatch.log
 FLEET-FINDINGS*
+
+# local runtime artifacts
+model-sweep.snapshot
+model-sweep.log
