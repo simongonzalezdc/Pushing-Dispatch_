@@ -35,3 +35,21 @@ Third-party figures, directional not gospel. Purpose: route by measured strength
 - whatllm.org / nxcode.io — Kimi K3
 - explainx.ai — GLM-5.3 launch benchmarks
 - artificialanalysis.ai — GPT-5.6 lineup positioning
+
+## Capability ladder (2026-08-16, fleet-verified where noted)
+Vision fail-closed by the router: briefs mentioning screenshots/images/render
+reviews can ONLY run on lanes declaring `capabilities = ["vision"]`.
+
+| Capability | Tier |
+|---|---|
+| Vision — best quality | grok-4.6 (fleet's primary vision lane, verified), gpt-5.6 luna/terra (verified), minimax-m3 (verified via gjc; also takes VIDEO input — unique) |
+| Vision — capable | kimi-k3-* (declared), gemini-3.7-flash |
+| Vision — BAD, hard-excluded | GLM-5.3 (Simon: "amazing but bad vision") — capabilities=[] by design, not an oversight. Never route visual work to zai-glm. dsh/deepseek/kilo/qwen lanes: no vision. |
+| 1M context | kimi-*, gemini-3.7-flash, zai-glm (claimed; verify per-task) |
+| Video input | minimax-m3 ONLY |
+| Local/private | unsloth-nucbox, ollama-xps-gpu, on-demand qwen lanes |
+
+Routing nuance: vision-required briefs in the standard tier fall through
+zai-glm (no vision) to the kimi block — if the visual task is quality-critical,
+escalate to grok-build / codex-luna / minimax-m3 rather than accepting the first
+vision-capable candidate.
