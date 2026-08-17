@@ -121,6 +121,12 @@ stall_threshold_seconds = 300
 # minimax-coding-plan (separate stale CUSTOM_MINIMAX_CODING_PLAN_API_KEY,
 # duplicated minimax M3). See fix/dispatch-lane-health.
 
+# BUDGET NOTE (Simon, 2026-08-16): OpenAI subscription downgraded $200 -> $20
+# plan; Grok downgraded $300 -> $30. Treat codex-* and grok-build as SCARCE:
+# prefer cheaper lanes (zai-glm, kimi, deepseek, unsloth-nucbox) for routine
+# work; reserve codex/grok for hard lanes and reviews they're genuinely best at;
+# avoid wide parallel fan-outs across their seats.
+
 [executors.codex-luna]
 wrapper = "codex-luna.sh"
 provider = "openai-codex"
