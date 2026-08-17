@@ -18,12 +18,14 @@ schema_version = 1
 #           context_window, max_turns, stall_threshold_seconds,
 #           hard_wall_block_breakout_top, hard_wall_block_task_top
 
-# Kimi K3 runs on TWO Kimi Code subscriptions (Simon, 2026-08-16): the OAuth
-# subscription shared by all hosts (kimi-k3-cli) and the API-key subscription
-# (kimi-k3-key, keychain kimi_api_key). Both verified live; ONE of them lapses
-# at end of the current billing period — run both lanes in parallel to maximize
-# usage, then prune whichever dies. (kimi-k3-ollama is a separate Ollama Cloud
-# account, not one of the two Kimi Code subs.)
+# Kimi K3 identity audit (2026-08-16, verified via api.kimi.com/coding/v1/me):
+# the OAuth login (kimi-k3-cli), the API key (kimi-k3-key), and every host's
+# hermes KIMI_API_KEY are ALL the same account — simon@puenteworks.com. That
+# account SURVIVES. The subscription lapsing at end of this billing period is
+# info@kyanitelabs.tech, which has NO credential connected anywhere yet; connect
+# it to actually use its remaining quota. Until then the two lanes below are one
+# account in two auth modes, not double capacity. (kimi-k3-ollama is a separate
+# Ollama Cloud account, not a Kimi Code sub.)
 [executors.kimi-k3-cli]
 wrapper = "kimi-k3-cli.sh"
 provider = "kimi-cli"
