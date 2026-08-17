@@ -37,6 +37,7 @@ HIGH_COST_SUBSCRIPTION = frozenset({"codex-sol"})
 # without a full matrix parse in the hot path.
 _EXECUTOR_PROVIDERS = {
     "kimi-k3-cli": "kimi-cli",
+    "kimi-k3-kyanite": "kimi-cli",
     "kimi-k3-key": "kimi-cli",
     "kimi-k3-ollama": "ollama-cloud",
     "zai-glm": "zai",

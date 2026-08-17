@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
-# Kimi dual-subscription death-watch (Simon, 2026-08-16). One Kimi Code sub
-# lapses at end of the billing period; we don't know which. This probe runs a
-# trivial prompt on BOTH accounts every 30 minutes and logs pass/fail so the
-# first failure identifies the dying subscription. Log-only; no notifications.
+# Kimi subscription death-watch (Simon, 2026-08-16). The DYING subscription is
+# info@kyanitelabs.tech (lane kimi-k3-kyanite, keychain kimi_api_key_kyanite);
+# simon@puenteworks.com (OAuth login, survivor) is the control probe. Logs
+# pass/fail every 30 minutes so the first hard failures identify the death.
+# Log-only; no notifications.
 set -uo pipefail
-# cron has a minimal PATH; resolve the binaries we need explicitly.
+# cron has a minimal PATH and cannot read the login keychain; resolve binaries
+# explicitly and fall back to 600-perm key caches.
 export PATH="$HOME/.kimi-code/bin:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
-LOG="${KIMI_DEATHWATCH_LOG:-$HOME/.local/share/pushing-dispatch/kimi-deathwatch.log}"
+BASE="$HOME/.local/share/pushing-dispatch"
+LOG="${KIMI_DEATHWATCH_LOG:-$BASE/kimi-deathwatch.log}"
 
-probe() {  # $1 = label, stdin none
+probe() {  # $1 = label, $2 = optional api key
     local out
-    out=$(timeout 120 kimi --model kimi-code/k3 --prompt "Reply with exactly: OK" 2>&1 | tail -5)
+    if [[ -n "${2:-}" ]]; then
+        out=$(KIMI_API_KEY="$2" timeout 120 kimi --model kimi-code/k3 --prompt "Reply with exactly: OK" 2>&1 | tail -5)
+    else
+        out=$(timeout 120 kimi --model kimi-code/k3 --prompt "Reply with exactly: OK" 2>&1 | tail -5)
+    fi
     if echo "$out" | grep -q "OK"; then
         printf '%s %s PASS\n' "$(date '+%F %T')" "$1" >>"$LOG"
     else
@@ -18,19 +25,25 @@ probe() {  # $1 = label, stdin none
     fi
 }
 
-# Account 1: shared OAuth subscription (default credential).
-probe "oauth-sub"
+load_key() {  # $1 = keychain account, $2 = cache file -> echoes secret
+    local secret
+    secret="$(security find-generic-password -s pushing-dispatch -a "$1" -w 2>/dev/null)"
+    if [[ -n "$secret" ]]; then
+        printf '%s' "$secret" > "$2"
+        chmod 600 "$2"
+    elif [[ -s "$2" ]]; then
+        secret="$(cat "$2")"
+    fi
+    printf '%s' "$secret"
+}
 
-# Account 2: API-key subscription (keychain pushing-dispatch/kimi_api_key).
-# cron cannot read the login keychain, so a 600-perm cache file is the fallback.
-if secret="$(security find-generic-password -s pushing-dispatch -a kimi_api_key -w 2>/dev/null)" && [[ -n "$secret" ]]; then
-    printf '%s' "$secret" > "$HOME/.local/share/pushing-dispatch/.kimi-key-cache"
-    chmod 600 "$HOME/.local/share/pushing-dispatch/.kimi-key-cache"
-elif [[ -s "$HOME/.local/share/pushing-dispatch/.kimi-key-cache" ]]; then
-    secret="$(cat "$HOME/.local/share/pushing-dispatch/.kimi-key-cache")"
-fi
-if [[ -n "${secret:-}" ]]; then
-    KIMI_API_KEY="$secret" probe "apikey-sub"
+# Control: survivor account (OAuth credential on this machine).
+probe "puenteworks-oauth"
+
+# Dying subscription: info@kyanitelabs.tech API key.
+kyanite="$(load_key "kimi_api_key_kyanite" "$BASE/.kimi-kyanite-key-cache")"
+if [[ -n "$kyanite" ]]; then
+    probe "kyanitelabs-dying" "$kyanite"
 else
-    printf '%s apikey-sub SKIP no-key\n' "$(date '+%F %T')" >>"$LOG"
+    printf '%s kyanitelabs-dying SKIP no-key\n' "$(date '+%F %T')" >>"$LOG"
 fi
