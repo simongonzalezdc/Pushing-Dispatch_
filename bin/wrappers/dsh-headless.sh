@@ -9,6 +9,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_exec.sh"
 
+# DeepSeek credential: dsh's deepseek-official route needs DEEPSEEK_API_KEY.
+# Read it from the locked-down Hermes dotenv (same allowlist pattern as
+# read-hermes-zai-key) unless the launching environment already provides one.
+if [[ -z "${DEEPSEEK_API_KEY:-}" ]]; then
+    _dsk="$("$SCRIPT_DIR/../read-hermes-deepseek-key" 2>/dev/null || true)"
+    [[ -z "$_dsk" ]] || export DEEPSEEK_API_KEY="$_dsk"
+    unset _dsk
+fi
+
 export CE_TOOL_NAME="dsh"
 export DSH_HOME="${DSH_HOME:-$HOME/.local/share/pushing-dispatch/dsh-home}"
 
