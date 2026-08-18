@@ -23,6 +23,9 @@ def record(worker_id, executor, tier, result, duration_s, cost_usd):
         "result": result,
         "duration_s": duration_s,
         "cost_usd": cost_usd,
+        # Wave-2 FM-22: honest cost provenance — 0.0 means "not yet priced",
+        # never "free". Books-time $ conversion uses cost_calc pricing.
+        "cost_basis": "usd" if cost_usd else "unpriced",
     }
     with open(path, "a") as f:
         f.write(json.dumps(entry) + "\n")
@@ -52,3 +55,16 @@ def success_rate(executor):
         return None
     ok = sum(1 for r in rows if r["result"] == "success")
     return ok / len(rows)
+
+
+def error_rate_30d(executor, min_samples=5):
+    """Wave-2 FM-23: (rate, n) of non-success outcomes in the last 30 days.
+    Counts auth/rate_limit/network/task classes as errors; success is success.
+    Returns (None, 0) when fewer than min_samples rows exist."""
+    cutoff = time.time() - 30 * 86400
+    rows = [r for r in _read() if r["executor"] == executor and r.get("ts", 0) >= cutoff]
+    n = len(rows)
+    if n < min_samples:
+        return None, n
+    bad = sum(1 for r in rows if r["result"] != "success")
+    return bad / n, n

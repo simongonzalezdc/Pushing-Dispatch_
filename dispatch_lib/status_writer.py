@@ -101,6 +101,12 @@ def finalize(worker_id: str, phase: str, exit_code: int = 0, error_summary: str 
         status["error_summary"] = error_summary
         status["finalized_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         _write_atomic(worker_id, status)
+    # Wave-2 FM-20: every terminal path releases the worker's cwd lock.
+    try:
+        from . import cwd_lock
+        cwd_lock.release(worker_id)
+    except Exception:
+        pass
 
 
 def read_status(worker_id: str) -> dict | None:

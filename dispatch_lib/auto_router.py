@@ -217,6 +217,23 @@ def auto_route(brief_text, mode, matrix_path=None, explicit_executor=None,
         else:
             eligible_order.append(executor)
 
+    # Wave-2 FM-23: auto-routing skips lanes whose 30-day error rate exceeds
+    # the threshold (min-sample guarded). Explicit executor choices are never
+    # filtered — the operator's call stands.
+    _threshold = float(route_cfg.get("bad_lane_error_threshold", 0.40))
+    _min_n = int(route_cfg.get("bad_lane_min_samples", 5))
+    _skipped_bad = []
+    if eligible_order:
+        from dispatch_lib import outcomes as _outcomes
+        _kept = []
+        for executor in eligible_order:
+            rate, n = _outcomes.error_rate_30d(executor, min_samples=_min_n)
+            if rate is not None and rate > _threshold:
+                _skipped_bad.append(f"{executor} ({rate:.0%} error, n={n})")
+                continue
+            _kept.append(executor)
+        eligible_order = _kept
+
     for executor in eligible_order:
         if not _mode_allowed(matrix, executor, mode):
             continue
@@ -233,8 +250,9 @@ def auto_route(brief_text, mode, matrix_path=None, explicit_executor=None,
             for executor, missing in capability_rejections
         )
         capability_detail = f" requires {', '.join(sorted(required))}; rejected: {rejected}."
+    _bad_detail = f" bad-lane skips: {'; '.join(_skipped_bad)}." if _skipped_bad else ""
     raise NoExecutorAvailable(
-        f"No available executor for mode={mode}{capability_detail} "
+        f"No available executor for mode={mode}{capability_detail}{_bad_detail} "
         "Run 'pushing-dispatch doctor' to see which providers need attention."
     )
 

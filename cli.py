@@ -244,6 +244,26 @@ def cmd_start(args, mode: str):
     slug = getattr(args, "slug", None) or Path(args.task_file).stem if args.task_file else mode
     worker_id = _generate_worker_id(slug)
 
+    # Wave-2 FM-20: one active worker per working directory. Prevents the
+    # Jul-18 class incident (double-dispatch racing a single worktree).
+    # Escape hatch for deliberate concurrency: DISPATCH_ALLOW_CWD_SHARE=1.
+    if os.environ.get("DISPATCH_ALLOW_CWD_SHARE") != "1":
+        from dispatch_lib import cwd_lock
+        _cwd = str(Path(args.cwd).resolve()) if args.cwd else os.getcwd()
+        ok, holder = cwd_lock.acquire(worker_id, _cwd)
+        if not ok:
+            print(
+                f"Error: cwd already held by active worker {holder.get('worker_id')} "
+                f"({holder.get('cwd')}) since {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime(holder.get('ts', 0)))}.",
+                file=sys.stderr,
+            )
+            print(
+                "Hint: let it finish, kill it, or use a different --cwd / worktree. "
+                "Deliberate sharing: DISPATCH_ALLOW_CWD_SHARE=1 (logged via EXTENDED_HISTORY).",
+                file=sys.stderr,
+            )
+            sys.exit(4)
+
     # Resolve wrapper
     executors_map = _build_executors(matrix) if matrix else {}
     wrapper = executors_map.get(args.executor, f"{args.executor}.sh")

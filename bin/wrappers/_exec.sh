@@ -69,6 +69,16 @@ ce_parse_args() {
     if [[ -z "$CE_QUESTION_FILE" ]]; then
         CE_QUESTION_FILE="$CE_DISPATCH_ROOT/questions/${CE_WORKER_ID}.md"
     fi
+
+    # Wave-2 FM-01/02: heartbeat so telemetry-blind harnesses (dsh, luna)
+    # show liveness. Reaper treats stale-but-young as alive.
+    (
+        while :; do
+            printf '{"ts":%s,"pid":%s,"log_bytes":%s}\n' "$(date +%s)" "$$"                 "$(wc -c < "$CE_DISPATCH_ROOT/logs/${CE_WORKER_ID}.log" 2>/dev/null || echo 0)"                 > "$CE_DISPATCH_ROOT/status/${CE_WORKER_ID}.heartbeat" 2>/dev/null || true
+            sleep 60
+        done
+    ) &
+    CE_HEARTBEAT_PID=$!
 }
 
 # --- Brief assembly ---
@@ -169,6 +179,10 @@ ce_finalize_status() {
     local exit_code="$2"
     local error_summary="${3:-}"
 
+    # Wave-2: stop the heartbeat; every terminal path lands here.
+    [[ -n "${CE_HEARTBEAT_PID:-}" ]] && kill "$CE_HEARTBEAT_PID" 2>/dev/null || true
+    rm -f "$CE_DISPATCH_ROOT/status/${CE_WORKER_ID}.heartbeat" 2>/dev/null || true
+
     PYTHONPATH="$CE_REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 - "$CE_WORKER_ID" "$phase" "$exit_code" "$error_summary" <<'PY'
 import sys
 
@@ -187,12 +201,21 @@ PY
     PYTHONPATH="$CE_REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 - \
         "${CE_EXECUTOR_NAME:-${CE_TOOL_NAME:-unknown}}" "$CE_WORKER_ID" \
         "${CE_TIER:-unknown}" "$phase" "$log_file" <<'PY' 2>/dev/null || true
-import sys
+import sys, time, calendar, datetime
 from dispatch_lib import lane_health, outcomes
+from dispatch_lib.status_writer import read_status
 executor, worker_id, tier, phase, log_file = sys.argv[1:6]
+# Wave-2 FM-22: real duration from the worker's own started_at.
+try:
+    _st = read_status(worker_id) or {}
+    _started = calendar.timegm(datetime.datetime.strptime(
+        _st["started_at"], "%Y-%m-%dT%H:%M:%SZ").timetuple())
+    duration_s = max(0.0, time.time() - _started)
+except Exception:
+    duration_s = 0.0
 if phase == "done":
     lane_health.recover(executor)
-    outcomes.record(worker_id, executor, tier, "success", 0.0, 0.0)
+    outcomes.record(worker_id, executor, tier, "success", duration_s, 0.0)
 elif phase == "errored":
     try:
         text = open(log_file, errors="replace").read()[-4000:]
@@ -200,10 +223,10 @@ elif phase == "errored":
         text = ""
     cls = lane_health.classify_failure(text)
     lane_health.demote(executor, cls)          # no-op for task-class
-    outcomes.record(worker_id, executor, tier, cls, 0.0, 0.0)
+    outcomes.record(worker_id, executor, tier, cls, duration_s, 0.0)
 else:
     # needs_guidance / blocked: task-level, not a lane fault.
-    outcomes.record(worker_id, executor, tier, "task", 0.0, 0.0)
+    outcomes.record(worker_id, executor, tier, "task", duration_s, 0.0)
 PY
 }
 
