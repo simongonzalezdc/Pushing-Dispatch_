@@ -102,3 +102,32 @@ Five deltas ported from the private dispatch codebase to restore missing capabil
 2. `feat: add shell wrappers and shared execution library` -- _exec.sh, provider wrappers
 3. `feat: add dispatch matrix, packs, hooks, and commands` -- config, packs, auto-poll
 4. `docs: add comprehensive documentation, examples, and tooling` -- all docs, examples, scripts
+
+## 2026-08-17 night — remediation waves (commit f3bc9d8)
+
+Operator-approved hardening, consensus-gated by the ~/research system-map
+program (24-entry FMEA register; plan + reviews in
+~/research/system-map/remediation/):
+
+- **cwd lock (FM-20):** `dispatch task start` refuses a --cwd held by an
+  active worker (exit 4, holder info in the message). Hatch:
+  `DISPATCH_ALLOW_CWD_SHARE=1`. Locks release at finalize; stale holders
+  (terminal/missing status) are stealable.
+- **outcomes (FM-22):** rows now carry real `duration_s` and
+  `cost_basis` ("usd"/"unpriced" — 0.0 cost means unpriced, never free).
+- **auto_route (FM-23):** skips lanes >40% 30-day error rate at n≥5
+  (`[auto_route] bad_lane_error_threshold` / `bad_lane_min_samples`).
+  Explicit executor choices are never filtered.
+- **heartbeat (FM-01/02):** wrappers write status/<id>.heartbeat every
+  60s; killed at finalize. Telemetry-blind lanes (dsh, luna) are now
+  distinguishable from dead ones.
+- **dsh isolation (FM-03):** dsh-headless.sh pins DSH_HOME to the
+  dispatch home — the lane serves flash regardless of ~/.dsh.
+
+Ops additions (outside repo): ops lane-probe.sh equivalent at
+~/.local/share/pushing-dispatch/remediation/ (lane-probe.sh,
+zombie-reaper.sh incl. orphan-heartbeat sweep, books-monthly.sh,
+skill-usage-mine.sh, ledger-populate.sh) + crontab entries. The decision
+ledger lives at ~/research/system-map/remediation/LEDGER.md (auto rows
+daily 03:17). Tests: tests/test_cwd_lock.py (4 cases) + live integration
+(refusal/hatch/release verified on kilo lane).
