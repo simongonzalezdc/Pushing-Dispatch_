@@ -475,12 +475,29 @@ def cmd_completions(args):
 
 
 def cmd_questions(args):
-    """List pending question files."""
+    """List pending question files (terminal workers filtered — CTO-003 fix:
+    dead workers' questions expired with them; only live workers' questions
+    are actionable)."""
     qdir = question_dir()
     if not qdir.exists():
         return
 
+    from .dispatch_lib.status_writer import is_terminal
+    terminal_ids = set()
+    for f in status_dir().glob("*.json"):
+        try:
+            st = json.loads(f.read_text())
+            if is_terminal(st.get("current_phase", "")):
+                terminal_ids.add(f.stem)
+        except (json.JSONDecodeError, OSError):
+            pass
+
     for qfile in sorted(qdir.glob("*.md")):
+        wid = qfile.stem.rsplit("-", 1)[0] if "-" in qfile.stem else qfile.stem
+        # question files are named w-XXXX-question or w-XXXX-brief-NAME; match
+        # any status id that prefixes the question stem
+        if any(qfile.stem.startswith(t) or t.startswith(wid) for t in terminal_ids):
+            continue
         print(f"  {qfile.stem}")
         # Show first few lines
         lines = qfile.read_text().splitlines()[:5]

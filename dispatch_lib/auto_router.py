@@ -75,8 +75,12 @@ LOCAL_GENERAL_KEYWORDS = re.compile(
     r"document|synthesize|synthesise|audit)\b",
     re.IGNORECASE,
 )
+# S-073 fix: bare 'screenshot'/'image' nouns false-positived research briefs
+# into vision-only lanes. Vision is required for visual ACTIONS, not mentions.
 VISION_REQUIREMENT_KEYWORDS = re.compile(
-    r"\bvision\s+required\b|\b(?:screenshot|image)\b|"
+    r"\bvision\s+required\b|"
+    r"\b(?:analyz|analys|describ|inspect|review|compare|read|interpret) e?\b[^.]{0,40}\b(?:screenshot|image|render|screenshot[s]?)\b|"
+    r"\b(?:screenshot|image|render(?:ed)?)\b[^.]{0,40}\b(?:analyz|analys|describ|inspect|review|compar)\b|"
     r"\b(?:render(?:ed)?\s+(?:review|inspection)|review\s+(?:the\s+)?render(?:ed)?)\b",
     re.IGNORECASE,
 )
