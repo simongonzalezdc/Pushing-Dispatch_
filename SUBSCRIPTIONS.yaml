@@ -16,6 +16,7 @@ lanes:
     notes: "Q4_K_XL @262k q4-KV champion; hardware-bound, never quota-dead"
 
   zai:
+    plan: max
     kind: subscription
     executors: [zai-glm]
     policy: primary-glm-runtime
@@ -26,6 +27,7 @@ lanes:
     risk: "our own agent activity IS the flagged high-frequency pattern — never burst, never share tokens"
 
   grok:
+    plan: $30  # SuperGrok Individual tier — price INF:CEO statement; features READ:grok.com/supergrok
     kind: subscription
     executors: [grok-build]
     policy: cco-cto-desks
@@ -37,12 +39,14 @@ lanes:
     forbidden: [extra_usage_credits, auto_top_up]   # never-pay law
 
   openai:
+    plan: $20
     kind: subscription
     executors: [codex-luna, codex-sol, codex-terra]
     policy: effort-ladder          # luna -> terra -> sol escalation is the built-in effort dial
     window: {model: calendar_monthly, last_reset: "2026-08-20", cycle_position: week-2}
 
   minimax:
+    plan: unknown
     kind: subscription
     executors: [minimax-m3]
     window: {model: calendar_monthly, observed: never-exhausted}
@@ -54,6 +58,7 @@ lanes:
     evidence: "CEO-pasted kilo-cli balance 2026-08-20 (authoritative)"
 
   deepseek:
+    plan: api-credits (MEASURED 2026-08-20: $17.01 balance via api.deepseek.com/user/balance)
     kind: credits
     executors: [dsh, deepseek-v4-pro, deepseek-v4-flash]
     window: {model: balance, balance_usd: 17.01, floor: 2.00}
@@ -61,18 +66,21 @@ lanes:
     meter: budget.jsonl
 
   kimi:
+    plan: allegretto
     kind: subscription
     executors: [kimi-k3-cli, kimi-k3-key, kimi-k3-kyanite]
     window: {model: calendar_monthly, next_renewal: "2026-09-17"}
     notes: "single OAuth seat; kyanite sub dying — deathwatch ops/kimi-deathwatch.sh"
 
   agy-gemini:
+    plan: google-workspace-included
     kind: subscription
     executors: [agy-gemini-flash]
     policy: gemini-flash-3.7@medium-ONLY
     window: {model: rolling, last_observed_death: "2026-08-20", eta_recovery: "2026-08-21"}
 
   higgsfield:
+    plan: plus (paid)
     kind: credits
     executors: [higgsfield-media]
     window: {model: balance, balance_credits: 1186.1, floor: 50}
