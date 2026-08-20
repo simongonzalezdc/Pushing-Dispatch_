@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# dispatch-notify — cute completion notification for pushing-dispatch workers.
+# Uses terminal-notifier with the on-brand candy-brick icon; falls back to
+# osascript when terminal-notifier is absent.
+#
+# Usage: dispatch-notify "title" "message"
+set -euo pipefail
+TITLE="${1:-Dispatch}"
+MSG="${2:-worker finished}"
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ICON="${HERE}/assets/dispatch-icon.png"
+
+if command -v terminal-notifier >/dev/null 2>&1; then
+  terminal-notifier \
+    -title "${TITLE}" \
+    -message "${MSG}" \
+    -appIcon "${ICON}" \
+    -sound default 2>/dev/null || true
+else
+  osascript -e "display notification \"${MSG}\" with title \"${TITLE}\"" >/dev/null 2>&1 || true
+fi
