@@ -101,3 +101,6 @@ pushing-dispatch route --mode task --task "fix a typo"
 For local-only hosts, define an explicit host-local executor in that host's
 matrix (for example LM Studio or Ollama) and let `auto` select it. `codex-oss`
 is retired and must not be restored as a generic fallback.
+
+## Notifications
+Worker completions surface via `bin/dispatch-notify` (terminal-notifier + on-brand candy-brick icon; osascript fallback) and the `pdw` watch dashboard (`~/.local/bin/pdw`).
