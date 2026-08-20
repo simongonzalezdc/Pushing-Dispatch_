@@ -243,6 +243,8 @@ def _executor_available(cfg: dict) -> bool:
 
 def resolve(matrix: dict, use_cache: bool = True) -> dict:
     """Return {executor: {"available": bool, "provider": str}} for all executors."""
+    from dispatch_lib import lane_health
+    lane_health.prune(set(matrix.get("executors", {})))
     if use_cache:
         cached = _read_cache()
         # Use cache only if it covers every executor currently in the matrix.
@@ -257,7 +259,11 @@ def resolve(matrix: dict, use_cache: bool = True) -> dict:
             "provider": cfg.get("provider", ""),
         }
     _apply_quota_ledger_veto(out)
-    _write_cache(out)
+    if out:  # never persist an empty availability dict (C1 guard)
+        _write_cache(out)
+    else:
+        import sys
+        print("[availability] empty executor set — cache not written", file=sys.stderr)
     return out
 
 

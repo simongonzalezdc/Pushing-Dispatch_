@@ -349,7 +349,7 @@ default_consult = "grok-build"
 # Learning loop: when true, candidate ordering is re-biased by outcomes.jsonl
 # history (success rate / cost per tier). Off by default; enable after data
 # accumulates.
-learning = false
+learning = true   # G2 (CEO 2026-08-20): re-bias candidate order from outcomes.jsonl (3,857 records; zai-glm skew accepted)
 
 # ============================================================
 # Nested dispatch configuration

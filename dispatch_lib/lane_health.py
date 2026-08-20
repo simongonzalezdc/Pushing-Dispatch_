@@ -90,3 +90,18 @@ def needs_relogin() -> list:
         if entry.get("class") == "auth" and now < float(entry.get("until", 0)):
             out.append(ex)
     return out
+
+
+def prune(executors: set) -> int:
+    """Drop cooldown entries for executors no longer in the matrix (retired).
+
+    Keyed on matrix membership (C2): retired lanes get cleaned up; auth-class
+    entries for matrix-live lanes are NEVER removed (relogin visibility stays).
+    """
+    data = _read()
+    stale = [k for k in data if k not in executors]
+    for k in stale:
+        data.pop(k, None)
+    if stale:
+        _write_atomic(data)
+    return len(stale)

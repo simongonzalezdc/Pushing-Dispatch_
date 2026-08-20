@@ -60,3 +60,9 @@ Workers in a nested dispatch context receive:
 | `DISPATCH_BUDGET_REMAINING` | Remaining budget from parent |
 | `DISPATCH_DEADLINE` | ISO-8601 deadline |
 | `DISPATCH_MAX_DEPTH` | Maximum allowed depth |
+
+## Operator discipline (G3, CEO 2026-08-20)
+
+- DISPATCH_NESTED=1 is the default (install-global-routing.sh); max_depth=2; self-dispatch always denied; missing permission pairs are denied.
+- CWD-LOCK: one mutator per worktree. Nested workers on the SAME worktree serialize on the cwd lock; parallel lanes must use isolated worktrees. Never run two edit-lanes on one checkout.
+- Budget cascade: children pass `--budget-remaining` from the parent; child spend accrues to the parent line.
