@@ -70,20 +70,6 @@ context_window = 1048576
 max_turns = 25
 stall_threshold_seconds = 600
 
-[executors.kimi-k3-ollama]
-key_env = "OLLAMA_API_KEY"
-key_account = "ollama_api_key"
-wrapper = "kimi-k3-ollama-cloud.sh"
-provider = "ollama-cloud"
-model_id = "kimi-k3"
-allowed_modes = ["breakout", "task", "consult"]
-capabilities = ["vision"]
-allowed_seats_in_breakout = ["engineer", "review"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 16000
-context_window = 1048576
-max_turns = 25
-stall_threshold_seconds = 600
 
 [executors.zai-glm]
 # Canonical: ZCode (`zcode -p`) — wrapper zai.sh execs bin/zcode. GLM-5.3 always.
@@ -290,83 +276,9 @@ stall_threshold_seconds = 180
 hard_wall_block_breakout_top = true
 
 
-[executors.unsloth-nucbox]
-wrapper = "unsloth-nucbox.sh"
-provider = "ollama"
-# Sticky Qwen3.8-27B workhorse on Studio proxy :8890 (Ornith GGUF remains on disk for rollback).
-# m3-class only — bounded/localized/reversible/verifying. Never architect/critic/security/vision/web.
-model_id = "unsloth/Qwen3.8-27B-GGUF"
-harness_command = "pi"
-health_url = "http://100.113.174.74:8890/v1/models"
-allowed_modes = ["task"]
-capabilities = []
-allowed_seats_in_breakout = ["leaf"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 0
-context_window = 32768
-max_turns = 12
-stall_threshold_seconds = 600
-hard_wall_block_breakout_top = true
 
-[executors.qwen35-35b-general]
-wrapper = "qwen35-35b-general.sh"
-provider = "unsloth-openai"
-model_id = "Qwen3.5-35B-A3B-Q4_K_M.gguf"
-on_demand = true
-workcell_profile = "qwen35-35b-general"
-activation_health_url = "http://100.113.174.74:8892/v1/models"
-activation_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
-allowed_modes = ["task", "consult"]
-capabilities = []
-allowed_seats_in_breakout = ["leaf"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 0
-context_window = 32768
-max_turns = 8
-stall_threshold_seconds = 900
-hard_wall_block_breakout_top = true
 
-[executors.qwen35-27b-review]
-wrapper = "qwen35-27b-review.sh"
-provider = "unsloth-openai"
-model_id = "Qwen3.5-27B-Q4_K_M.gguf"
-on_demand = true
-workcell_profile = "qwen35-27b-review"
-activation_health_url = "http://100.113.174.74:8892/v1/models"
-activation_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
-allowed_modes = ["task", "consult"]
-capabilities = []
-allowed_seats_in_breakout = ["leaf"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 0
-context_window = 32768
-max_turns = 8
-stall_threshold_seconds = 900
-hard_wall_block_breakout_top = true
 
-[executors.qwen36-35b-coding]
-wrapper = "qwen36-35b-coding.sh"
-provider = "unsloth-openai"
-model_id = "qwen3.6:35b"
-on_demand = true
-workcell_profile = "qwen36-35b-coding"
-activation_health_url = "http://100.113.174.74:8892/v1/models"
-activation_model_id = "unsloth/Qwen3.6-27B-MTP-GGUF"
-allowed_modes = ["task"]
-capabilities = []
-allowed_seats_in_breakout = ["leaf"]
-default_thinking_tokens = 0
-thinking_hard_ceiling = 0
-context_window = 32768
-max_turns = 8
-stall_threshold_seconds = 900
-hard_wall_block_breakout_top = true
-
-# ============================================================
-# Auto-routing heuristics
-# ============================================================
-# Consulted by the auto-router when no explicit executor is set.
-# Keys are signal names, values are executor preferences.
 
 [auto_route]
 # Ordered candidate lists per tier. The router returns the first executor that
@@ -377,15 +289,15 @@ hard_wall_block_breakout_top = true
 # an unsatisfactory Luna result advances explicitly to Terra high and then, only
 # if justified, Sol low/medium/high. Availability routing cannot infer whether a
 # semantically valid answer was good enough.
-trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "unsloth-nucbox", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-standard_candidates       = ["zai-glm", "unsloth-nucbox", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "kimi-k3-ollama", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
-local_general_candidates  = ["unsloth-nucbox", "qwen35-35b-general", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-local_review_candidates   = ["qwen35-27b-review", "unsloth-nucbox", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-local_coding_candidates   = ["unsloth-nucbox", "qwen36-35b-coding", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-hard_task_candidates      = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key", "kimi-k3-ollama"]
-hard_breakout_candidates  = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key", "kimi-k3-ollama"]
-long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "agy-gemini-flash", "kimi-k3-ollama", "grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "minimax-m3"]
-consult_candidates        = ["grok-build", "agy-gemini-flash", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key", "kimi-k3-ollama"]
+trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+standard_candidates       = ["zai-glm", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
+local_general_candidates  = ["nucbox-champion", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+local_review_candidates   = ["nucbox-champion", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
+local_coding_candidates   = ["nucbox-champion", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
+hard_task_candidates      = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
+hard_breakout_candidates  = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
+long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "agy-gemini-flash", "grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "minimax-m3"]
+consult_candidates        = ["grok-build", "agy-gemini-flash", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
@@ -447,3 +359,21 @@ max_depth = 2
 "zai-glm.kilo-free-auto" = true
 "minimax-m3.codex-luna" = true
 "minimax-m3.kilo-free-auto" = true
+
+# ============================================================
+# Resident champion lane (COO 2026-08-20) — the ONE local model
+# from the NUCBox (CEO policy). Served through qwen27-forward
+# (tailscale :46380 -> on-box 127.0.0.1:46377). --parallel 1:
+# leaf-serialized; GPU-window laws apply (no bench traffic).
+# ============================================================
+[executors.nucbox-champion]
+name = "nucbox-champion"
+provider = "unsloth-openai"          # openai-compat local family (llama-server /v1)
+wrapper = "bin/wrappers/nucbox-champion.sh"
+model = "Qwen3.8-27B"
+base_url = "http://100.113.174.74:46380/v1"
+health_url = "http://100.113.174.74:46380/v1/models"
+model_id = "Qwen3.8-27B"
+max_turns = 8
+stall_threshold_seconds = 900
+hard_wall_block_breakout_top = false

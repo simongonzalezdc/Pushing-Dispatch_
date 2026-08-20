@@ -256,8 +256,31 @@ def resolve(matrix: dict, use_cache: bool = True) -> dict:
             "available": _executor_available(cfg),
             "provider": cfg.get("provider", ""),
         }
+    _apply_quota_ledger_veto(out)
     _write_cache(out)
     return out
+
+
+def _apply_quota_ledger_veto(out: dict) -> None:
+    """Balancer wiring: a lane the quota ledger says is RED is NOT available,
+    even if auth is present (auth-present != quota-usable). Reads
+    ledger-state.json written by ops/quota_ledger.py; missing/stale state =
+    no veto (existing behavior) so the overlay can never wedge routing on
+    its own bugs."""
+    state_path = availability_path().parent / "ledger-state.json"
+    try:
+        blob = json.loads(state_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return
+    red = {}
+    for lane, row in (blob.get("lanes") or {}).items():
+        if row.get("status") in ("RED-RESET", "RED-HOLD", "RETIRED"):
+            for ex in row.get("executors") or []:
+                red[ex] = "%s %s" % (row.get("status"), lane)
+    for name, rec in out.items():
+        if name in red and rec.get("available"):
+            rec["available"] = False
+            rec["provider"] = "%s [quota: %s]" % (rec.get("provider", ""), red[name])
 
 
 def available_set(matrix: dict, use_cache: bool = True) -> set:

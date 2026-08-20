@@ -21,6 +21,8 @@ def record_spend(
     parent_id: str = None,
     tokens_in: int = 0,
     tokens_out: int = 0,
+    source: str = None,
+    estimated: bool = None,
 ):
     """Append a spend record to the budget ledger."""
     path = budget_path()
@@ -36,6 +38,10 @@ def record_spend(
         "tokens_in": tokens_in,
         "tokens_out": tokens_out,
     }
+    if source is not None:
+        entry["source"] = source
+    if estimated is not None:
+        entry["estimated"] = estimated
     with open(path, "a") as f:
         f.write(json.dumps(entry) + "\n")
 
