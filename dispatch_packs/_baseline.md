@@ -18,7 +18,7 @@ Workers execute and report. Be terse. No conversational filler. Focus on: what y
 
 ## Task Naming (CEO law 2026-08-21)
 
-Every task name, worker slug, and report line is read by humans in small spaces (notification banners, status dashboards). Names must be self-explanatory AND concise:
+Every task name, worker slug, and report line is read by humans in small spaces (notification banners, status dashboards). READABILITY FIRST: a name is wrong if a human has to decode it. Self-explanatory AND concise:
 
 - Plain words naming the OUTCOME or object ("port-pricing-catalog", "fix-vision-keyword-filter") — never opaque codes, ticket numbers alone, or private abbreviations.
 - Hyphenated lowercase, 3-6 words max. Dates/ids live in metadata, not in the name.
