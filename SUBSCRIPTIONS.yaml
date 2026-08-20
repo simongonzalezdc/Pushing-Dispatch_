@@ -1,0 +1,92 @@
+# SUBSCRIPTIONS.yaml — lane catalog for the quota ledger + smart router.
+# Source of truth for: plan shape, quota window model, provider policy, retirement.
+# P13: every non-obvious number carries its evidence tag in comments.
+# Law: purchase paths (credits top-up, auto-top-up) are FORBIDDEN — CEO 2026-08-20.
+# Schema influenced by models.dev + OpenRouter model-metadata (prior-art targets 2/10).
+
+version: 1
+updated: "2026-08-20"
+
+lanes:
+  nucbox:
+    kind: local                    # local > free > subscription > credits (cost ladder)
+    executors: []                  # champion served by qwen27.service, not a wrapper
+    policy: champion-only          # one wrapper post-experiments; GPU-window laws apply
+    window: {model: none}
+    notes: "Q4_K_XL @262k q4-KV champion; hardware-bound, never quota-dead"
+
+  zai:
+    kind: subscription
+    executors: [zai-glm]
+    policy: primary-glm-runtime
+    window:
+      model: fair_use              # 1313 = enforcement, NOT billing — no predictable reset
+      lockout_class: hold          # route away + cool-down; never treat as timed quota
+      evidence: "GWS thread user_feedback@z.ai 2026-08-19; linux.do 1313 threads"
+    risk: "our own agent activity IS the flagged high-frequency pattern — never burst, never share tokens"
+
+  grok:
+    kind: subscription
+    executors: [grok-build]
+    policy: cco-cto-desks
+    window:
+      model: weekly_pool           # one pool across Chat/Imagine/Voice/Build/API
+      period_days: 7
+      last_observed_death: "2026-08-20"
+      evidence: "READ:grok.com/faq 2026-08-11 — weekly shared pool, pause-not-stop"
+    forbidden: [extra_usage_credits, auto_top_up]   # never-pay law
+
+  openai:
+    kind: subscription
+    executors: [codex-luna, codex-sol, codex-terra]
+    policy: effort-ladder          # luna -> terra -> sol escalation is the built-in effort dial
+    window: {model: calendar_monthly, last_reset: "2026-08-20", cycle_position: week-2}
+
+  minimax:
+    kind: subscription
+    executors: [minimax-m3]
+    window: {model: calendar_monthly, observed: never-exhausted}
+
+  kilo:
+    kind: credits
+    executors: [kilo-free, kilo]
+    window: {model: dual_bucket, pass_spent: 36, pass_total: 49, bonus: 24.50, personal: 12.88, floor: 5.00}
+    evidence: "CEO-pasted kilo-cli balance 2026-08-20 (authoritative)"
+
+  deepseek:
+    kind: credits
+    executors: [dsh, deepseek-v4-pro, deepseek-v4-flash]
+    window: {model: balance, balance_usd: 17.01, floor: 2.00}
+    evidence: "MEASURED 2026-08-20 api.deepseek.com/user/balance"
+    meter: budget.jsonl
+
+  kimi:
+    kind: subscription
+    executors: [kimi-k3-cli, kimi-k3-key, kimi-k3-kyanite]
+    window: {model: calendar_monthly, next_renewal: "2026-09-17"}
+    notes: "single OAuth seat; kyanite sub dying — deathwatch ops/kimi-deathwatch.sh"
+
+  agy-gemini:
+    kind: subscription
+    executors: [agy-gemini-flash]
+    policy: gemini-flash-3.7@medium-ONLY
+    window: {model: rolling, last_observed_death: "2026-08-20", eta_recovery: "2026-08-21"}
+
+  higgsfield:
+    kind: credits
+    executors: [higgsfield-media]
+    window: {model: balance, balance_credits: 1186.1, floor: 50}
+    notice: "CLI credits and web-plan meter are separate; wrapper warns at floor; web still works after CLI death"
+
+  xiaomi-mimo:
+    kind: credits
+    executors: []
+    policy: dead                    # 401 payment-failure; ride until CEO reactivates
+    window: {model: none, status: red-hold}
+
+retired:                           # never routed; presence in candidates lists = drift to fix
+  - ollama-cloud routes (kimi-k3-ollama)   # policy OUT
+  - qwen35 / qwen36 locals                  # superseded by nucbox champion
+  - unsloth-nucbox
+  - agy-pro
+  - xiaomi-mimo key lane
