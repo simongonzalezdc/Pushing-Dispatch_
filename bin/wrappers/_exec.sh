@@ -202,6 +202,18 @@ from dispatch_lib.budget import record_spend
 
 record_spend(sys.argv[1], sys.argv[2], 0.0, source="wrapper-direct", estimated=True)
 PYMETER
+        # knotify surface (CEO 2026-08-20: dispatch notifications through our
+        # notifier). Failures of a run notify loudly; adhoc completions ping
+        # pass-class. Detached — never blocks the worker teardown path.
+        KN=/Applications/Knotify.app/Contents/MacOS/knotify
+        if [ -x "$KN" ]; then
+            case "$phase" in
+                errored|blocked)
+                    ( "$KN" -c error -t "dispatch: ${CE_TOOL_NAME:-worker} $phase" -m "$CE_WORKER_ID — $error_summary" >/dev/null 2>&1 & ) ;;
+                done)
+                    ( "$KN" -c pass -t "dispatch: ${CE_TOOL_NAME:-worker} done" -m "$CE_WORKER_ID completed" >/dev/null 2>&1 & ) ;;
+            esac
+        fi
     fi
 
     # --- Self-healing + outcome recording ---
