@@ -16,7 +16,7 @@ lanes:
     notes: "Q4_K_XL @262k q4-KV champion; hardware-bound, never quota-dead"
 
   zai:
-    plan: max
+    plan: max — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)
     kind: subscription
     executors: [zai-glm]
     policy: primary-glm-runtime
@@ -46,12 +46,13 @@ lanes:
     window: {model: calendar_monthly, last_reset: "2026-08-20", cycle_position: week-2}
 
   minimax:
-    plan: unknown
+    plan: PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly; resolves prior unknown)
     kind: subscription
     executors: [minimax-m3]
     window: {model: calendar_monthly, observed: never-exhausted}
 
   kilo:
+    plan: kilo-pass $49 — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly); personal credits = pay-as-you-go balance
     kind: credits
     executors: [kilo-free, kilo]
     window: {model: dual_bucket, pass_spent: 36, pass_total: 49, bonus: 24.50, personal: 12.88, floor: 5.00}
@@ -66,7 +67,7 @@ lanes:
     meter: budget.jsonl
 
   kimi:
-    plan: allegretto
+    plan: allegretto — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)
     kind: subscription
     executors: [kimi-k3-cli, kimi-k3-key, kimi-k3-kyanite]
     window: {model: calendar_monthly, next_renewal: "2026-09-17"}
