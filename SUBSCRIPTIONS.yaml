@@ -10,7 +10,7 @@ updated: "2026-08-20"
 lanes:
   nucbox:
     kind: local                    # local > free > subscription > credits (cost ladder)
-    executors: []                  # champion served by qwen27.service, not a wrapper
+    executors: [nucbox-champion]   # resident via qwen27-forward tailscale :46380 (COO 2026-08-20)
     policy: champion-only          # one wrapper post-experiments; GPU-window laws apply
     window: {model: none}
     notes: "Q4_K_XL @262k q4-KV champion; hardware-bound, never quota-dead"

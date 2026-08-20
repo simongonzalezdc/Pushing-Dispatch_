@@ -62,16 +62,17 @@ def matrix_candidates(tier):
     key = "%s_candidates" % tier
     out, capture = [], False
     for line in open(MATRIX):
-        m = re.match(r"^\s*(%s)\s*=\s*\[" % re.escape(key), line)
-        if m:
+        if not capture:
+            m = re.match(r"^\s*%s\s*=\s*\[" % re.escape(key), line)
+            if not m:
+                continue
             capture = True
             line = line[m.end() - 1:]
-        if capture:
-            out += re.findall(r'"([^"]+)"', line)
-            if "]" in line and not line.strip().startswith("["):
-                # handles both single-line and multi-line toml arrays
-                if not line.rstrip().endswith(",") or line.rstrip().endswith("]"):
-                    break
+        out += re.findall(r'"([^"]+)"', line)
+        # single-line arrays end here; multi-line arrays end on the line that
+        # closes the bracket. Middle lines end with a comma and continue.
+        if line.rstrip().endswith("]"):
+            break
     # de-dupe preserving order
     seen, res = set(), []
     for c in out:

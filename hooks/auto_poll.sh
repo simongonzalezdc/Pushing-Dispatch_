@@ -32,6 +32,9 @@ if [[ -f "$AVAIL_CACHE" ]]; then
 fi
 if [[ ! -f "$AVAIL_CACHE" || "$_avail_age" -gt 300 ]]; then
     python3 "$DISPATCH_REPO/cli.py" doctor --json >/dev/null 2>&1 || true
+    # Quota-ledger refresh beside the reachability warm (balancer wiring):
+    # availability now reflects quota state, not just auth presence.
+    python3 "$DISPATCH_REPO/ops/quota_ledger.py" status >/dev/null 2>&1 || true
 fi
 
 # Count active workers for this session
