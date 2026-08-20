@@ -36,9 +36,12 @@ OPTIONAL_EXECUTOR_FIELDS = {
     "allowed_seats_in_breakout",
     "hard_wall_block_breakout_top",
     "hard_wall_block_task_top",
+    "display_name",
+    "color",
 }
 
 VALID_MODES = {"task", "breakout", "consult"}
+VALID_COLORS = {"red", "orange", "yellow", "green", "blue", "magenta", "cyan", "white"}
 
 
 def validate(matrix_path: str) -> list[str]:
@@ -91,6 +94,11 @@ def _validate_executor(name: str, config: dict) -> list[str]:
     capabilities = config.get("capabilities", [])
     if not isinstance(capabilities, list) or not all(isinstance(item, str) for item in capabilities):
         errors.append(f"Executor '{name}' capabilities must be a list of strings")
+
+    if "display_name" in config and not isinstance(config.get("display_name"), str):
+        errors.append(f"Executor '{name}' display_name must be a string")
+    if "color" in config and config.get("color") not in VALID_COLORS:
+        errors.append(f"Executor '{name}' color must be one of {sorted(VALID_COLORS)}")
 
     thinking = config.get("default_thinking_tokens", 0)
     ceiling = config.get("thinking_hard_ceiling", thinking)

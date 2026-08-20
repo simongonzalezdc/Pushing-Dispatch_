@@ -100,6 +100,29 @@ def _executor_choices(matrix: dict) -> list[str]:
     return list(matrix.get("executors", {}).keys())
 
 
+_COLOR_ANSI = {
+    "red": "31", "orange": "33", "yellow": "33", "green": "32",
+    "blue": "34", "magenta": "35", "cyan": "36", "white": "37",
+}
+
+
+def _display_name(matrix: dict, executor: str) -> str:
+    """Human-readable executor name (display_name) or the raw key."""
+    ex = matrix.get("executors", {}).get(executor, {})
+    return ex.get("display_name") or executor
+
+
+def _render_executor(matrix: dict, executor: str) -> str:
+    """TTY-aware executor label: emoji display name with color on a TTY,
+    raw key when piped (machine contract preserved)."""
+    if not sys.stdout.isatty():
+        return executor
+    ex = matrix.get("executors", {}).get(executor, {})
+    name = ex.get("display_name") or executor
+    color = _COLOR_ANSI.get(ex.get("color", ""))
+    return f"\x1b[{color}m{name}\x1b[0m" if color else name
+
+
 def _build_executors(matrix: dict) -> dict:
     """Build executor -> wrapper mapping from matrix."""
     result = {}
@@ -370,7 +393,8 @@ def cmd_list(args):
             started = e.get("started_at", "?")
             depth = e.get("depth", 0)
             depth_str = f" (depth {depth})" if depth > 0 else ""
-            print(f"{wid}  {executor:>10}  {mode:>8}  {phase:>16}  {started}{depth_str}")
+            label = _render_executor(_load_matrix(), executor)
+            print(f"{wid}  {label:>24}  {mode:>8}  {phase:>16}  {started}{depth_str}")
 
 
 def cmd_status(args):
@@ -447,7 +471,7 @@ def cmd_completions(args):
         wid = e["worker_id"]
         phase = e.get("current_phase", "?")
         when = e.get("finalized_at", "?")
-        print(f"{wid}  {phase}  {when}")
+        print(f"{wid}  {_render_executor(_load_matrix(), e.get('executor','?')):>24}  {phase}  {when}")
 
 
 def cmd_questions(args):
@@ -504,6 +528,7 @@ def cmd_route(args):
     if args.json:
         payload = {
             "executor": executor,
+            "executor_display": _display_name(_load_matrix(), executor),
             "mode": mode,
             "tier": tier,
             "matrix": matrix_path,
@@ -685,7 +710,8 @@ def cmd_doctor(args):
             state = "cooldown"
         if r["needs_relogin"]:
             state = "NEEDS RE-LOGIN"
-        line = f"{r['executor']:24} {r['provider']:22} {state:14}"
+        label = _render_executor(_load_matrix(), r['executor'])
+        line = f"{label:24} {r['provider']:22} {state:14}"
         if probe_results:
             p = r.get("probe", "")
             d = r.get("probe_detail", "")
