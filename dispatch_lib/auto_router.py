@@ -79,9 +79,9 @@ LOCAL_GENERAL_KEYWORDS = re.compile(
 # into vision-only lanes. Vision is required for visual ACTIONS, not mentions.
 VISION_REQUIREMENT_KEYWORDS = re.compile(
     r"\bvision\s+required\b|"
-    r"\b(?:analyz|analys|describ|inspect|review|compare|read|interpret) e?\b[^.]{0,40}\b(?:screenshot|image|render|screenshot[s]?)\b|"
-    r"\b(?:screenshot|image|render(?:ed)?)\b[^.]{0,40}\b(?:analyz|analys|describ|inspect|review|compar)\b|"
-    r"\b(?:render(?:ed)?\s+(?:review|inspection)|review\s+(?:the\s+)?render(?:ed)?)\b",
+    r"\b(?:analy[sz]e|describ e?|inspect|review|compar e?|read|interpret)\b[^.]{0,40}\b(?:screenshots?|images?|renders?)\b|"
+    r"\b(?:screenshots?|images?|renders?)\b[^.]{0,40}\b(?:analy[sz]e|describ e?|inspect|review|compar e?|read|interpret)\b|"
+    r"\brender(?:ed)?\s+(?:review|inspection)\b|\breview\s+(?:the\s+)?render(?:ed)?\b",
     re.IGNORECASE,
 )
 
