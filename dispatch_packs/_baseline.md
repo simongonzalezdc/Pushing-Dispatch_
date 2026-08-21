@@ -4,6 +4,10 @@
 
 You are running in a worktree. Do NOT switch branches. All commits go to YOUR branch (specified in the brief header). Do not cd elsewhere. Do not touch the main checkout.
 
+## Improvement Instinct (CEO law 2026-08-21)
+
+Every final report ENDS with an IMPROVEMENTS section — up to 3 concrete suggestions, each with: what to improve, WHY it matters (the friction or failure you actually hit), and a concrete fix proposal. "IMPROVEMENTS: none" is valid but should be rare — if you touched the system, you saw something. This is how the org gets better without anyone remembering to ask.
+
 ## Status Protocol
 
 Report with literal tokens at the start of a line:
