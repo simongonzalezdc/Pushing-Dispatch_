@@ -25,6 +25,10 @@ schema_version = 1
 # it FIRST in every kimi-eligible tier so its remaining quota drains before
 # the period ends. Prune it once it starts hard-failing (death-watch watches).
 # (kimi-k3-ollama is a separate Ollama Cloud account, not a Kimi Code sub.)
+# KIMI STEWARDSHIP (CEO 2026-08-21): prepaid-YEARLY (sunk), exceptionally
+# smart, vision AND video understanding — the smart prepaid lane. Steward the
+# credits: reserve for work that needs that intelligence (hard analysis,
+# vision/video, long-doc review), not routine tasks the cheap lanes carry.
 [executors.kimi-k3-cli]
 wrapper = "kimi-k3-cli.sh"
 provider = "kimi-cli"
@@ -168,6 +172,26 @@ context_window = 272000
 max_turns = 25
 stall_threshold_seconds = 600
 
+# EFFORT GRANULARITY DOCTRINE (CEO 2026-08-21): the matrix distinguishes
+# model x reasoning-effort as separate executors (luna=xhigh, terra=high,
+# sol=low). Grow this pattern where data supports it (e.g. sol-high for
+# fan-out leaves needing a notch more juice) — the MODEL-INTEL advisor
+# (see .omx/plans/model-intel-loop.md) proposes splits from outcome data.
+[executors.codex-sol-high]
+wrapper = "codex-sol.sh"
+provider = "openai-codex"
+model_id = "gpt-5.6-sol"
+display_name = "🟣 Sol High"
+color = "magenta"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = ["vision"]
+allowed_seats_in_breakout = ["top", "review", "engineer"]
+default_thinking_tokens = 0
+reasoning_effort = "high"
+context_window = 272000
+max_turns = 25
+stall_threshold_seconds = 600
+
 [executors.grok-build]
 wrapper = "grok-cli.sh"
 provider = "grok-cli"
@@ -200,13 +224,16 @@ context_window = 1000000
 max_turns = 10
 stall_threshold_seconds = 300
 
-# Kilo credit resets on the 15th of each month ($50); check balance before
-# heavy multi-worker fan-outs late in the cycle.
+# KILO LANE SEMANTICS (CEO correction 2026-08-21): kilo DEFAULTS to
+# deepseek-v4-flash while account credit remains ($50/mo, resets the 15th);
+# kilo-auto/FREE is used only once credits are exhausted. Kilo can ALSO serve
+# as Kimi-K3 BACKUP when the canonical kimi account (simon@puenteworks.com)
+# runs out of usage. Check balance before heavy fan-outs late in the cycle.
 [executors.kilo-free-auto]
 wrapper = "kilo-free.sh"
 provider = "kilo-cli"
 model_id = "kilo/kilo-auto/free"
-display_name = "🩵 Kilo Free"
+display_name = "🩵 Kilo (DS-Flash)"
 color = "cyan"
 allowed_modes = ["breakout", "task", "consult"]
 capabilities = []
@@ -217,8 +244,9 @@ context_window = 128000
 max_turns = 15
 stall_threshold_seconds = 600
 
-# DeepSeek Harness one-shot lane; model/provider from ~/.dsh/settings.yaml
-# (currently deepseek-v4-flash @ deepseek-official).
+# DeepSeek Harness one-shot lane; model/provider from ~/.dsh/settings.yaml.
+# CEO 2026-08-21: DSH runs dsv4-FLASH ONLY until further notice (Pro price
+# hike). Do not point this lane at Pro without a CEO word.
 [executors.dsh]
 wrapper = "dsh-headless.sh"
 provider = "deepseek-dsh"
