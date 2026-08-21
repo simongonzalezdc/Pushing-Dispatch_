@@ -30,6 +30,7 @@ schema_version = 1
 # credits: reserve for work that needs that intelligence (hard analysis,
 # vision/video, long-doc review), not routine tasks the cheap lanes carry.
 [executors.kimi-k3-cli]
+pricing_class = "prepaid-yearly"
 wrapper = "kimi-k3-cli.sh"
 provider = "kimi-cli"
 model_id = "kimi-code/k3"
@@ -45,6 +46,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.kimi-k3-key]
+pricing_class = "prepaid-yearly"
 # Second Kimi Code subscription (API-key account).
 key_env = "KIMI_API_KEY"
 key_account = "kimi_api_key"
@@ -63,6 +65,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.kimi-k3-kyanite]
+pricing_class = "prepaid-yearly"
 # DYING subscription (info@kyanitelabs.tech) — burn this quota first.
 key_env = "KIMI_API_KEY"
 key_account = "kimi_api_key_kyanite"
@@ -82,6 +85,7 @@ stall_threshold_seconds = 600
 
 
 [executors.zai-glm]
+pricing_class = "prepaid-yearly"
 # Canonical: ZCode (`zcode -p`) — wrapper zai.sh execs bin/zcode. GLM-5.3 always.
 # See docs/ZCODE.md. Never route GLM through Claude Code.
 key_env = "Z_AI_API_KEY"
@@ -101,6 +105,7 @@ max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.minimax-m3]
+pricing_class = "prepaid-yearly"
 wrapper = "gjc-minimax-m3.sh"
 provider = "gjc"
 model_id = "minimax-code/minimax-m3"
@@ -128,6 +133,7 @@ stall_threshold_seconds = 300
 # avoid wide parallel fan-outs across their seats.
 
 [executors.codex-luna]
+pricing_class = "scarce"
 wrapper = "codex-luna.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-luna"
@@ -143,6 +149,7 @@ max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.codex-terra]
+pricing_class = "scarce"
 wrapper = "codex-terra.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-terra"
@@ -158,6 +165,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.codex-sol]
+pricing_class = "scarce"
 wrapper = "codex-sol.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-sol"
@@ -178,6 +186,7 @@ stall_threshold_seconds = 600
 # fan-out leaves needing a notch more juice) — the MODEL-INTEL advisor
 # (see .omx/plans/model-intel-loop.md) proposes splits from outcome data.
 [executors.codex-sol-high]
+pricing_class = "scarce"
 wrapper = "codex-sol.sh"
 provider = "openai-codex"
 model_id = "gpt-5.6-sol"
@@ -193,6 +202,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.grok-build]
+pricing_class = "scarce"
 wrapper = "grok-cli.sh"
 provider = "grok-cli"
 model_id = "grok-4.6"
@@ -210,6 +220,7 @@ stall_threshold_seconds = 600
 # model. The gemini-pro lane was removed; do not re-add AGY Pro models.
 
 [executors.agy-gemini-flash]
+pricing_class = "free"
 wrapper = "agy-gemini-flash.sh"
 provider = "agy"
 model_id = "Gemini 3.7 Flash (High)"
@@ -230,6 +241,7 @@ stall_threshold_seconds = 300
 # as Kimi-K3 BACKUP when the canonical kimi account (simon@puenteworks.com)
 # runs out of usage. Check balance before heavy fan-outs late in the cycle.
 [executors.kilo-free-auto]
+pricing_class = "free"
 wrapper = "kilo-free.sh"
 provider = "kilo-cli"
 model_id = "kilo/kilo-auto/free"
@@ -248,6 +260,7 @@ stall_threshold_seconds = 600
 # CEO 2026-08-21: DSH runs dsv4-FLASH ONLY until further notice (Pro price
 # hike). Do not point this lane at Pro without a CEO word.
 [executors.dsh]
+pricing_class = "credit"
 wrapper = "dsh-headless.sh"
 provider = "deepseek-dsh"
 model_id = "deepseek-v4-flash"
@@ -263,6 +276,7 @@ max_turns = 10
 stall_threshold_seconds = 600
 
 [executors.deepseek-v4-pro]
+pricing_class = "credit"
 # Ollama Cloud lane (shares ollama_api_key with kimi-k3-ollama).
 key_env = "OLLAMA_API_KEY"
 key_account = "ollama_api_key"
@@ -281,6 +295,7 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.deepseek-v4-flash]
+pricing_class = "credit"
 # Ollama Cloud lane (shares ollama_api_key with kimi-k3-ollama).
 key_env = "OLLAMA_API_KEY"
 key_account = "ollama_api_key"
@@ -299,6 +314,7 @@ max_turns = 25
 stall_threshold_seconds = 300
 
 [executors.lm-studio]
+pricing_class = "local"
 wrapper = "lm-studio.sh"
 provider = "lm-studio"
 model_id = "qwen3.5-35b-a3b"
@@ -316,6 +332,7 @@ stall_threshold_seconds = 300
 hard_wall_block_breakout_top = true
 
 [executors.ollama-xps-gpu]
+pricing_class = "local"
 wrapper = "cascade-local.sh"
 provider = "ollama"
 model_id = "qwen35-2b-max"
@@ -426,6 +443,7 @@ max_depth = 2
 # leaf-serialized; GPU-window laws apply (no bench traffic).
 # ============================================================
 [executors.nucbox-champion]
+pricing_class = "local"
 name = "nucbox-champion"
 provider = "unsloth-openai"          # openai-compat local family (llama-server /v1)
 wrapper = "bin/wrappers/nucbox-champion.sh"

@@ -16,7 +16,7 @@
       ],
       "context_window": 1048576,
       "pricing_class": "prepaid-yearly",
-      "display_name": "🟩 Kimi K3",
+      "display_name": "\ud83d\udfe9 Kimi K3",
       "first_seen": "2026-07-21",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Prepaid-yearly sunk (CEO 2026-08-21). Reserve for hard analysis / vision+video / long-doc review."
@@ -30,7 +30,7 @@
       ],
       "context_window": 1048576,
       "pricing_class": "prepaid-yearly",
-      "display_name": "🟩 Kimi K3 Key",
+      "display_name": "\ud83d\udfe9 Kimi K3 Key",
       "first_seen": "2026-08-16",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Second Kimi Code subscription (API-key account). Same stewardship as kimi-k3-cli."
@@ -44,10 +44,10 @@
       ],
       "context_window": 1048576,
       "pricing_class": "prepaid-yearly",
-      "display_name": "🟩 Kimi Kyanite",
+      "display_name": "\ud83d\udfe9 Kimi Kyanite",
       "first_seen": "2026-08-16",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
-      "notes": "DYING subscription — route here first in kimi-eligible tiers to drain quota; prune on hard-fail."
+      "notes": "DYING subscription \u2014 route here first in kimi-eligible tiers to drain quota; prune on hard-fail."
     },
     {
       "name": "zai-glm",
@@ -56,10 +56,10 @@
       "capabilities": [],
       "context_window": 1000000,
       "pricing_class": "prepaid-yearly",
-      "display_name": "🟡 GLM Z.ai",
+      "display_name": "\ud83d\udfe1 GLM Z.ai",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
-      "notes": "Z.ai max plan prepaid-yearly (CEO 2026-08-21). Fair-use lockout (1313) — never burst. No vision."
+      "notes": "Z.ai max plan prepaid-yearly (CEO 2026-08-21). Fair-use lockout (1313) \u2014 never burst. No vision."
     },
     {
       "name": "minimax-m3",
@@ -70,7 +70,7 @@
       ],
       "context_window": 512000,
       "pricing_class": "prepaid-yearly",
-      "display_name": "🟥 MiniMax",
+      "display_name": "\ud83d\udfe5 MiniMax",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Prepaid-yearly (CEO 2026-08-21). Vision AND video input (fleet-verified via gjc)."
@@ -84,7 +84,7 @@
       ],
       "context_window": 272000,
       "pricing_class": "scarce",
-      "display_name": "🔵 Luna",
+      "display_name": "\ud83d\udd35 Luna",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "reasoning_effort": "xhigh",
@@ -99,7 +99,7 @@
       ],
       "context_window": 272000,
       "pricing_class": "scarce",
-      "display_name": "🟠 Terra",
+      "display_name": "\ud83d\udfe0 Terra",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "reasoning_effort": "high"
@@ -113,7 +113,7 @@
       ],
       "context_window": 272000,
       "pricing_class": "scarce",
-      "display_name": "🟣 Sol",
+      "display_name": "\ud83d\udfe3 Sol",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "reasoning_effort": "low"
@@ -127,7 +127,7 @@
       ],
       "context_window": 272000,
       "pricing_class": "scarce",
-      "display_name": "🟣 Sol High",
+      "display_name": "\ud83d\udfe3 Sol High",
       "first_seen": "2026-08-20",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "reasoning_effort": "high",
@@ -142,7 +142,7 @@
       ],
       "context_window": 500000,
       "pricing_class": "scarce",
-      "display_name": "🟢 Grok",
+      "display_name": "\ud83d\udfe2 Grok",
       "first_seen": "2026-07-13",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Scarce lane ($30 SuperGrok, 2026-08-16 budget note). Weekly shared pool."
@@ -156,7 +156,7 @@
       ],
       "context_window": 1000000,
       "pricing_class": "free",
-      "display_name": "🟦 Gemini Flash",
+      "display_name": "\ud83d\udfe6 Gemini Flash",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Google-Workspace-included: $0 incremental, rolling quota. Flash-only per AGY policy."
@@ -168,7 +168,7 @@
       "capabilities": [],
       "context_window": 128000,
       "pricing_class": "free",
-      "display_name": "🩵 Kilo (DS-Flash)",
+      "display_name": "\ud83e\ude75 Kilo (DS-Flash)",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "FREE tier fallback once kilo credits exhaust; kilo default is DS-flash on credit balance."
@@ -180,7 +180,7 @@
       "capabilities": [],
       "context_window": 131072,
       "pricing_class": "credit",
-      "display_name": "🐬 DSH",
+      "display_name": "\ud83d\udc2c DSH",
       "first_seen": "2026-08-16",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "DeepSeek api-credits ($17.01 @ 2026-08-20). Flash-ONLY until CEO notice (Pro hike)."
@@ -192,7 +192,7 @@
       "capabilities": [],
       "context_window": 131072,
       "pricing_class": "credit",
-      "display_name": "🐋 DeepSeek Pro",
+      "display_name": "\ud83d\udc0b DeepSeek Pro",
       "first_seen": "2026-08-16",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Metered lane; grouped under deepseek credits in SUBSCRIPTIONS.yaml."
@@ -204,7 +204,7 @@
       "capabilities": [],
       "context_window": 131072,
       "pricing_class": "credit",
-      "display_name": "🐋 DeepSeek Flash",
+      "display_name": "\ud83d\udc0b DeepSeek Flash",
       "first_seen": "2026-08-16",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Metered lane; grouped under deepseek credits in SUBSCRIPTIONS.yaml."
@@ -216,7 +216,7 @@
       "capabilities": [],
       "context_window": 131072,
       "pricing_class": "local",
-      "display_name": "🧪 LM Studio",
+      "display_name": "\ud83e\uddea LM Studio",
       "first_seen": "2026-07-12",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "LAN host 100.113.174.74:4000. disabled=true in matrix as of provenance commit."
@@ -228,7 +228,7 @@
       "capabilities": [],
       "context_window": 65536,
       "pricing_class": "local",
-      "display_name": "🖥️ Ollama XPS",
+      "display_name": "\ud83d\udda5\ufe0f Ollama XPS",
       "first_seen": "2026-07-21",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02"
     },
@@ -239,7 +239,7 @@
       "capabilities": [],
       "context_window": null,
       "pricing_class": "local",
-      "display_name": "🟤 Champion",
+      "display_name": "\ud83d\udfe4 Champion",
       "first_seen": "2026-08-20",
       "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
       "notes": "Resident NUCBox champion lane. context_window not set in matrix; SUBSCRIPTIONS.yaml hints 262k (q4-KV)."
