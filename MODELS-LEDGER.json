@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "generated": "2026-08-20T00:00:00Z",
+  "source": "dispatch_matrix.toml @ 24f948bd02b815fc67531d11c9cc3425aeee2e02",
+  "pricing_class_sources": [
+    "dispatch_matrix.toml comments (scarce/credit/free/local notes)",
+    "SUBSCRIPTIONS.yaml updated 2026-08-20 (prepaid-yearly CEO designations)"
+  ],
+  "executors": [
+    {
+      "name": "kimi-k3-cli",
+      "provider": "kimi-cli",
+      "model_id": "kimi-code/k3",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 1048576,
+      "pricing_class": "prepaid-yearly",
+      "display_name": "🟩 Kimi K3",
+      "first_seen": "2026-07-21",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Prepaid-yearly sunk (CEO 2026-08-21). Reserve for hard analysis / vision+video / long-doc review."
+    },
+    {
+      "name": "kimi-k3-key",
+      "provider": "kimi-cli",
+      "model_id": "kimi-code/k3",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 1048576,
+      "pricing_class": "prepaid-yearly",
+      "display_name": "🟩 Kimi K3 Key",
+      "first_seen": "2026-08-16",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Second Kimi Code subscription (API-key account). Same stewardship as kimi-k3-cli."
+    },
+    {
+      "name": "kimi-k3-kyanite",
+      "provider": "kimi-cli",
+      "model_id": "kimi-code/k3",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 1048576,
+      "pricing_class": "prepaid-yearly",
+      "display_name": "🟩 Kimi Kyanite",
+      "first_seen": "2026-08-16",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "DYING subscription — route here first in kimi-eligible tiers to drain quota; prune on hard-fail."
+    },
+    {
+      "name": "zai-glm",
+      "provider": "zai",
+      "model_id": "glm-5.3",
+      "capabilities": [],
+      "context_window": 1000000,
+      "pricing_class": "prepaid-yearly",
+      "display_name": "🟡 GLM Z.ai",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Z.ai max plan prepaid-yearly (CEO 2026-08-21). Fair-use lockout (1313) — never burst. No vision."
+    },
+    {
+      "name": "minimax-m3",
+      "provider": "gjc",
+      "model_id": "minimax-code/minimax-m3",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 512000,
+      "pricing_class": "prepaid-yearly",
+      "display_name": "🟥 MiniMax",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Prepaid-yearly (CEO 2026-08-21). Vision AND video input (fleet-verified via gjc)."
+    },
+    {
+      "name": "codex-luna",
+      "provider": "openai-codex",
+      "model_id": "gpt-5.6-luna",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 272000,
+      "pricing_class": "scarce",
+      "display_name": "🔵 Luna",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "reasoning_effort": "xhigh",
+      "notes": "Scarce lane ($20 OpenAI plan, 2026-08-16 budget note): reserve for hard lanes/reviews."
+    },
+    {
+      "name": "codex-terra",
+      "provider": "openai-codex",
+      "model_id": "gpt-5.6-terra",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 272000,
+      "pricing_class": "scarce",
+      "display_name": "🟠 Terra",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "reasoning_effort": "high"
+    },
+    {
+      "name": "codex-sol",
+      "provider": "openai-codex",
+      "model_id": "gpt-5.6-sol",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 272000,
+      "pricing_class": "scarce",
+      "display_name": "🟣 Sol",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "reasoning_effort": "low"
+    },
+    {
+      "name": "codex-sol-high",
+      "provider": "openai-codex",
+      "model_id": "gpt-5.6-sol",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 272000,
+      "pricing_class": "scarce",
+      "display_name": "🟣 Sol High",
+      "first_seen": "2026-08-20",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "reasoning_effort": "high",
+      "notes": "Effort-split variant of codex-sol (same model, reasoning_effort=high) per effort-granularity doctrine."
+    },
+    {
+      "name": "grok-build",
+      "provider": "grok-cli",
+      "model_id": "grok-4.6",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 500000,
+      "pricing_class": "scarce",
+      "display_name": "🟢 Grok",
+      "first_seen": "2026-07-13",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Scarce lane ($30 SuperGrok, 2026-08-16 budget note). Weekly shared pool."
+    },
+    {
+      "name": "agy-gemini-flash",
+      "provider": "agy",
+      "model_id": "Gemini 3.7 Flash (High)",
+      "capabilities": [
+        "vision"
+      ],
+      "context_window": 1000000,
+      "pricing_class": "free",
+      "display_name": "🟦 Gemini Flash",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Google-Workspace-included: $0 incremental, rolling quota. Flash-only per AGY policy."
+    },
+    {
+      "name": "kilo-free-auto",
+      "provider": "kilo-cli",
+      "model_id": "kilo/kilo-auto/free",
+      "capabilities": [],
+      "context_window": 128000,
+      "pricing_class": "free",
+      "display_name": "🩵 Kilo (DS-Flash)",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "FREE tier fallback once kilo credits exhaust; kilo default is DS-flash on credit balance."
+    },
+    {
+      "name": "dsh",
+      "provider": "deepseek-dsh",
+      "model_id": "deepseek-v4-flash",
+      "capabilities": [],
+      "context_window": 131072,
+      "pricing_class": "credit",
+      "display_name": "🐬 DSH",
+      "first_seen": "2026-08-16",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "DeepSeek api-credits ($17.01 @ 2026-08-20). Flash-ONLY until CEO notice (Pro hike)."
+    },
+    {
+      "name": "deepseek-v4-pro",
+      "provider": "ollama-cloud",
+      "model_id": "deepseek-v4-pro:0813",
+      "capabilities": [],
+      "context_window": 131072,
+      "pricing_class": "credit",
+      "display_name": "🐋 DeepSeek Pro",
+      "first_seen": "2026-08-16",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Metered lane; grouped under deepseek credits in SUBSCRIPTIONS.yaml."
+    },
+    {
+      "name": "deepseek-v4-flash",
+      "provider": "ollama-cloud",
+      "model_id": "deepseek-v4-flash:0731",
+      "capabilities": [],
+      "context_window": 131072,
+      "pricing_class": "credit",
+      "display_name": "🐋 DeepSeek Flash",
+      "first_seen": "2026-08-16",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Metered lane; grouped under deepseek credits in SUBSCRIPTIONS.yaml."
+    },
+    {
+      "name": "lm-studio",
+      "provider": "lm-studio",
+      "model_id": "qwen3.5-35b-a3b",
+      "capabilities": [],
+      "context_window": 131072,
+      "pricing_class": "local",
+      "display_name": "🧪 LM Studio",
+      "first_seen": "2026-07-12",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "LAN host 100.113.174.74:4000. disabled=true in matrix as of provenance commit."
+    },
+    {
+      "name": "ollama-xps-gpu",
+      "provider": "ollama",
+      "model_id": "qwen35-2b-max",
+      "capabilities": [],
+      "context_window": 65536,
+      "pricing_class": "local",
+      "display_name": "🖥️ Ollama XPS",
+      "first_seen": "2026-07-21",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02"
+    },
+    {
+      "name": "nucbox-champion",
+      "provider": "unsloth-openai",
+      "model_id": "Qwen3.8-27B",
+      "capabilities": [],
+      "context_window": null,
+      "pricing_class": "local",
+      "display_name": "🟤 Champion",
+      "first_seen": "2026-08-20",
+      "provenance": "24f948bd02b815fc67531d11c9cc3425aeee2e02",
+      "notes": "Resident NUCBox champion lane. context_window not set in matrix; SUBSCRIPTIONS.yaml hints 262k (q4-KV)."
+    }
+  ]
+}
