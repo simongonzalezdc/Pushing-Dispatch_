@@ -27,3 +27,13 @@ unpause) — one instrument, two consumers. NO separate GPU work scheduled.
 - 3 winning pairs >=10% median: **PASS (15.2%, 20.0%, 56%)** — paired, cited
 - auto-apply: OFF — flips only via the existing CEO-QUEUE row (incl. the
   pending KV q8 serving flip)
+
+
+## CORRECTION (COO, 2026-08-21 — retract-wrong-numbers law)
+The "56% faster quotes" pair was CROSS-ARTIFACT (needle file vs warm-file, different
+task variants) — a violation of the paired-same-task doctrine. CS's paired table is
+the truth: q4 vs q8 differences at 131k are SMALL AND MIXED (decode 3.2 vs 4.0s =
+0.8s absolute; tg128 slightly favors q4; q8 costs +2GB GTT). The one clean pair in
+this table remains spec-mirror prose (+15%). VERDICT CORRECTED: KEEP q4 KV (CS's
+original least-resource call was RIGHT); the q8 flip row is WITHDRAWN as an input,
+not a recommendation. "3 winning pairs" claim: reduced to 1.
