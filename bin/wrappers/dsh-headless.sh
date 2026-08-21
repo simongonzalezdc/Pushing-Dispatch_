@@ -14,6 +14,8 @@ source "$SCRIPT_DIR/_exec.sh"
 # read-hermes-zai-key) unless the launching environment already provides one.
 if [[ -z "${DEEPSEEK_API_KEY:-}" ]]; then
     _dsk="$("$SCRIPT_DIR/../read-hermes-deepseek-key" 2>/dev/null || true)"
+    # keychain direct read (S-080): works outside login shells
+    [[ -n "${_dsk:-}" ]] || _dsk="$(security find-generic-password -s pushing-dispatch -a deepseek_api_key -w 2>/dev/null || true)"
     [[ -z "$_dsk" ]] || export DEEPSEEK_API_KEY="$_dsk"
     unset _dsk
 fi
