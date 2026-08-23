@@ -1,24 +1,45 @@
 #!/usr/bin/env bash
-# nucbox-ornith.sh — Ornith-1.5-35B-A3B APEX on the NUC (:46381 forwarder).
-# Zero-cost local speed lane: ~55 tok/s decode (2x champion), thinking-on.
-# Best for: volume generation, math with thinking, long analysis.
-
+# nucbox-ornith.sh — Ornith-1.5-35B via tokflint (FULL AGENT: bash, read, write,
+# edit, grep, find, code tools). Zero-cost local lane, certified, 262k ctx.
+# Best for: agent tool loops, code tasks, file operations. ~26 tok/s prose.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_exec.sh"
 
 export CE_TOOL_NAME="nucbox-ornith"
-export OPENAI_COMPAT_BASE_URL="${ORNITH_BASE_URL:-http://100.113.174.74:46381/v1}"
-export OPENAI_COMPAT_PATH="/chat/completions"
-export OPENAI_COMPAT_MODEL="${ORNITH_MODEL:-Ornith-1.5-35B}"
-export OPENAI_COMPAT_EXPECT_RESPONSE_MODEL="$OPENAI_COMPAT_MODEL"
-export OPENAI_COMPAT_MAX_TOKENS="${ORNITH_MAX_TOKENS:-8192}"
-export OPENAI_COMPAT_TEMPERATURE="${ORNITH_TEMPERATURE:-0.2}"
+
+# Steer tokflint to the ornith (via socat forwarder on the NUC)
+# NOTE: NO /v1 suffix — tokflint's adapter appends /v1/chat/completions itself
+export LIAM_API="${ORNITH_LIAM_API:-http://100.113.174.74:46381}"
+export LIAM_MODEL="${ORNITH_MODEL:-Ornith-1.5-35B}"
+
+# tokflint home + task execution
+TOKFLINT_DIR="${TOKFLINT_DIR:-$HOME/workspaces/liam-core}"
+TASK_FILE="/tmp/dispatch-task-$$.txt"
 
 ce_parse_args "$@"
-export OPENAI_COMPAT_API_KEY="${ORNITH_API_KEY:-local-no-key}"
 
-export CE_GEN_CANARY_URL="$OPENAI_COMPAT_BASE_URL/chat/completions"
-export CE_GEN_CANARY_MODEL="$OPENAI_COMPAT_MODEL"
+# Write the task to a file (handles quoting)
+printf '%s' "$CE_TASK" > "$TASK_FILE"
 
-ce_run_openai_compatible "$@"
+# Execute via tokflint with --yolo (no confirmation gates)
+timeout "${ORNITH_TIMEOUT:-900}" python3 "$TOKFLINT_DIR/tokflint.py" run \
+  --task "$(cat "$TASK_FILE")" \
+  --yolo \
+  > /tmp/dispatch-result-$$.log 2>&1
+EXIT_CODE=$?
+
+rm -f "$TASK_FILE"
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+    echo "Error: tokflint exited $EXIT_CODE" >&2
+    tail -5 /tmp/dispatch-result-$$.log >&2
+    rm -f /tmp/dispatch-result-$$.log
+    exit $EXIT_CODE
+fi
+
+# Output the result (tokflint prints the conversation)
+cat /tmp/dispatch-result-$$.log
+rm -f /tmp/dispatch-result-$$.log
+
+ce_finalize_from_text "Status: DONE"
