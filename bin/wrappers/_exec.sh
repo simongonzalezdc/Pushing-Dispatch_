@@ -1006,11 +1006,22 @@ ce_pi_local_gen_canary() {
         if printf '%s' "$out" | python3 -c 'import sys,json
 try:
  d=json.load(sys.stdin)
+ # Model-identity assertion (COO UltraQA 2026-08-23, COO-004): in the
+ # dual-resident no-switching architecture a misroute returns HTTP 200
+ # served by the WRONG model — invisible to status codes. Fail the canary
+ # unless the response model matches the requested id (prefix-match absorbs
+ # llama.cpp alias suffix variants).
+ rm=str(d.get("model") or "")
+ rq=sys.argv[1]
+ if rm and rq and not rm.startswith(rq.split(":")[0]) and rq not in rm:
+  raise SystemExit(1)
  m=(d.get("choices") or [{}])[0].get("message",{}) or {}
  c=(m.get("content") or "")+(m.get("reasoning_content") or "")
  raise SystemExit(0 if str(c).strip() else 1)
+except SystemExit:
+ raise
 except Exception:
- raise SystemExit(1)' 2>/dev/null; then
+ raise SystemExit(1)' "$model" 2>/dev/null; then
             echo "gen canary PASS: proxy $url produced content" >&2
             return 0
         fi
