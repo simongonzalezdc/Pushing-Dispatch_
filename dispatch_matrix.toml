@@ -223,7 +223,7 @@ stall_threshold_seconds = 600
 pricing_class = "free"
 wrapper = "agy-gemini-flash.sh"
 provider = "agy"
-model_id = "Gemini 3.7 Flash (High)"
+model_id = "Gemini 3.7 Flash (Medium)"  # CEO order 2026-08-22: flash is MEDIUM-ONLY (was High)
 display_name = "🟦 Gemini Flash"
 color = "blue"
 allowed_modes = ["breakout", "task", "consult"]
@@ -366,15 +366,15 @@ hard_wall_block_breakout_top = true
 # an unsatisfactory Luna result advances explicitly to Terra high and then, only
 # if justified, Sol low/medium/high. Availability routing cannot infer whether a
 # semantically valid answer was good enough.
-trivial_candidates        = ["ollama-xps-gpu", "kilo-free-auto", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-standard_candidates       = ["zai-glm", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
-local_general_candidates  = ["nucbox-champion", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+trivial_candidates        = ["ollama-xps-gpu", "nucbox-champion", "kilo-free-auto", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
+standard_candidates       = ["nucbox-champion", "nucbox-ornith", "zai-glm", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
+local_general_candidates  = ["nucbox-champion", "nucbox-ornith", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
 local_review_candidates   = ["nucbox-champion", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
 local_coding_candidates   = ["nucbox-champion", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
 hard_task_candidates      = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
 hard_breakout_candidates  = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
 long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "agy-gemini-flash", "grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "minimax-m3"]
-consult_candidates        = ["grok-build", "agy-gemini-flash", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
+consult_candidates        = ["nucbox-champion", "nucbox-ornith", "grok-build", "agy-gemini-flash", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
@@ -454,6 +454,35 @@ model_id = "Qwen3.8-27B"
 display_name = "🟤 Champion"
 color = "yellow"
 allowed_modes = ["task", "consult"]
+capabilities = ["vision"]            # mmproj attached, 6/6 certified
+context_window = 262144              # verified, serving
+default_thinking_tokens = 0          # think-off default (speed)
+thinking_hard_ceiling = 2048         # reasoning-budget cap
 max_turns = 8
 stall_threshold_seconds = 900
+hard_wall_block_breakout_top = false
+
+# Ornith-1.5-35B-A3B APEX — co-resident speed lane on :46399 (2026-08-23).
+# Zero-cost, ~55 tok/s decode (2x champion), thinking-on default.
+# Best for: volume generation, math with thinking, long analysis.
+# Not for: agent tool loops (champion cache 54x), quick terse answers.
+# GTT: ~17GB at 32k ctx (champion + ornith = ~44/64GB, 20GB margin).
+[executors.nucbox-ornith]
+pricing_class = "local"
+name = "nucbox-ornith"
+provider = "unsloth-openai"
+wrapper = "bin/wrappers/nucbox-ornith.sh"
+model = "Ornith-1.5-35B"
+base_url = "http://100.113.174.74:46399/v1"
+health_url = "http://100.113.174.74:46399/v1/models"
+model_id = "Ornith-1.5-35B"
+display_name = "🟠 Ornith 35B"
+color = "orange"
+allowed_modes = ["task", "consult"]
+capabilities = ["vision"]            # works (5/6 battery)
+context_window = 32768               # 32k dispatch config (262k verified solo)
+default_thinking_tokens = 0          # controllable per-request
+thinking_hard_ceiling = 8192         # long thinking tail — cap at 8k
+max_turns = 4                        # fewer turns (compute shares with champion)
+stall_threshold_seconds = 1200       # thinking can be slow
 hard_wall_block_breakout_top = false
