@@ -73,8 +73,38 @@ Current provider truth:
 - Gemini models are exclusive to AGY (`agy-gemini-flash` only — 3.7 Flash is the sole allowed AGY model); Gemini CLI and legacy direct-API lanes are retired.
 - Grok Build is the `grok-build` executor through xAI's official `grok` CLI, pinned to `grok-4.6`. It replaces retired Claude Opus-class work: hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer Grok. It is vision-capable, uses native OAuth or `XAI_API_KEY`, transports briefs by prompt file, and runs with explicit `workspace`/`read-only` sandbox profiles. Do not route through community Grok clients.
 - Ordinary work remains GPT-5.6 Luna-first. Within Codex, retry an unusable Luna result with Terra high; use Sol only when justified, escalating low, medium, then high and stopping after high. Auto-routing cannot judge semantic answer quality. GPT-5.5, Codex OSS, NUCBox Gemma, and Anthropic Opus are retired.
-- **Ornith sticky leaf (`unsloth-nucbox`):** free NUC coding/ops for **m3-class only** (bounded · localized · reversible · verifying). Never sole architect/critic/security/vision/web/breakout-top. Serialize jobs. Full YES/NO: fleet `launchpad/docs/agents/ORNITH-GUIDELINES.md` § Cloud-orchestrator card; pack `ornith-leaf`; `docs/ORCHESTRATING.md`.
-- On-demand dual-load Qwen workcells on `:8892` stay **retired** while Ornith is the single big resident model. Dell Qwen 3.5 2B remains atomic mechanical only (with resident NUC validation where configured). Broad/risky, oversized, visual, breakout, consult, and long-context work stays on stronger cloud tiers.
+- **Ornith sticky leaf (`unsloth-nucbox`):** RETIRED — replaced by the dual-resident executors below.
+- On-demand dual-load Qwen workcells on `:8892`: RETIRED — replaced by `nucbox-ornith` on `:46381`.
+
+## Local Model Executors (dual-resident, 2026-08-23)
+
+Two local models run simultaneously on the NUC (Strix Halo, 96GB unified, 64GB GTT).
+Both have FULL AGENT TOOLS via tokflint: bash, read/write/edit files, grep, find, code search.
+Both are zero-cost. Both have vision. Both load in seconds.
+
+**Route to `nucbox-champion` (Qwen3.8-27B, ~26 tok/s) when:**
+- The task is ITERATIVE (same context resent across turns — coding sessions,
+  agent tool loops, debug cycles, review-then-fix). Its 54x prompt cache means
+  turn 2+ returns in 0.4s instead of 1.7s — this is its killer feature.
+- The task needs >32k context (champion has 262k; ornith dispatch config is 32k).
+- You want terse, factual, no-fluff output.
+- The task is code review (certified 20/20 on the delegation card).
+- You need a quick answer with no thinking delay (think-off default).
+
+**Route to `nucbox-ornith` (Ornith-1.5-35B-A3B, ~55 tok/s) when:**
+- The task is ONE-SHOT generation (analysis, summary, long document, essay).
+  2x faster than champion on fresh-context generation.
+- The task is math-heavy (97% GSM8K with thinking vs champion's 90%).
+- You want a second opinion from a different model lineage.
+- You want detailed, exploratory, conversational output.
+- The champion is busy or you want to parallelize across local models.
+
+**Route to cloud (not local) when:**
+- The task is a hard breakout requiring frontier intelligence.
+- The task is vision-critical (local vision works but cloud is better).
+- Being wrong costs more than cloud credits.
+
+**Quick rule of thumb:** iterative → champion, one-shot → ornith, hard → cloud.
 - Kilo is CLI-only and free-only: the durable lane is `kilo-free-auto` using `kilo/kilo-auto/free`. Never fall through to a paid Kilo model; rotating monthly `:free` models must be verified live before use.
 
 ## Registered Local Surfaces
