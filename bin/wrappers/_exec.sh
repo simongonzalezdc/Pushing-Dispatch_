@@ -1464,3 +1464,70 @@ PY
     echo "Set $env_var env var, or store in macOS Keychain (service=$service, account=$account)." >&2
     return 1
 }
+
+ce_run_commandcode() {
+    # Command Code (commandcode.ai) headless lane — CEO Pro plan ($80 credits, 45+ models).
+    # Probe-verified 2026-08-24: -p headless + stdin task + --no-session, exit 0.
+    if [[ -z "${CE_CWD:-}" ]]; then
+        ce_parse_args "$@"
+    fi
+
+    ce_assemble_brief_with_packs
+    ce_assemble_prompt
+
+    local log_dir="$CE_DISPATCH_ROOT/logs"
+    mkdir -p "$log_dir"
+    local log_file="$log_dir/${CE_WORKER_ID}.log"
+
+    local prompt_file
+    prompt_file="$(mktemp "${TMPDIR:-/tmp}/dispatch-prompt-XXXXXX")"
+    echo "$CE_FINAL_PROMPT" > "$prompt_file"
+
+    local cmd=(command-code -p --no-session --trust)
+
+    if [[ -n "${COMMANDCODE_MODEL:-}" ]]; then
+        cmd+=(-m "$COMMANDCODE_MODEL")
+    fi
+    if [[ -n "${COMMANDCODE_EFFORT:-}" ]]; then
+        cmd+=(--effort "$COMMANDCODE_EFFORT")
+    fi
+    if [[ "${COMMANDCODE_TOOLS_ALL:-0}" -eq 1 ]]; then
+        cmd+=(--tools-all)
+    fi
+    # Worker-execution mode (tokflint --yolo doctrine): dispatch workers run on our own
+    # machines/tasks; headless defaults withhold write/shell which blocks real tasks.
+    if [[ "${COMMANDCODE_YOLO:-1}" -eq 1 ]]; then
+        cmd+=(--yolo)
+    fi
+    cmd+=("--max-turns" "${COMMANDCODE_MAX_TURNS:-25}")
+
+    if [[ "$CE_READ_ONLY" -eq 1 ]]; then
+        cmd+=("--permission-mode" "standard")
+    fi
+
+    if [[ "$CE_DRY_RUN" -eq 1 ]]; then
+        echo "DRY RUN - Would execute:"
+        echo "  ${cmd[*]} < $prompt_file"
+        return 0
+    fi
+
+    echo "Dispatching worker $CE_WORKER_ID (command-code)..."
+
+    local exit_code=0
+    "${cmd[@]}" < "$prompt_file" 2>&1 | tee "$log_file" || exit_code=$?
+
+    rm -f "$prompt_file" "$CE_ASSEMBLED_BRIEF"
+
+    local final_text=""
+    if [[ -f "$log_file" ]]; then
+        final_text="$(tail -200 "$log_file")"
+    fi
+
+    if [[ $exit_code -ne 0 ]]; then
+        echo "Worker $CE_WORKER_ID: command-code exited with code $exit_code." >&2
+        ce_finalize_status "errored" 4 "command-code exited with code $exit_code"
+        return 4
+    fi
+
+    ce_finalize_from_text "$final_text"
+}

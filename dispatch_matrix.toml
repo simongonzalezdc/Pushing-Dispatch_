@@ -486,3 +486,21 @@ thinking_hard_ceiling = 8192         # long thinking tail — cap at 8k
 max_turns = 4                        # fewer turns (compute shares with champion)
 stall_threshold_seconds = 1200       # thinking can be slow
 hard_wall_block_breakout_top = false
+
+[executors.command-code]
+pricing_class = "credit"
+# commandcode.ai Pro plan (CEO account, authenticated as simongonzalezdc; $80 credits/mo, 45+ models).
+# Lane verified live 2026-08-24: -p headless, stdin task, exit 0, LANE-OK probe.
+wrapper = "command-code.sh"
+provider = "command-code"
+model_id = "deepseek/deepseek-v4-flash"
+display_name = "⬛ Command Code"
+color = "white"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["engineer", "review"]
+default_thinking_tokens = 0
+thinking_hard_ceiling = 16000
+context_window = 1048576
+max_turns = 25
+stall_threshold_seconds = 600
