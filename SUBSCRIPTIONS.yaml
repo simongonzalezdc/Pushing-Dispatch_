@@ -95,10 +95,10 @@ lanes:
     notice: "CLI credits and web-plan meter are separate; wrapper warns at floor; web still works after CLI death"
 
   xiaomi-mimo:
-    kind: credits
-    executors: []
-    policy: dead                    # 401 payment-failure; ride until CEO reactivates
-    window: {model: none, status: red-hold}
+    kind: subscription
+    executors: [xiaomi-mimo]
+    policy: active                  # CEO paid 2026-08-25 ("use it for this month"); old key 401-dead, fresh key intake pending
+    window: {model: monthly-window, status: amber-key}   # amber until fresh key verified live; use-it month ends ~2026-09-25
 
 retired:                           # never routed; presence in candidates lists = drift to fix
   - ollama-cloud routes (kimi-k3-ollama)   # policy OUT

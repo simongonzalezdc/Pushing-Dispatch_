@@ -180,6 +180,22 @@ context_window = 272000
 max_turns = 25
 stall_threshold_seconds = 600
 
+
+[executors.xiaomi-mimo]
+pricing_class = "subscription"
+wrapper = "xiaomi-mimo.sh"
+provider = "xiaomi-mimo"
+model_id = "mimo-v2-pro"
+display_name = "🟣 MiMo"
+color = "purple"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = []
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+context_window = 128000
+max_turns = 20
+stall_threshold_seconds = 300
+
 # EFFORT GRANULARITY DOCTRINE (CEO 2026-08-21): the matrix distinguishes
 # model x reasoning-effort as separate executors (luna=xhigh, terra=high,
 # sol=low). Grow this pattern where data supports it (e.g. sol-high for
