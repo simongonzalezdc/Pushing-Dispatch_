@@ -45,6 +45,13 @@ lanes:
     policy: effort-ladder          # luna -> terra -> sol escalation is the built-in effort dial
     window: {model: calendar_monthly, last_reset: "2026-08-20", cycle_position: week-2}
 
+  commandcode:
+    kind: credit                     # CEO Pro plan (commandcode.ai): $20+/mo, $80 credits, 45+ models
+    executors: [command-code]
+    policy: coding-background        # credit burn-down lane, never refilled (no-purchase law)
+    window: {model: calendar_monthly, last_reset: "2026-08-24", cycle_position: week-1}
+    notes: "CLI auth as simongonzalezdc; provider API OpenAI-compatible; deepseek-v4-flash default. E2E verified 2026-08-24."
+
   minimax:
     plan: PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly; resolves prior unknown)
     kind: subscription

@@ -360,36 +360,37 @@ hard_wall_block_breakout_top = true
 [auto_route]
 # Ordered candidate lists per tier. The router returns the first executor that
 # is mode-allowed AND available AND not in cooldown.
-# Grok 4.5 replaces retired Claude Opus-class work: hard tasks, breakouts, and
-# consults prefer `grok-build`. Unclassified standard work remains Z.ai-first.
-# Within Codex,
-# an unsatisfactory Luna result advances explicitly to Terra high and then, only
-# if justified, Sol low/medium/high. Availability routing cannot infer whether a
-# semantically valid answer was good enough.
-trivial_candidates        = ["ollama-xps-gpu", "nucbox-champion", "kilo-free-auto", "deepseek-v4-flash", "zai-glm", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-standard_candidates       = ["nucbox-champion", "nucbox-ornith", "zai-glm", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build", "agy-gemini-flash"]
-local_general_candidates  = ["nucbox-champion", "nucbox-ornith", "zai-glm", "dsh", "minimax-m3", "codex-luna", "codex-terra", "codex-sol"]
-local_review_candidates   = ["nucbox-champion", "zai-glm", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-local_coding_candidates   = ["nucbox-champion", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3", "codex-luna", "codex-terra", "codex-sol", "grok-build"]
-hard_task_candidates      = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
-hard_breakout_candidates  = ["grok-build", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "agy-gemini-flash", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
-long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "agy-gemini-flash", "grok-build", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "deepseek-v4-pro", "minimax-m3"]
-consult_candidates        = ["nucbox-champion", "nucbox-ornith", "grok-build", "agy-gemini-flash", "kimi-k3-kyanite", "kimi-k3-cli", "deepseek-v4-pro", "codex-luna", "codex-terra", "codex-sol", "zai-glm", "kimi-k3-key"]
+# LOCAL-FIRST DOCTRINE (CEO 2026-08-24: "maximize work to local models; everything
+# on codex/chatgpt/grok comes off those lanes"): nucbox champion + ornith lead every
+# tier they can carry; ornith think-ON leads pure reasoning (2x2: 98.3% GSM8K);
+# command-code = prepaid credit pool for coding; remaining prepaid lanes follow.
+# codex-* and grok-build are EXPLICIT-ONLY (removed from all auto lists; those
+# accounts end Sept 2026 wk1/wk2 — burn-down by direct request only).
+trivial_candidates        = ["nucbox-champion", "ollama-xps-gpu", "nucbox-ornith", "kilo-free-auto", "command-code", "deepseek-v4-flash", "zai-glm", "minimax-m3"]
+standard_candidates       = ["nucbox-champion", "nucbox-ornith", "zai-glm", "command-code", "kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "deepseek-v4-pro", "deepseek-v4-flash", "minimax-m3", "agy-gemini-flash"]
+local_general_candidates  = ["nucbox-champion", "nucbox-ornith", "zai-glm", "command-code", "dsh", "minimax-m3"]
+local_review_candidates   = ["nucbox-champion", "nucbox-ornith", "zai-glm", "deepseek-v4-pro", "command-code"]
+local_coding_candidates   = ["nucbox-champion", "command-code", "zai-glm", "dsh", "deepseek-v4-pro", "minimax-m3"]
+hard_task_candidates      = ["nucbox-ornith", "nucbox-champion", "kimi-k3-kyanite", "deepseek-v4-pro", "agy-gemini-flash", "kimi-k3-cli"]
+hard_breakout_candidates  = ["nucbox-champion", "nucbox-ornith", "kimi-k3-kyanite", "deepseek-v4-pro", "agy-gemini-flash", "kimi-k3-cli"]
+long_context_candidates   = ["kimi-k3-kyanite", "kimi-k3-cli", "kimi-k3-key", "nucbox-champion", "agy-gemini-flash", "deepseek-v4-pro", "minimax-m3"]
+consult_candidates        = ["nucbox-champion", "nucbox-ornith", "zai-glm", "kimi-k3-kyanite", "deepseek-v4-pro", "agy-gemini-flash", "kimi-k3-cli", "kimi-k3-key"]
 
 # Back-compat single-value keys (read only if the matching *_candidates list is
 # absent). Kept so older tooling / partial matrices still resolve.
+# Local-first 2026-08-24: defaults were codex-luna/grok-build — now local lanes.
 long_context_executor = "kimi-k3-cli"
 long_context_threshold_tokens = 50000
-trivial_executor = "ollama-xps-gpu"
+trivial_executor = "nucbox-champion"
 trivial_threshold_tokens = 5000
 local_general_max_tokens = 24000
 local_review_max_tokens = 5000
 local_coding_max_tokens = 16000
-hard_coding_breakout_executor = "grok-build"
-hard_coding_task_executor = "grok-build"
-default_breakout = "grok-build"
-default_task = "codex-luna"
-default_consult = "grok-build"
+hard_coding_breakout_executor = "nucbox-champion"
+hard_coding_task_executor = "nucbox-ornith"
+default_breakout = "nucbox-champion"
+default_task = "nucbox-champion"
+default_consult = "nucbox-ornith"
 
 # Learning loop: when true, candidate ordering is re-biased by outcomes.jsonl
 # history (success rate / cost per tier). Off by default; enable after data
