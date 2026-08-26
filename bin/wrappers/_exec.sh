@@ -826,7 +826,8 @@ req = urllib.request.Request(
     base_url + path,
     data=json.dumps(body).encode("utf-8"),
     headers={
-        "Authorization": f"Bearer {token}",
+        ("api-key" if os.environ.get("OPENAI_COMPAT_AUTH_STYLE") == "api-key" else "Authorization"):
+            (token if os.environ.get("OPENAI_COMPAT_AUTH_STYLE") == "api-key" else f"Bearer {token}"),
         "Content-Type": "application/json",
         "Accept": "application/json",
     },
