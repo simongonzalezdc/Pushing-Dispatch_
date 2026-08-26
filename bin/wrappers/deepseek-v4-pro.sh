@@ -16,6 +16,15 @@ export OPENAI_COMPAT_TIMEOUT="${OPENAI_COMPAT_TIMEOUT:-600}"
 
 ce_parse_args "$@"
 if [[ "$CE_DRY_RUN" -ne 1 ]]; then
+    # 2026-08-26: prefer the DeepSeek platform key (CEO account, browser-intaked);
+    # ollama_cloud fallback retained for the legacy lane
+    ds_key="$(security find-generic-password -s pushing-dispatch -a deepseek_api_key -w 2>/dev/null || true)"
+    if [[ -n "$ds_key" ]]; then
+        export OPENAI_COMPAT_BASE_URL="${DS_BASE_URL:-https://api.deepseek.com}"
+        export OPENAI_COMPAT_API_KEY="$ds_key"
+        ce_run_openai_compatible "$@"
+        return $?
+    fi
     ds_key="${OLLAMA_API_KEY:-}"
     if [[ -z "$ds_key" ]]; then
         ds_key="$(ce_load_api_key "pushing-dispatch" "ollama_api_key" "OLLAMA_API_KEY" 2>/dev/null || true)"
