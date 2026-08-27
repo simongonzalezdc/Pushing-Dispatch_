@@ -104,6 +104,30 @@ context_window = 1000000
 max_turns = 25
 stall_threshold_seconds = 300
 
+[executors.zai-glm-flash]
+pricing_class = "prepaid-yearly"
+# GLM-5.3-Flash (released 2026-08-26; 320B/18B-active MoE, natively multimodal)
+# via ZCode under isolated HOME ~/.zcode/flash-home — same Coding Plan quota as
+# zai-glm (zero marginal cost, same fair-use/1313 burst law). The engine applies
+# ZCODE_HOME (see _exec.sh ce_run_zcode); wrapper refuses on model-pin drift.
+key_env = "Z_AI_API_KEY"       # same key as zai-glm; runtime auth = apiKey inside flash-home config
+key_account = "z_ai_api_key"
+wrapper = "zai-flash.sh"
+provider = "zai"
+model_id = "glm-5.3-flash"
+display_name = "⚡ GLM Flash"
+color = "yellow"
+allowed_modes = ["breakout", "task", "consult"]
+capabilities = []  # same rule as zai-glm: do not default visual-QA to this lane
+allowed_seats_in_breakout = ["engineer", "review"]
+# Family-default numbers carried from zai-glm; Flash-specific limits unverified —
+# label any quality claims accordingly (P13).
+default_thinking_tokens = 32768
+thinking_hard_ceiling = 65536
+context_window = 1000000
+max_turns = 25
+stall_threshold_seconds = 300
+
 [executors.minimax-m3]
 pricing_class = "prepaid-yearly"
 wrapper = "gjc-minimax-m3.sh"

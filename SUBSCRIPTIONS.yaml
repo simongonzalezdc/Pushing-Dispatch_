@@ -18,13 +18,14 @@ lanes:
   zai:
     plan: max — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)
     kind: subscription
-    executors: [zai-glm]
+    executors: [zai-glm, zai-glm-flash]
     policy: primary-glm-runtime
     window:
       model: fair_use              # 1313 = enforcement, NOT billing — no predictable reset
       lockout_class: hold          # route away + cool-down; never treat as timed quota
       evidence: "GWS thread user_feedback@z.ai 2026-08-19; linux.do 1313 threads"
     risk: "our own agent activity IS the flagged high-frequency pattern — never burst, never share tokens"
+    notes: "zai-glm-flash (added 2026-08-26) = GLM-5.3-Flash via isolated flash-home; shares this fair-use window. 1313 ticket CLOSED 08-26 (lane restored, live-probe-proven)." 
 
   grok:
     plan: $30  # SuperGrok Individual tier — price INF:CEO statement; features READ:grok.com/supergrok

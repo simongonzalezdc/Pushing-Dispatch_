@@ -629,6 +629,13 @@ ce_run_zcode() {
         cmd+=(--cwd "$CE_CWD")
     fi
 
+    # Isolated HOME pins the zcode model without touching the live config
+    # (zcode has no --model flag; --settings is documented-but-rejected).
+    # Used by zai-glm-flash. Recipe: ~/.agents/docs/ZCODE-GLM.md 2026-08-26 addendum.
+    if [[ -n "${ZCODE_HOME:-}" ]]; then
+        cmd=(env HOME="$ZCODE_HOME" "${cmd[@]}")
+    fi
+
     if [[ "$CE_DRY_RUN" -eq 1 ]]; then
         echo "DRY RUN - Would execute ZCode (GLM ${ZCODE_MODEL:-glm-5.3})"
         return 0
