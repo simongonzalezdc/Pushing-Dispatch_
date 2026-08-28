@@ -22,7 +22,7 @@ stanzas in `dispatch_matrix.toml`.
 | `codex-sol` (🟣 Sol) | scarce | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low) | Yes | Exceptional explicit fallback; escalate low → medium → high |
 | `codex-sol-high` (🟣 Sol High) | scarce | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (high) | Yes | Effort-split variant of `codex-sol` (effort-granularity doctrine) |
 | `grok-build` (🟢 Grok) | scarce | Official Grok CLI | `grok-4.6` | Yes | Explicit-only since 2026-08-24; accounts end Sept 2026 wk1/wk2 — burn-down by direct request |
-| `xiaomi-mimo` (🟣 MiMo) | subscription | Xiaomi MiMo OpenAI-compatible API; Keychain key `xiaomi_api_key`, `api-key` header | `mimo-v2-pro` in the stanza; wrapper default `mimo-v2.5-pro` | No | Reactivated 2026-08-25 (CEO paid use-it month); amber until the fresh key is verified live |
+| `xiaomi-mimo` (🟣 MiMo) | subscription | Xiaomi MiMo OpenAI-compatible API; Keychain key `xiaomi_api_key`, `api-key` header | `mimo-v2.5-pro` (stanza aligned to wrapper default, eeee4cc) | No | Reactivated 2026-08-25 (CEO paid use-it month); amber until the fresh key is verified live |
 | `agy-gemini-flash` (🟦 Gemini Flash) | free | AGY only | Gemini 3.7 Flash (Medium — medium-only per CEO 2026-08-22) | Yes | Workspace-included Gemini lane |
 | `kilo-free-auto` (🩵 Kilo DS-Flash) | free | Native Kilo CLI | `kilo/kilo-auto/free` | No | Used only once Kilo account credits are exhausted; verify the rotating monthly `:free` model live before use |
 | `dsh` (🐬 DSH) | credit | DeepSeek Harness headless (`~/.dsh/settings.yaml`) | `deepseek-v4-flash` | No | Flash-ONLY until CEO notice (Pro price hike); task/consult |
