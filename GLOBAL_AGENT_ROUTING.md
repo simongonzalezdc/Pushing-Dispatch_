@@ -69,10 +69,10 @@ Current provider truth:
 - When any model's primary search path fails or yields unusable results, retry through the globally configured DuckDuckGo `ddg` MCP. If DDG also fails, report the search failure; never fabricate results, URLs, or citations.
 - GJC is the backup chat path: `gjc --model zai/glm-5.3` or `gjc --model minimax-code/minimax-m3`. Not the GLM harness. Canonical GLM is `zcode -p` — `docs/ZCODE.md`.
 - `claude-minimax` is the direct MiniMax M3 fallback.
-- Kimi K3 is split by access boundary: `kimi-k3-cli` always uses the official Kimi CLI subscription session, while `kimi-k3-ollama` uses only Ollama Cloud and remains unavailable until Ollama's live catalog exposes K3. Hermes may promote only the Ollama lane to its native main model; never exchange credentials or silently substitute lanes.
+- Kimi K3 is split by access boundary: `kimi-k3-cli` always uses the official Kimi CLI subscription session. The `kimi-k3-ollama` lane was attic'd 2026-08-20 and Ollama Cloud routes are policy-OUT in `SUBSCRIPTIONS.yaml` — do not restore it. Never exchange credentials or silently substitute lanes.
 - Gemini models are exclusive to AGY (`agy-gemini-flash` only — 3.7 Flash is the sole allowed AGY model); Gemini CLI and legacy direct-API lanes are retired.
-- Grok Build is the `grok-build` executor through xAI's official `grok` CLI, pinned to `grok-4.6`. It replaces retired Claude Opus-class work: hard implementation, deep architecture, adversarial review, breakout, and consult tiers prefer Grok. It is vision-capable, uses native OAuth or `XAI_API_KEY`, transports briefs by prompt file, and runs with explicit `workspace`/`read-only` sandbox profiles. Do not route through community Grok clients.
-- Ordinary work remains GPT-5.6 Luna-first. Within Codex, retry an unusable Luna result with Terra high; use Sol only when justified, escalating low, medium, then high and stopping after high. Auto-routing cannot judge semantic answer quality. GPT-5.5, Codex OSS, NUCBox Gemma, and Anthropic Opus are retired.
+- Grok Build is the `grok-build` executor through xAI's official `grok` CLI, pinned to `grok-4.6`. It is vision-capable, uses native OAuth or `XAI_API_KEY`, transports briefs by prompt file, and runs with explicit `workspace`/`read-only` sandbox profiles. Do not route through community Grok clients. Since the 2026-08-24 local-first flip it is **explicit-only**: removed from every auto-route list; request it by name only (the OpenAI/Grok accounts end Sept 2026 wk1/wk2 — burn-down by direct request).
+- Ordinary work is **local-first**: `nucbox-champion` is the default task/breakout executor and `nucbox-ornith` the default consult executor (auto_route, 2026-08-24). Codex (`codex-luna`/`codex-terra`/`codex-sol`) is explicit-only too — never auto-selected. Within an explicit Codex request, retry an unusable Luna result with Terra high; use Sol only when justified, escalating low, medium, then high and stopping after high. GPT-5.5, Codex OSS, NUCBox Gemma, and Anthropic Opus are retired.
 - **Ornith sticky leaf (`unsloth-nucbox`):** RETIRED — replaced by the dual-resident executors below.
 - On-demand dual-load Qwen workcells on `:8892`: RETIRED — replaced by `nucbox-ornith` on `:46381`.
 
@@ -100,12 +100,16 @@ Both are zero-cost. Both have vision. Both load in seconds.
 - The champion is busy or you want to parallelize across local models.
 
 **Route to cloud (not local) when:**
-- The task is a hard breakout requiring frontier intelligence.
+- Local lanes are saturated, in cooldown, or unavailable — the router walks the
+  candidate list in order, so cloud lanes only fire after the local leads.
 - The task is vision-critical (local vision works but cloud is better).
-- Being wrong costs more than cloud credits.
+- Context exceeds what the locals carry — the long-context tier leads Kimi K3
+  (1M window), not the NUC.
 
-**Quick rule of thumb:** iterative → champion, one-shot → ornith, hard → cloud.
-- Kilo is CLI-only and free-only: the durable lane is `kilo-free-auto` using `kilo/kilo-auto/free`. Never fall through to a paid Kilo model; rotating monthly `:free` models must be verified live before use.
+**Quick rule of thumb:** iterative → champion, one-shot → ornith, hard task →
+ornith then champion, hard breakout → champion then ornith (all local first),
+long-context → Kimi.
+- Kilo defaults to **deepseek-v4-flash while account credit remains** ($50/mo, resets the 15th); the `kilo-free-auto` lane (`kilo/kilo-auto/free`) is used only once credits are exhausted. Kilo can also back up Kimi-K3 when the canonical Kimi account runs out of usage — check balance before heavy fan-outs late in the cycle. Rotating monthly `:free` models must be verified live before use.
 
 ## Registered Local Surfaces
 
