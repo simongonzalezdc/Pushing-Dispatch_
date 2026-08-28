@@ -1,9 +1,13 @@
 # SCHEMA.md — MODELS-LEDGER.json
 
 Per-executor model intelligence for the MODEL-INTEL loop (`.omx/plans/model-intel-loop.md`, P1).
-One row per executor in `dispatch_matrix.toml`. The matrix stays the source of truth for
-configuration; this ledger is the intelligence overlay (pricing class, provenance, later:
-benchmarks + our outcome scorecard, filled by research sweeps and P2+ components).
+One row per executor in `dispatch_matrix.toml`. Since S4 (2026-08-20) every
+executor stanza in the matrix carries `pricing_class` — the matrix is the source
+of truth for configuration INCLUDING pricing_class (hard-error, no silent
+default); ledger pricing-class rows derive from it at the row's `provenance` sha.
+What stays ledger-side: provenance, `first_seen`, stewardship `notes`, and the
+`pricing_class_sources` evidence list; benchmarks + our outcome scorecard are
+later versions (P2+), filled by research sweeps and P2+ components.
 
 ## Top level
 
