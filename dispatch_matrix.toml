@@ -118,7 +118,7 @@ model_id = "glm-5.3-flash"
 display_name = "⚡ GLM Flash"
 color = "yellow"
 allowed_modes = ["breakout", "task", "consult"]
-capabilities = []  # same rule as zai-glm: do not default visual-QA to this lane
+capabilities = ["vision"]  # same rule as zai-glm: do not default visual-QA to this lane
 allowed_seats_in_breakout = ["engineer", "review"]
 # Family-default numbers carried from zai-glm; Flash-specific limits unverified —
 # label any quality claims accordingly (P13).
