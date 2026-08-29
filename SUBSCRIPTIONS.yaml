@@ -16,7 +16,7 @@ lanes:
     notes: "Q4_K_XL @262k q4-KV champion; hardware-bound, never quota-dead"
 
   zai:
-    plan: max — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)
+    plan: "max — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)"
     kind: subscription
     executors: [zai-glm, zai-glm-flash]
     policy: primary-glm-runtime
@@ -54,20 +54,20 @@ lanes:
     notes: "CLI auth as simongonzalezdc; provider API OpenAI-compatible; deepseek-v4-flash default. E2E verified 2026-08-24."
 
   minimax:
-    plan: PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly; resolves prior unknown)
+    plan: "PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly; resolves prior unknown)"
     kind: subscription
     executors: [minimax-m3]
     window: {model: calendar_monthly, observed: never-exhausted}
 
   kilo:
-    plan: kilo-pass $49 — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly); personal credits = pay-as-you-go balance
+    plan: "kilo-pass $49 — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly); personal credits = pay-as-you-go balance"
     kind: credits
     executors: [kilo-free, kilo]
     window: {model: dual_bucket, pass_spent: 36, pass_total: 49, bonus: 24.50, personal: 12.88, floor: 5.00}
     evidence: "CEO-pasted kilo-cli balance 2026-08-20 (authoritative)"
 
   deepseek:
-    plan: api-credits (MEASURED 2026-08-20: $17.01 balance via api.deepseek.com/user/balance)
+    plan: "api-credits (MEASURED 2026-08-20: $17.01 balance via api.deepseek.com/user/balance)"
     kind: credits
     executors: [dsh, deepseek-v4-pro, deepseek-v4-flash]
     window: {model: balance, balance_usd: 17.01, floor: 2.00}
@@ -75,7 +75,7 @@ lanes:
     meter: budget.jsonl
 
   kimi:
-    plan: allegretto — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)
+    plan: "allegretto — PREPAID YEARLY (CEO 2026-08-21: sunk, $0 incremental monthly)"
     kind: subscription
     executors: [kimi-k3-cli, kimi-k3-key, kimi-k3-kyanite]
     window: {model: calendar_monthly, next_renewal: "2026-09-17"}
