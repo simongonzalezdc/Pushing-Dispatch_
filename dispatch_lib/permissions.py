@@ -23,7 +23,8 @@ except ImportError:
 
 
 # Executors that may never dispatch sub-workers
-LEAF_EXECUTORS = {"codex-luna", "minimax-m3", "agy-gemini-flash", "kilo-free-auto", "lm-studio"}
+LEAF_EXECUTORS = {"codex-luna", "minimax-m3", "agy-gemini-flash", "kilo-free-auto",
+                  "lm-studio", "zai-glm-flash"}
 
 # Provider cost tiers: metered providers charge per-token (budget-capped),
 # subscription providers have flat-rate access (unbounded per-call cost).
@@ -41,6 +42,7 @@ _EXECUTOR_PROVIDERS = {
     "kimi-k3-key": "kimi-cli",
     "kimi-k3-ollama": "ollama-cloud",
     "zai-glm": "zai",
+    "zai-glm-flash": "zai",
     "minimax-m3": "gjc",
     "codex-luna": "openai-codex",
     "codex-terra": "openai-codex",
@@ -51,6 +53,13 @@ _EXECUTOR_PROVIDERS = {
     "deepseek-v4-flash": "ollama-cloud",
     "kilo-free-auto": "kilo-cli",
     "lm-studio": "lm-studio",
+    "codex-sol-high": "openai-codex",
+    "grok-build": "grok-cli",
+    "command-code": "command-code",
+    "xiaomi-mimo": "xiaomi-mimo",
+    "ollama-xps-gpu": "ollama",
+    "nucbox-champion": "unsloth-openai",
+    "nucbox-ornith": "unsloth-openai",
 }
 
 

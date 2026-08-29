@@ -448,7 +448,9 @@ learning = true   # G2 (CEO 2026-08-20): re-bias candidate order from outcomes.j
 max_depth = 2
 
 # Feature flag: set DISPATCH_NESTED=1 env var to enable.
-# When off, --parent-id and --depth flags are silently ignored.
+# When off, --parent-id is REJECTED (NESTING_DISABLED) — a child spawned with
+# parent linkage while ungated is a bypass hazard (2026-08-29 fix); deliberate
+# test override: DISPATCH_ALLOW_UNGATED_PARENT=1.
 
 [nested_dispatch.permissions]
 # Format: parent.child = true|false
@@ -476,6 +478,11 @@ max_depth = 2
 "zai-glm.kilo-free-auto" = true
 "minimax-m3.codex-luna" = true
 "minimax-m3.kilo-free-auto" = true
+# zai-glm-flash (GLM-5.3-Flash, provider zai — same subscription as zai-glm;
+# leaf: never a parent). Cost-symmetric for all subscription parents.
+"codex-sol.zai-glm-flash" = true
+"codex-terra.zai-glm-flash" = true
+"zai-glm.zai-glm-flash" = true
 
 # ============================================================
 # Resident champion lane (COO 2026-08-20) — the ONE local model

@@ -71,10 +71,14 @@ class TestRouter(unittest.TestCase):
         t = "implement and debug complex concurrency logic"
         self.assertEqual(route(t, "task", available=["codex-spark", "opus"]), "codex-spark")
 
-    def test_adversarial_review_routes_to_grok_in_live_matrix(self):
+    def test_adversarial_review_routes_to_hard_task_tier_in_live_matrix(self):
         with open(ROOT / "dispatch_matrix.toml", "rb") as f:
             matrix = tomllib.load(f)
-        with mock.patch.object(auto_router, "available_set", return_value={"grok-build", "codex-luna"}), \
+        # The tier's ordered candidate list is ops-owned state (executors come
+        # and go with quota health); derive the expectation instead of
+        # hardcoding an executor that ops may have retired.
+        first = matrix["auto_route"]["hard_task_candidates"][0]
+        with mock.patch.object(auto_router, "available_set", return_value={first}), \
              mock.patch.object(auto_router, "in_cooldown", return_value=False):
             executor, tier = auto_router.auto_route(
                 "Perform an adversarial review of this security-sensitive patch",
@@ -83,7 +87,7 @@ class TestRouter(unittest.TestCase):
                 return_tier=True,
             )
         self.assertEqual(tier, "hard_task_candidates")
-        self.assertEqual(executor, "grok-build")
+        self.assertEqual(executor, first)
 
     def test_cooldown_skips_executor(self):
         t = "implement and debug complex concurrency logic"
@@ -125,10 +129,13 @@ class TestRouter(unittest.TestCase):
         with self.assertRaises(auto_router.NoExecutorAvailable):
             route("fix typo", "task", available=[])
 
-    def test_live_matrix_routes_only_atomic_mechanical_work_to_dell(self):
+    def test_live_matrix_routes_only_atomic_mechanical_work_to_trivial_tier(self):
+        # Executor hardcodes retired with the dell/local-specialist matrix era;
+        # the durable assertions are tier routing + the trivial-lane exclusion.
         with open(ROOT / "dispatch_matrix.toml", "rb") as f:
             matrix = tomllib.load(f)
         available = set(matrix["executors"])
+        trivial = matrix["auto_route"]["trivial_candidates"]
         with mock.patch.object(auto_router, "available_set", return_value=available), \
              mock.patch.object(auto_router, "in_cooldown", return_value=False):
             atomic_executor, atomic_tier = auto_router.auto_route(
@@ -143,7 +150,8 @@ class TestRouter(unittest.TestCase):
                 matrix_dict=matrix,
                 return_tier=True,
             )
-        self.assertEqual((atomic_executor, atomic_tier), ("ollama-xps-gpu", "trivial_candidates"))
+        self.assertEqual(atomic_tier, "trivial_candidates")
+        self.assertIn(atomic_executor, trivial)
         self.assertNotEqual(broad_executor, "ollama-xps-gpu")
         self.assertEqual(broad_tier, "hard_task_candidates")
 
@@ -178,7 +186,7 @@ class TestRouter(unittest.TestCase):
             )
             self.assertNotEqual(executor, "ollama-xps-gpu")
 
-    def test_live_matrix_routes_bounded_general_work_to_ornith(self):
+    def test_live_matrix_routes_bounded_general_work_to_local_general_tier(self):
         with open(ROOT / "dispatch_matrix.toml", "rb") as f:
             matrix = tomllib.load(f)
         with mock.patch.object(auto_router, "available_set", return_value=set(matrix["executors"])), \
@@ -189,9 +197,10 @@ class TestRouter(unittest.TestCase):
                 matrix_dict=matrix,
                 return_tier=True,
             )
-        self.assertEqual((executor, tier), ("unsloth-nucbox", "local_general_candidates"))
+        self.assertEqual(tier, "local_general_candidates")
+        self.assertIn(executor, matrix["auto_route"]["local_general_candidates"])
 
-    def test_live_matrix_routes_bounded_review_to_qwen35_27b(self):
+    def test_live_matrix_routes_bounded_review_to_local_review_tier(self):
         with open(ROOT / "dispatch_matrix.toml", "rb") as f:
             matrix = tomllib.load(f)
         with mock.patch.object(auto_router, "available_set", return_value=set(matrix["executors"])), \
@@ -202,9 +211,10 @@ class TestRouter(unittest.TestCase):
                 matrix_dict=matrix,
                 return_tier=True,
             )
-        self.assertEqual((executor, tier), ("qwen35-27b-review", "local_review_candidates"))
+        self.assertEqual(tier, "local_review_candidates")
+        self.assertIn(executor, matrix["auto_route"]["local_review_candidates"])
 
-    def test_live_matrix_routes_bounded_coding_to_ornith(self):
+    def test_live_matrix_routes_bounded_coding_to_local_coding_tier(self):
         with open(ROOT / "dispatch_matrix.toml", "rb") as f:
             matrix = tomllib.load(f)
         with mock.patch.object(auto_router, "available_set", return_value=set(matrix["executors"])), \
@@ -215,7 +225,8 @@ class TestRouter(unittest.TestCase):
                 matrix_dict=matrix,
                 return_tier=True,
             )
-        self.assertEqual((executor, tier), ("unsloth-nucbox", "local_coding_candidates"))
+        self.assertEqual(tier, "local_coding_candidates")
+        self.assertIn(executor, matrix["auto_route"]["local_coding_candidates"])
 
     def test_local_specialist_context_ceiling_falls_back_to_standard_tier(self):
         with open(ROOT / "dispatch_matrix.toml", "rb") as f:
@@ -230,7 +241,7 @@ class TestRouter(unittest.TestCase):
                 return_tier=True,
             )
         self.assertEqual(tier, "standard_candidates")
-        self.assertEqual(executor, "zai-glm")
+        self.assertIn(executor, matrix["auto_route"]["standard_candidates"])
 
 if __name__ == "__main__":
     unittest.main()

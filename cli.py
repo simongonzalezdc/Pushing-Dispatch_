@@ -182,8 +182,17 @@ def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int
         return True, "", 0
 
     if not is_nested_dispatch_enabled():
-        # Silently ignore nesting flags when feature is off
-        return True, "", 0
+        # Ungated-parent bypass hazard: a --parent-id worker spawned while the
+        # feature is off runs as an ungated top-level worker while still
+        # carrying parent linkage in its status/registry rows. Reject loudly;
+        # deliberate use sets DISPATCH_NESTED=1 (or the explicit test override).
+        if os.environ.get("DISPATCH_ALLOW_UNGATED_PARENT") == "1":
+            return True, "", 0
+        return False, (
+            "NESTING_DISABLED: --parent-id given but nested dispatch is off "
+            "(DISPATCH_NESTED unset). The child would spawn ungated. "
+            "Enable DISPATCH_NESTED=1 or drop --parent-id."
+        ), 5
 
     # Depth check
     depth_cap = get_depth_cap()
