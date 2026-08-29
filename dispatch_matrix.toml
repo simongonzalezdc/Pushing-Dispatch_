@@ -299,6 +299,9 @@ stall_threshold_seconds = 600
 # DeepSeek Harness one-shot lane; model/provider from ~/.dsh/settings.yaml.
 # CEO 2026-08-21: DSH runs dsv4-FLASH ONLY until further notice (Pro price
 # hike). Do not point this lane at Pro without a CEO word.
+# CEO 2026-08-29: DSH IS OUT OF CREDIT — lane dead until refilled (never-pay
+# law: no auto top-up). ALL deepseek-flash requests route via kilo-cli
+# (kilo-free-auto) instead. Do not dispatch to dsh.
 [executors.dsh]
 pricing_class = "credit"
 wrapper = "dsh-headless.sh"
