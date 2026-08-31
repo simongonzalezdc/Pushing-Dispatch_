@@ -22,7 +22,7 @@ stanzas in `dispatch_matrix.toml`.
 | `codex-sol` (🟣 Sol) | scarce | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (low) | Yes | Exceptional explicit fallback; escalate low → medium → high |
 | `codex-sol-high` (🟣 Sol High) | scarce | Codex CLI, ChatGPT subscription | GPT-5.6 Sol (high) | Yes | Effort-split variant of `codex-sol` (effort-granularity doctrine) |
 | `grok-build` (🟢 Grok) | scarce | Official Grok CLI | `grok-4.6` | Yes | Explicit-only since 2026-08-24; accounts end Sept 2026 wk1/wk2 — burn-down by direct request |
-| `xiaomi-mimo` (🟣 MiMo) | subscription | Xiaomi MiMo OpenAI-compatible API; Keychain key `xiaomi_api_key`, `api-key` header | `mimo-v2.5-pro` (stanza aligned to wrapper default, eeee4cc) | No | Reactivated 2026-08-25 (CEO paid use-it month); amber until the fresh key is verified live |
+| `xiaomi-mimo` (🟣 MiMo) | subscription | Xiaomi MiMo OpenAI-compatible API; Keychain key `xiaomi_api_key`, `api-key` header | `mimo-v2.5-pro` (stanza aligned to wrapper default, eeee4cc) | No | GREEN 2026-08-30: plan region = `token-plan-sgp` (wrapper default fixed from cn); dedicated `tp-` key live-verified (LANE-OK, prompt cache live); use-it month ends 2026-09-25. Platform `sk-` keys are PAYG-only, cannot mix |
 | `agy-gemini-flash` (🟦 Gemini Flash) | free | AGY only | Gemini 3.7 Flash (Medium — medium-only per CEO 2026-08-22) | Yes | Workspace-included Gemini lane |
 | `kilo-free-auto` (🩵 Kilo DS-Flash) | free | Native Kilo CLI | `kilo/kilo-auto/free` | No | Used only once Kilo account credits are exhausted; verify the rotating monthly `:free` model live before use |
 | `dsh` (🐬 DSH) | credit | DeepSeek Harness headless (`~/.dsh/settings.yaml`) | `deepseek-v4-flash` | No | Flash-ONLY until CEO notice (Pro price hike); task/consult |
@@ -80,7 +80,7 @@ for harness maintenance. Do not teach `claude -p` as the GLM path.
 - Grok uses the official CLI's browser/OAuth session or `XAI_API_KEY`.
 - Kimi, AGY, GJC, Kilo, and LM Studio use their native harness authentication (`kilo_api_key` in Keychain for Kilo's gateway lane).
 - `xiaomi-mimo` uses Keychain `xiaomi_api_key` sent as an `api-key` header, never Bearer.
-- `command-code` uses the authenticated commandcode.ai CLI session (Pro plan).
+- `command-code` uses the authenticated commandcode.ai CLI session (CEO plan = Go: $1/mo, $10 credits/mo, credits never expire; the old '$80 credits/mo Pro plan' matrix comment was the wrong plan tier).
 - `deepseek-v4-pro` prefers the DeepSeek platform key (Keychain `deepseek_api_key`, `api.deepseek.com`) and falls back to the Ollama Cloud key.
 - Do not paste credentials into the matrix or documentation.
 

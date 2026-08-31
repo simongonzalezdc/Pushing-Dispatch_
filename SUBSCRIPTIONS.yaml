@@ -98,8 +98,16 @@ lanes:
   xiaomi-mimo:
     kind: subscription
     executors: [xiaomi-mimo]
-    policy: active                  # CEO paid 2026-08-25 ("use it for this month"); old key 401-dead, fresh key intake pending
-    window: {model: monthly-window, status: amber-key}   # amber until fresh key verified live; use-it month ends ~2026-09-25
+    policy: active                  # CEO paid 2026-08-25 ("use it for this month"); GREEN 2026-08-30
+    window: {model: monthly-window, status: green}   # use-it month ends 2026-09-25
+    evidence: "LIVE-VERIFIED 2026-08-30: dedicated tp- key + region-bound endpoint token-plan-sgp/v1 -> HTTP 200, LANE-OK, prompt cache live. Prior 401s were wrong-REGION (wrapper default was token-plan-cn), not a dead key. Platform sk- keys are pay-as-you-go ONLY and cannot be mixed with the Token Plan tp- key (a spare sk- 'pushing-dispatch' key exists on the account; PAYG balance 0)."
+
+  deepinfra:
+    kind: budget
+    executors: [deepinfra-dsv4flash]
+    policy: active                  # CEO 2026-08-30: "$40 budget total all used for deepseek v4 flash 0731"
+    window: {model: usd-cap, cap_usd: 40.0, ledger: "~/.sinter/provider-budgets.json"}   # server-reported estimated_cost per call; fail-closed at cap
+    evidence: "LIVE-VERIFIED 2026-08-30: Bearer key -> api.deepinfra.com/v1/openai, HTTP 200, LANE-OK, exact per-call usage.estimated_cost returned server-side. Earmark = deepseek-ai/DeepSeek-V4-Flash-0731 ONLY (ledger allowedModels); other DeepInfra models would burn the earmark and are blocked."
 
 retired:                           # never routed; presence in candidates lists = drift to fix
   - ollama-cloud routes (kimi-k3-ollama)   # policy OUT

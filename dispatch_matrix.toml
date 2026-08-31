@@ -209,11 +209,34 @@ stall_threshold_seconds = 600
 pricing_class = "subscription"
 wrapper = "xiaomi-mimo.sh"
 provider = "xiaomi-mimo"
+key_env = "XIAOMI_API_KEY"      # dedicated Token Plan tp- key; platform sk- keys CANNOT be substituted
+key_account = "xiaomi_api_key"
 model_id = "mimo-v2.5-pro"  # aligned to wrapper default (eeee4cc, 08-26); stanza was stale
 display_name = "🟣 MiMo"
 color = "magenta"
 allowed_modes = ["breakout", "task", "consult"]
 capabilities = []
+allowed_seats_in_breakout = ["engineer"]
+default_thinking_tokens = 0
+context_window = 128000
+max_turns = 20
+stall_threshold_seconds = 300
+
+# DeepInfra — CEO 2026-08-30: $40 TOTAL account budget, earmarked entirely
+# for DeepSeek-V4-Flash-0731. Server-reported per-call USD (usage.estimated_
+# cost) accumulates in sinter's provider-budgets ledger, which fail-closes
+# api.deepinfra.com at $40. NEVER route other models on this lane.
+[executors.deepinfra-dsv4flash]
+pricing_class = "budget"
+budget_cap_usd = 40.0
+wrapper = "deepinfra.sh"
+provider = "deepinfra"
+key_env = "DEEPINFRA_API_KEY"
+key_account = "deepinfra_api_key"
+model_id = "deepseek-ai/DeepSeek-V4-Flash-0731"
+display_name = "🔵 DSF-0731"
+color = "blue"
+allowed_modes = ["task"]
 allowed_seats_in_breakout = ["engineer"]
 default_thinking_tokens = 0
 context_window = 128000
