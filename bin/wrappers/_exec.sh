@@ -18,6 +18,7 @@ set -euo pipefail
 CE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CE_REPO_ROOT="$(cd "$CE_SCRIPT_DIR/../.." && pwd)"
 CE_DISPATCH_ROOT="${DISPATCH_ROOT:-$HOME/.local/share/pushing-dispatch}"
+mkdir -p "$CE_DISPATCH_ROOT/logs" "$CE_DISPATCH_ROOT/status" "$CE_DISPATCH_ROOT/questions" 2>/dev/null || true
 CE_PACKS_DIR="${DISPATCH_PACKS_DIR:-$CE_REPO_ROOT/dispatch_packs}"
 CE_PROMPT_TEMPLATE="$CE_SCRIPT_DIR/executor_prompt.md"
 
