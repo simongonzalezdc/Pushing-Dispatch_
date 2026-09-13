@@ -19,27 +19,37 @@ TASK_FILE="/tmp/dispatch-task-$$.txt"
 
 ce_parse_args "$@"
 
-# Write the task to a file (handles quoting)
-printf '%s' "$CE_TASK" > "$TASK_FILE"
+# Retained at the path the status file's log_path already advertises; stdout
+# alone is not evidence (dispatch task start attaches it to DEVNULL).
+LOG_FILE="$CE_DISPATCH_ROOT/logs/${CE_WORKER_ID}.log"
 
-# Execute via tokflint with --yolo (no confirmation gates)
-timeout "${CHAMPION_TIMEOUT:-900}" python3 "$TOKFLINT_DIR/tokflint.py" run \
+# Write the task to a file (handles quoting). Append the terminal-status
+# contract so the finalize gate can require the worker's own token
+# (same doctrine as ce_run_zcode; without it this lane could never
+# honestly report anything but the wrapper's hardcoded string).
+printf '%s\n\nOutput contract: your final line must be exactly "Status: DONE", "Status: DONE_WITH_CONCERNS", "Status: NEEDS_GUIDANCE", or "Status: BLOCKED", in English.\n' "$CE_TASK" > "$TASK_FILE"
+
+# Execute via tokflint with --yolo (no confirmation gates), inside the
+# dispatched --cwd so the harness boots in the assigned checkout. Ignoring
+# CE_CWD anchored w-8027-task to the dispatcher's live checkout and it read
+# the old org-bus tree instead of the assigned worktree.
+EXIT_CODE=0
+( cd "$CE_CWD" && timeout "${CHAMPION_TIMEOUT:-900}" python3 "$TOKFLINT_DIR/tokflint.py" run \
   --task "$(cat "$TASK_FILE")" \
-  --yolo \
-  > /tmp/dispatch-result-$$.log 2>&1
-EXIT_CODE=$?
+  --yolo ) > "$LOG_FILE" 2>&1 || EXIT_CODE=$?
 
 rm -f "$TASK_FILE"
 
 if [[ $EXIT_CODE -ne 0 ]]; then
     echo "Error: tokflint exited $EXIT_CODE" >&2
-    tail -5 /tmp/dispatch-result-$$.log >&2
-    rm -f /tmp/dispatch-result-$$.log
+    tail -5 "$LOG_FILE" >&2
+    ce_finalize_status "errored" 4 "tokflint exited $EXIT_CODE"
     exit $EXIT_CODE
 fi
 
-# Output the result (tokflint prints the conversation)
-cat /tmp/dispatch-result-$$.log
-rm -f /tmp/dispatch-result-$$.log
+# Output the result (tokflint prints the conversation); $LOG_FILE is retained.
+cat "$LOG_FILE"
 
-ce_finalize_from_text "Status: DONE"
+# Fail closed on the worker's own terminal token: a tokflint exit 0 only means
+# the turn ended (w-8027-task: turn_done + wrong checkout still said DONE).
+ce_finalize_from_text "$(tail -200 "$LOG_FILE")"
