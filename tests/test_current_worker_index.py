@@ -77,6 +77,27 @@ class CurrentWorkerIndexTests(unittest.TestCase):
         self.assertEqual(result["candidate_worker_ids"], ["w-target"])
         self.assertEqual(result["counts"]["malformed"], 4)
 
+    def test_recognized_regular_ancillary_files_are_counted_separately(self):
+        self.write("w-terminal", "done")
+        (self.status / "w-factory-test.heartbeat").write_text("heartbeat")
+        (self.status / "w-test-valid-contract.lock").touch()
+        (self.status / "w-unknown.tmp").touch()
+        (self.status / "w-legacy.dotted.json").write_text(
+            json.dumps({"worker_id": "w-legacy.dotted", "current_phase": "done"})
+        )
+        os.symlink(
+            self.status / "w-terminal.json", self.status / "w-link.heartbeat"
+        )
+
+        result = build_index(self.status)
+
+        self.assertEqual(result["counts"]["scanned"], 6)
+        self.assertEqual(result["counts"]["valid"], 1)
+        self.assertEqual(result["counts"]["terminal"], 1)
+        self.assertEqual(result["counts"]["ancillary"], 2)
+        self.assertEqual(result["counts"]["malformed"], 3)
+        self.assertEqual(result["candidate_worker_ids"], [])
+
     def test_exact_file_read_limit_is_accepted(self):
         # Whitespace makes a valid object exactly the maximum encoded size.
         raw = b'{"worker_id":"w-max","current_phase":"reading"}'
