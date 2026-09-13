@@ -207,14 +207,28 @@ class TestChampionWrapperReceipts(unittest.TestCase):
         self.assertEqual(r["proc"].returncode, 3)
         self.assertEqual(r["status"]["current_phase"], "blocked")
 
+    def test_turn_done_must_match_final_assistant_identity(self):
+        for case in ("mismatched_rid", "mismatched_tid"):
+            with self.subTest(case=case):
+                r = self._run(
+                    "w-43repro-" + case, DONE_TAIL, receipt_case=case)
+                self.assertEqual(r["proc"].returncode, 4)
+                self.assertEqual(r["status"]["current_phase"], "errored")
+                self.assertIn("liam receipt", r["status"]["error_summary"])
+
+    def test_final_assistant_with_tool_calls_is_not_terminal_receipt(self):
+        r = self._run(
+            "w-43repro-final-tool-calls", DONE_TAIL,
+            receipt_case="final_tool_calls")
+        self.assertEqual(r["proc"].returncode, 4)
+        self.assertEqual(r["status"]["current_phase"], "errored")
+        self.assertIn("liam receipt", r["status"]["error_summary"])
+
     def test_missing_or_malformed_receipt_fails_closed(self):
         for case in (
             "missing_receipt",
             "malformed_receipt",
             "missing_turn_done",
-            "mismatched_rid",
-            "mismatched_tid",
-            "final_tool_calls",
         ):
             with self.subTest(case=case):
                 r = self._run("w-43repro-" + case, DONE_TAIL, receipt_case=case)
