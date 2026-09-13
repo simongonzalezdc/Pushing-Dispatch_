@@ -251,7 +251,16 @@ def resolve(matrix: dict, use_cache: bool = True) -> dict:
         # A partial/stale cache (e.g. after the matrix gained executors) is
         # discarded and recomputed — self-healing against matrix drift.
         if cached is not None and set(matrix.get("executors", {})) <= set(cached):
-            return cached
+            # Current operator authorization always overrides cached reachability.
+            return {
+                name: {
+                    **cached[name],
+                    "available": bool(cached[name].get("available"))
+                    and cfg.get("disabled") is not True,
+                    "provider": cfg.get("provider", ""),
+                }
+                for name, cfg in matrix.get("executors", {}).items()
+            }
     out = {}
     for name, cfg in matrix.get("executors", {}).items():
         out[name] = {

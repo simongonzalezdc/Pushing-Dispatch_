@@ -167,6 +167,9 @@ max_turns = 25
 stall_threshold_seconds = 600
 
 [executors.grok-build]
+# Local CLI/auth artifacts remain after entitlement ends. Fail closed until an
+# authorized non-billable entitlement check confirms this lane can execute.
+disabled = true
 wrapper = "grok-cli.sh"
 provider = "grok-cli"
 model_id = "grok-4.6"
