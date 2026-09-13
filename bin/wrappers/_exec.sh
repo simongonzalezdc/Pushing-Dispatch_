@@ -625,6 +625,41 @@ ce_run_zcode() {
         return 69
     fi
 
+    # ZCode v2 no longer discovers the bundled provider catalog beside the
+    # legacy glm/zcode.cjs entrypoint. Preserve explicit operator overrides,
+    # otherwise bind the first installed, readable catalog. Fail before model
+    # launch when no compatible catalog exists; never fall through to auto.
+    if [[ -z "${ZCODE_BUILTIN_PROVIDER_CONFIG_FILE:-}" ]]; then
+        local zcode_resources="${ZCODE_APP_RESOURCES:-}"
+        local builtin_candidate
+        local builtin_candidates=()
+        if [[ -n "$zcode_resources" ]]; then
+            builtin_candidates+=("$zcode_resources/config/provider/zcode-builtin.json")
+        else
+            builtin_candidates+=(
+                "/Applications/ZCode.app/Contents/Resources/config/provider/zcode-builtin.json"
+                "$HOME/Applications/ZCode.app/Contents/Resources/config/provider/zcode-builtin.json"
+            )
+        fi
+        for builtin_candidate in "${builtin_candidates[@]}"; do
+            if [[ -n "$builtin_candidate" && -f "$builtin_candidate" && -r "$builtin_candidate" ]]; then
+                export ZCODE_BUILTIN_PROVIDER_CONFIG_FILE="$builtin_candidate"
+                break
+            fi
+        done
+    fi
+    if [[ -z "${ZCODE_BUILTIN_PROVIDER_CONFIG_FILE:-}" || ! -f "$ZCODE_BUILTIN_PROVIDER_CONFIG_FILE" || ! -r "$ZCODE_BUILTIN_PROVIDER_CONFIG_FILE" ]]; then
+        ce_finalize_status "errored" 69 "ZCode built-in provider config not found (set ZCODE_BUILTIN_PROVIDER_CONFIG_FILE)"
+        return 69
+    fi
+    if [[ -z "${ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE:-}" ]]; then
+        export ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE="$ZCODE_BUILTIN_PROVIDER_CONFIG_FILE"
+    fi
+    if [[ ! -f "$ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE" || ! -r "$ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE" ]]; then
+        ce_finalize_status "errored" 69 "ZCode bundled provider config not found (set ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE)"
+        return 69
+    fi
+
     local cmd=("$zcode_bin" -p "$CE_FINAL_PROMPT")
     if [[ -n "$CE_CWD" ]]; then
         cmd+=(--cwd "$CE_CWD")
