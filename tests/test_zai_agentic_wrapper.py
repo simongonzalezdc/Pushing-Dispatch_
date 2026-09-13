@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -114,6 +115,117 @@ ce_finalize_from_text $'Work completed.\nStatus: DONE'
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("done|0|", result.stdout)
+
+    def _run_fake_zcode(
+        self, *, create_builtin=True, override=None, bundled_override=None
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            resources = root / "ZCode.app" / "Contents" / "Resources"
+            builtin = resources / "config" / "provider" / "zcode-builtin.json"
+            if create_builtin:
+                builtin.parent.mkdir(parents=True)
+                builtin.write_text('{}\n')
+            fake = root / "zcode"
+            fake.write_text(
+                "#!/usr/bin/env bash\n"
+                "printf 'builtin=%s\\nbundled=%s\\nhome=%s\\n' "
+                '"${ZCODE_BUILTIN_PROVIDER_CONFIG_FILE:-}" '
+                '"${ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE:-}" '
+                '"${HOME:-}"\n'
+                "python3 -c 'import json,os; print(\"model=\" + json.load(open(os.path.join(os.environ[\"HOME\"], \".zcode/cli/config.json\")))[\"model\"][\"main\"])'\n"
+                "printf 'Status: DONE\\n'\n"
+            )
+            fake.chmod(0o700)
+            flash_home = root / "flash-home"
+            config = flash_home / ".zcode" / "cli" / "config.json"
+            config.parent.mkdir(parents=True)
+            config.write_text('{"model":{"main":"zai/glm-5.3-flash"}}\n')
+            env = {
+                **os.environ,
+                "DISPATCH_ROOT": str(root / "dispatch"),
+                "DISPATCH_PACKS_DIR": str(ROOT / "dispatch_packs"),
+                "ZCODE_BIN": str(fake),
+                "ZCODE_FLASH_HOME": str(flash_home),
+                "ZCODE_APP_RESOURCES": str(resources),
+            }
+            if override is not None:
+                env["ZCODE_BUILTIN_PROVIDER_CONFIG_FILE"] = str(override)
+            else:
+                env.pop("ZCODE_BUILTIN_PROVIDER_CONFIG_FILE", None)
+            if bundled_override is not None:
+                env["ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE"] = str(
+                    bundled_override
+                )
+            else:
+                env.pop("ZCODE_BUILTIN_PROVIDER_BUNDLED_CONFIG_FILE", None)
+            output = root / "wrapper-output.txt"
+            with output.open("w+") as stream:
+                result = subprocess.run(
+                    [
+                        ROOT / "bin" / "wrappers" / "zai-flash.sh",
+                        "--worker-id", "w-zcode-fixture",
+                        "--cwd", str(ROOT),
+                        "--task", "fixture only",
+                    ],
+                    cwd=ROOT,
+                    env=env,
+                    text=True,
+                    stdout=stream,
+                    stderr=subprocess.STDOUT,
+                    timeout=5,
+                )
+                stream.seek(0)
+                captured = stream.read()
+            result.stdout = captured
+            result.stderr = captured
+            return result, builtin, flash_home
+
+    def test_zcode_v2_discovers_installed_resources_config(self):
+        result, builtin, flash_home = self._run_fake_zcode()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"builtin={builtin}", result.stdout)
+        self.assertIn(f"bundled={builtin}", result.stdout)
+        self.assertIn(f"home={flash_home}", result.stdout)
+        self.assertIn("model=zai/glm-5.3-flash", result.stdout)
+        self.assertNotIn("model=auto", result.stdout)
+
+    def test_zcode_v2_preserves_explicit_builtin_override(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            override = Path(tmp) / "operator-builtin.json"
+            override.write_text('{}\n')
+            result, _, _ = self._run_fake_zcode(override=override)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"builtin={override}", result.stdout)
+        self.assertIn(f"bundled={override}", result.stdout)
+
+    def test_zcode_v2_missing_builtin_fails_before_launch(self):
+        result, _, _ = self._run_fake_zcode(create_builtin=False)
+
+        self.assertEqual(result.returncode, 69, result.stdout + result.stderr)
+        self.assertNotIn("Status: DONE", result.stdout)
+
+    def test_zcode_v2_preserves_distinct_bundled_override(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundled = Path(tmp) / "operator-bundled.json"
+            bundled.write_text('{}\n')
+            result, builtin, _ = self._run_fake_zcode(
+                bundled_override=bundled
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"builtin={builtin}", result.stdout)
+        self.assertIn(f"bundled={bundled}", result.stdout)
+
+    def test_zcode_v2_missing_bundled_override_fails_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing-bundled.json"
+            result, _, _ = self._run_fake_zcode(bundled_override=missing)
+
+        self.assertEqual(result.returncode, 69, result.stdout + result.stderr)
+        self.assertNotIn("Status: DONE", result.stdout)
 
 
 if __name__ == "__main__":
