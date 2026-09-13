@@ -31,6 +31,11 @@ def registry_path() -> Path:
     return dispatch_root() / "session_registry.jsonl"
 
 
+def registry_lock_path() -> Path:
+    """Lock file serializing registry appends against compaction rewrites."""
+    return dispatch_root() / "session_registry.jsonl.lock"
+
+
 def status_path(worker_id: str) -> Path:
     return status_dir() / f"{worker_id}.json"
 
