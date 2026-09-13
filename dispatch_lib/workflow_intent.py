@@ -21,7 +21,12 @@ from dispatch_lib.path_conventions import dispatch_root
 
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{7,127}$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _STATES = {"launch_requested", "launch_started", "launch_not_started"}
+_RECORD_KEYS = {
+    "schema_version", "operation_id", "parameters", "parameters_sha256",
+    "state", "created_at_ns", "updated_at_ns", "worker_id", "pid",
+}
 
 
 class IntentConflict(RuntimeError):
@@ -70,13 +75,56 @@ def _write(path: Path, record: dict) -> None:
             os.unlink(tmp_name)
 
 
+def _load_valid_record(path: Path, operation_id: str) -> dict:
+    """Load a complete, internally consistent intent or fail without mutation."""
+    try:
+        record = json.loads(path.read_bytes())
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise IntentConflict("malformed intent record") from exc
+
+    if not isinstance(record, dict) or set(record) - _RECORD_KEYS:
+        raise IntentConflict("invalid intent record schema")
+    required = _RECORD_KEYS - {"worker_id", "pid"}
+    if not required.issubset(record):
+        raise IntentConflict("invalid intent record schema")
+    if type(record["schema_version"]) is not int or record["schema_version"] != 1:
+        raise IntentConflict("invalid intent record schema")
+    if record["operation_id"] != operation_id:
+        raise IntentConflict("intent operation identity mismatch")
+    if not isinstance(record["parameters"], dict):
+        raise IntentConflict("invalid intent parameters")
+    digest = record["parameters_sha256"]
+    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+        raise IntentConflict("invalid intent parameters digest")
+    if hashlib.sha256(_canonical(record["parameters"])).hexdigest() != digest:
+        raise IntentConflict("intent parameters digest mismatch")
+    if not isinstance(record["state"], str) or record["state"] not in _STATES:
+        raise IntentConflict("invalid intent state")
+    created = record["created_at_ns"]
+    updated = record["updated_at_ns"]
+    if (
+        type(created) is not int
+        or type(updated) is not int
+        or created < 0
+        or updated < created
+    ):
+        raise IntentConflict("invalid intent timestamps")
+    if "worker_id" in record and not isinstance(record["worker_id"], str):
+        raise IntentConflict("invalid intent worker_id")
+    if "pid" in record and (type(record["pid"]) is not int or record["pid"] <= 0):
+        raise IntentConflict("invalid intent pid")
+    return record
+
+
 def record_launch_intent(operation_id: str, parameters: dict) -> dict:
     """Create one intent, or return the identical retryable non-started intent."""
     path = _intent_path(operation_id)
+    if not isinstance(parameters, dict):
+        raise IntentConflict("invalid intent parameters")
     digest = hashlib.sha256(_canonical(parameters)).hexdigest()
     with _locked(path):
         if path.exists():
-            record = json.loads(path.read_text())
+            record = _load_valid_record(path, operation_id)
             if record.get("parameters_sha256") != digest:
                 raise IntentConflict("operation_id reused with changed parameters")
             if record.get("state") != "launch_not_started":
@@ -104,10 +152,16 @@ def transition(operation_id: str, expected: str, state: str, **fields) -> dict:
     if expected not in _STATES or state not in _STATES:
         raise IntentConflict("invalid intent state")
     path = _intent_path(operation_id)
+    if set(fields) - {"worker_id", "pid"}:
+        raise IntentConflict("invalid intent transition fields")
+    if "worker_id" in fields and not isinstance(fields["worker_id"], str):
+        raise IntentConflict("invalid intent worker_id")
+    if "pid" in fields and (type(fields["pid"]) is not int or fields["pid"] <= 0):
+        raise IntentConflict("invalid intent pid")
     with _locked(path):
         if not path.exists():
             raise IntentConflict("intent missing")
-        record = json.loads(path.read_text())
+        record = _load_valid_record(path, operation_id)
         if record.get("state") != expected:
             raise IntentConflict(
                 f"intent state changed: expected {expected}, got {record.get('state')}"
