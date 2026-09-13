@@ -19,6 +19,9 @@ from .path_conventions import dispatch_root, status_dir
 from .status_writer import PHASES, is_terminal
 
 WORKER_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+ANCILLARY_NAME = re.compile(
+    r"^(?P<worker>[A-Za-z0-9][A-Za-z0-9_-]{0,63})\.(?:heartbeat|lock)$"
+)
 INDEX_NAME = "current-workers.json"
 LOCK_NAME = ".current-workers.lock"
 
@@ -82,6 +85,7 @@ def build_index(
                 "scanned",
                 "valid",
                 "malformed",
+                "ancillary",
                 "terminal",
                 "nonterminal",
                 "awaiting_checkpoint",
@@ -101,6 +105,18 @@ def build_index(
                     stop_reason = "ENTRY_LIMIT"
                     break
                 counts["scanned"] += 1
+                ancillary = ANCILLARY_NAME.fullmatch(entry.name)
+                if ancillary:
+                    try:
+                        info = entry.stat(follow_symlinks=False)
+                    except OSError:
+                        counts["malformed"] += 1
+                        continue
+                    if stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid():
+                        counts["ancillary"] += 1
+                    else:
+                        counts["malformed"] += 1
+                    continue
                 if not entry.name.endswith(".json") or not WORKER_ID.fullmatch(
                     entry.name[:-5]
                 ):
