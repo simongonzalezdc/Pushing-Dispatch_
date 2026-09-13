@@ -136,6 +136,7 @@ def build_index(
                     OSError,
                     UnicodeDecodeError,
                     json.JSONDecodeError,
+                    RecursionError,
                     TypeError,
                     ValueError,
                 ):
@@ -150,10 +151,11 @@ def build_index(
                     continue
                 counts["valid"] += 1
                 phase = value.get("current_phase")
-                if phase in PHASES and is_terminal(phase):
+                known_phase = isinstance(phase, str) and phase in PHASES
+                if known_phase and is_terminal(phase):
                     counts["terminal"] += 1
                     continue
-                if phase not in PHASES:
+                if not known_phase:
                     counts["phase_unknown"] += 1
                 else:
                     counts["nonterminal"] += 1

@@ -85,6 +85,49 @@ class CurrentWorkerIndexTests(unittest.TestCase):
         self.assertEqual(result["candidate_worker_ids"], ["w-max"])
         self.assertEqual(result["coverage"]["bytes_read"], 65536)
 
+    def test_nonstring_missing_and_unknown_phases_are_candidates_not_crashes(self):
+        self.write("w-neighbor", "reading")
+        for suffix, phase in (
+            ("list", []),
+            ("dict", {}),
+            ("null", None),
+            ("number", 3),
+            ("string", "future_phase"),
+        ):
+            self.write(f"w-{suffix}", phase)
+        (self.status / "w-missing.json").write_text(
+            json.dumps({"worker_id": "w-missing"})
+        )
+
+        result = build_index(self.status)
+
+        self.assertEqual(result["counts"]["valid"], 7)
+        self.assertEqual(result["counts"]["nonterminal"], 1)
+        self.assertEqual(result["counts"]["phase_unknown"], 6)
+        self.assertEqual(result["counts"]["malformed"], 0)
+        self.assertEqual(
+            set(result["candidate_worker_ids"]),
+            {
+                "w-neighbor",
+                "w-list",
+                "w-dict",
+                "w-null",
+                "w-number",
+                "w-string",
+                "w-missing",
+            },
+        )
+
+    def test_deeply_nested_json_is_malformed_without_hiding_valid_neighbor(self):
+        self.write("w-neighbor", "writing")
+        (self.status / "w-nested.json").write_text("[" * 2000 + "]" * 2000)
+
+        result = build_index(self.status)
+
+        self.assertEqual(result["candidate_worker_ids"], ["w-neighbor"])
+        self.assertEqual(result["counts"]["valid"], 1)
+        self.assertEqual(result["counts"]["malformed"], 1)
+
     def test_raced_generation_retries_once(self):
         first = {"source_generation": {"consistent": False}}
         second = {
