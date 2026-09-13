@@ -41,6 +41,7 @@ from dispatch_lib.feature_flag import (
     is_nested_dispatch_enabled, get_depth_cap,
 )
 from dispatch_lib.permissions import check_nested_permission
+from dispatch_lib.deadline import evaluate_deadline
 from dispatch_lib.nested import (
     build_tree, children_of, tree_for, kill_cascade, format_tree,
 )
@@ -168,6 +169,21 @@ def _read_registry() -> list[dict]:
     return entries
 
 
+# --- Deadline admission ---
+
+def _admit_deadline_or_exit(value) -> None:
+    """Common deadline gate: reject expired/malformed/naive before side effects.
+
+    Missing deadline admits (missing is not expired). Rejection exits 6 —
+    the established deadline exit code — before any archive write, question
+    resolution, checkpoint consumption, intent mutation, or launch.
+    """
+    ok, reason = evaluate_deadline(value)
+    if not ok:
+        print(f"Error: {reason}", file=sys.stderr)
+        sys.exit(6)
+
+
 # --- Nested dispatch gates ---
 
 def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int]:
@@ -213,16 +229,11 @@ def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int
     if budget_remaining is not None and budget_remaining <= 0:
         return False, f"BUDGET_EXHAUSTED: remaining={budget_remaining}", 3
 
-    # Deadline check
-    deadline_str = getattr(args, "deadline", None)
-    if deadline_str:
-        try:
-            deadline = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
-            now = datetime.now(deadline.tzinfo)
-            if now >= deadline:
-                return False, f"DEADLINE_EXCEEDED: deadline={deadline_str}", 6
-        except (ValueError, TypeError):
-            pass
+    # Deadline check — common admission semantics: expired, malformed, and
+    # timezone-ambiguous supplied deadlines all fail closed (exit 6).
+    ok, reason = evaluate_deadline(getattr(args, "deadline", None))
+    if not ok:
+        return False, reason, 6
 
     return True, "", 0
 
@@ -231,6 +242,10 @@ def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int
 
 def cmd_start(args, mode: str):
     """Start a new worker (task or breakout)."""
+    # Common deadline admission first: rejects expired/malformed/naive
+    # deadlines for top-level and nested workers alike, before routing,
+    # directory writes, or any launch effect.
+    _admit_deadline_or_exit(getattr(args, "deadline", None))
     ensure_dirs()
     matrix = _load_matrix()
     matrix_path = _find_matrix_path()
@@ -332,14 +347,17 @@ def cmd_start(args, mode: str):
     parent_id = getattr(args, "parent_id", None)
     depth = getattr(args, "depth", 0)
 
+    # The admitted deadline rides the launch environment for top-level and
+    # nested workers alike, so runtime enforcement can see it downstream.
+    if getattr(args, "deadline", None):
+        env["DISPATCH_DEADLINE"] = args.deadline
+
     if parent_id and is_nested_dispatch_enabled():
         env["DISPATCH_NESTED"] = "1"
         env["DISPATCH_CURRENT_DEPTH"] = str(depth)
         env["DISPATCH_WORKER_ID"] = worker_id
         if getattr(args, "budget_remaining", None) is not None:
             env["DISPATCH_BUDGET_REMAINING"] = str(args.budget_remaining)
-        if getattr(args, "deadline", None):
-            env["DISPATCH_DEADLINE"] = args.deadline
     else:
         env["DISPATCH_WORKER_ID"] = worker_id
 
@@ -362,6 +380,7 @@ def cmd_start(args, mode: str):
         parent_id=parent_id,
         depth=depth,
         session_id=os.environ.get("DISPATCH_SESSION_ID"),
+        deadline=getattr(args, "deadline", None),
     )
 
     # Registry entry
@@ -754,6 +773,13 @@ def cmd_answer(args):
         print(f"Error: no worker '{args.worker_id}'", file=sys.stderr)
         sys.exit(2)
 
+    # Inherited deadline admission: the answer re-dispatch keeps the original
+    # worker's deadline (no silent reset). An expired/malformed/naive stored
+    # deadline rejects before any task-archive write, question resolution,
+    # registry append, or launch.
+    inherited_deadline = status.get("deadline")
+    _admit_deadline_or_exit(inherited_deadline)
+
     if args.answer_file:
         answer_text = Path(args.answer_file).read_text()
     elif args.answer:
@@ -827,6 +853,9 @@ def cmd_answer(args):
 
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
+    # Keep the inherited deadline visible to the relaunched worker.
+    if inherited_deadline:
+        env["DISPATCH_DEADLINE"] = inherited_deadline
 
     proc = subprocess.Popen(
         cmd, env=env, start_new_session=True,
@@ -843,6 +872,7 @@ def cmd_answer(args):
         parent_id=args.worker_id,
         depth=status.get("depth", 0),
         session_id=os.environ.get("DISPATCH_SESSION_ID"),
+        deadline=inherited_deadline,
     )
 
     _append_registry({
@@ -907,6 +937,13 @@ def cmd_checkpoint_continue(args):
               file=sys.stderr)
         sys.exit(2)
 
+    # Inherited deadline admission before intent mutation, checkpoint
+    # consumption, or launch: the resume keeps the paused worker's deadline
+    # (no silent reset); expired/malformed/naive stored values fail closed.
+    prior_status = read_status(ck.worker_id)
+    inherited_deadline = prior_status.get("deadline") if prior_status else None
+    _admit_deadline_or_exit(inherited_deadline)
+
     # Default worktree path follows the breakout convention.
     worktree = Path(args.worktree) if args.worktree else None
     if worktree and not worktree.is_dir():
@@ -958,6 +995,9 @@ def cmd_checkpoint_continue(args):
 
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
+    # Keep the inherited deadline visible to the resumed worker.
+    if inherited_deadline:
+        env["DISPATCH_DEADLINE"] = inherited_deadline
 
     try:
         proc = subprocess.Popen(
@@ -983,6 +1023,7 @@ def cmd_checkpoint_continue(args):
         pid=proc.pid,
         brief_path=str(resume_brief_path),
         log_file=str(log_path(worker_id)),
+        deadline=inherited_deadline,
     )
 
     _append_registry({

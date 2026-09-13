@@ -9,6 +9,10 @@ Schema version 3:
   dispatched_by_session_id, current_phase, pid, started_at,
   tokens_in, tokens_out, turns_taken, log_path, brief_path,
   finalized_at, exit_code, error_summary
+
+Additive optional field: deadline (ISO-8601 string or None) — the worker's
+admitted deadline, inherited verbatim by answer/checkpoint-continue
+re-dispatches. No consumer validates schema_version; readers use .get().
 """
 
 import json
@@ -45,6 +49,7 @@ def init_status(
     parent_id: str = None,
     depth: int = 0,
     session_id: str = None,
+    deadline: str = None,
 ) -> dict:
     """Create and write initial status file for a new worker."""
     ensure_dirs()
@@ -64,6 +69,7 @@ def init_status(
         "turns_taken": 0,
         "log_path": log_file,
         "brief_path": brief_path,
+        "deadline": deadline,
         "finalized_at": None,
         "exit_code": None,
         "error_summary": None,
