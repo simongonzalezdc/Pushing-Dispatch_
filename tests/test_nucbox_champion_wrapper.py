@@ -18,13 +18,50 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 WRAPPER = ROOT / "bin" / "wrappers" / "nucbox-champion.sh"
 
-STUB = """#!/usr/bin/env python3
-import json, os, sys
+STUB = r"""#!/usr/bin/env python3
+import json
+import os
+import sys
+from pathlib import Path
+
+resume = sys.argv[sys.argv.index("--resume") + 1]
+task = sys.argv[sys.argv.index("--task") + 1]
 with open(os.environ["STUB_OUT"], "a") as f:
-    f.write(json.dumps({"stub_cwd": os.getcwd()}) + "\\n")
+    f.write(json.dumps({"stub_cwd": os.getcwd(), "resume": resume}) + "\n")
+
+case = os.environ.get("STUB_CASE", "final_done")
+receipt_dir = Path(os.environ["STUB_SESSION_DIR"])
+receipt = receipt_dir / (resume + ".jsonl")
+rid, tid = "stub-rid", "stub-tid"
+
+def event(kind, **fields):
+    event.seq += 1
+    return {"kind": kind, "rid": rid, "tid": tid, "sid_seq": event.seq, **fields}
+
+event.seq = -1
+events = [event("user_message", content=task)]
+tail = os.environ.get("STUB_TAIL", "final answer delivered")
+if case == "earlier_done_final_blocked":
+    events.append(event("assistant_message", content="Earlier answer.\nStatus: DONE"))
+if case == "tool_done":
+    events.append(event("tool_result", call_id="tool-1", content="Status: DONE"))
+if case != "missing_receipt":
+    events.append(event("assistant_message", content=tail))
+if case not in {"missing_turn_done", "missing_receipt", "malformed_receipt"}:
+    events.append(event("telemetry", kind_detail="turn_done"))
+
+if case == "malformed_receipt":
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    receipt.write_text('{"kind":"assistant_message"\n')
+elif case != "missing_receipt":
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    with receipt.open("w") as f:
+        for row in events:
+            f.write(json.dumps(row) + "\n")
+
 print("ASST  analysis of the assigned checkout ...")
-print("TASK-RECEIVED: " + sys.argv[sys.argv.index("--task") + 1][-400:])
-print(os.environ.get("STUB_TAIL", "final answer delivered"))
+print("TASK-RECEIVED: " + task[-400:])
+print(tail)
 """
 
 # A turn that ends without any terminal token: turn_done is not completion.
@@ -33,14 +70,16 @@ DONE_TAIL = "Status: DONE"
 
 
 class TestChampionWrapperReceipts(unittest.TestCase):
-    def _run(self, worker_id, stub_tail, task="Read exact candidate files only."):
+    def _run(self, worker_id, stub_tail, task="Read exact candidate files only.",
+             receipt_case="final_done", hook_dir=None):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
         stub_dir = base / "stub"
         assigned = base / "assigned-checkout"
         root = base / "root"
-        for d in (stub_dir, assigned, root / "status", root / "logs"):
+        session_dir = root / "liam-sessions"
+        for d in (stub_dir, assigned, root / "status", root / "logs", session_dir):
             d.mkdir(parents=True, exist_ok=True)
         (stub_dir / "tokflint.py").write_text(STUB)
         (stub_dir / "tokflint.py").chmod(0o755)
@@ -69,6 +108,10 @@ class TestChampionWrapperReceipts(unittest.TestCase):
             "TOKFLINT_DIR": str(stub_dir),
             "STUB_OUT": str(stub_out),
             "STUB_TAIL": stub_tail,
+            "STUB_CASE": receipt_case,
+            "STUB_SESSION_DIR": str(session_dir),
+            "CHAMPION_TEST_HOOK": "1",
+            "CHAMPION_TEST_SESSION_DIR": str(hook_dir or session_dir),
             "CHAMPION_TIMEOUT": "30",
         })
         # DEVNULL mirrors cli.py task start; a captured pipe would block on
@@ -85,16 +128,19 @@ class TestChampionWrapperReceipts(unittest.TestCase):
         )
         after = json.loads((root / "status" / f"{worker_id}.json").read_text())
         stub_cwd = json.loads(stub_out.read_text().strip())["stub_cwd"]
+        stub_resume = json.loads(stub_out.read_text().strip())["resume"]
         return {
             "proc": proc,
             "status": after,
             "stub_cwd": stub_cwd,
+            "stub_resume": stub_resume,
             "assigned": assigned,
             "log_path": Path(after["log_path"]),
+            "receipt_dir": session_dir,
         }
 
     def test_tokenless_turn_cannot_finalize_done(self):
-        r = self._run("w-43repro-tokenless", TOKENLESS_TAIL)
+        r = self._run("w-43repro-tokenless", TOKENLESS_TAIL, receipt_case="tokenless")
         self.assertNotEqual(
             r["status"]["current_phase"], "done",
             "turn_done without the worker's terminal token must not be done")
@@ -107,6 +153,10 @@ class TestChampionWrapperReceipts(unittest.TestCase):
         self.assertEqual(
             r["stub_cwd"], str(r["assigned"].resolve()),
             "harness must boot in the dispatched --cwd (wrong-checkout class)")
+        self.assertTrue(r["stub_resume"].startswith("dispatch-"))
+        self.assertTrue(
+            list(r["receipt_dir"].glob("dispatch-*.jsonl")),
+            "fresh known session receipt must be retained")
 
     def test_done_requires_real_token_and_log_is_retained(self):
         r = self._run("w-43repro-done", DONE_TAIL)
@@ -119,6 +169,78 @@ class TestChampionWrapperReceipts(unittest.TestCase):
         self.assertIn("Status: DONE", retained)
         self.assertIn("Output contract", retained,
                       "task handed to the leaf must carry the status protocol")
+
+    def test_echoed_task_done_does_not_count(self):
+        r = self._run(
+            "w-43repro-echo",
+            TOKENLESS_TAIL,
+            task="Example output:\nStatus: DONE\nDo not finish yet",
+            receipt_case="tokenless",
+        )
+        self.assertEqual(r["status"]["current_phase"], "errored")
+        self.assertEqual(r["status"]["exit_code"], 4)
+        self.assertIn("terminal status token", r["status"]["error_summary"])
+
+    def test_earlier_done_then_final_blocked_uses_final_assistant(self):
+        r = self._run(
+            "w-43repro-earlier-done",
+            "Current answer.\nStatus: BLOCKED",
+            receipt_case="earlier_done_final_blocked",
+        )
+        self.assertEqual(r["proc"].returncode, 3)
+        self.assertEqual(r["status"]["current_phase"], "blocked")
+        self.assertEqual(r["status"]["exit_code"], 3)
+
+    def test_tool_done_does_not_count_over_final_blocked(self):
+        r = self._run(
+            "w-43repro-tool-done",
+            "Current answer.\nStatus: BLOCKED",
+            receipt_case="tool_done",
+        )
+        self.assertEqual(r["proc"].returncode, 3)
+        self.assertEqual(r["status"]["current_phase"], "blocked")
+
+    def test_missing_or_malformed_receipt_fails_closed(self):
+        for case in ("missing_receipt", "malformed_receipt", "missing_turn_done"):
+            with self.subTest(case=case):
+                r = self._run("w-43repro-" + case, DONE_TAIL, receipt_case=case)
+                self.assertEqual(r["proc"].returncode, 4)
+                self.assertEqual(r["status"]["current_phase"], "errored")
+                self.assertIn("liam receipt", r["status"]["error_summary"])
+
+    def test_test_receipt_hook_cannot_escape_dispatch_root(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        base = Path(tmp.name)
+        root = base / "root"
+        for d in (root / "status", root / "logs"):
+            d.mkdir(parents=True)
+        status = {
+            "schema_version": 3, "worker_id": "w-43repro-hook",
+            "mode": "task", "executor": "nucbox-champion",
+            "current_phase": "starting", "pid": 0,
+            "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "tokens_in": 0, "tokens_out": 0, "turns_taken": 0,
+            "log_path": str(root / "logs" / "w-43repro-hook.log"),
+            "brief_path": "", "finalized_at": None,
+            "exit_code": None, "error_summary": None,
+        }
+        (root / "status" / "w-43repro-hook.json").write_text(json.dumps(status))
+        env = os.environ.copy()
+        env.update({
+            "DISPATCH_ROOT": str(root),
+            "CHAMPION_TEST_HOOK": "1",
+            "CHAMPION_TEST_SESSION_DIR": str(base / "outside"),
+        })
+        proc = subprocess.run(
+            ["bash", str(WRAPPER), "--worker-id", "w-43repro-hook",
+             "--cwd", str(base), "--mode", "task", "--task", "x"],
+            cwd=str(root), env=env, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, timeout=120)
+        after = json.loads((root / "status" / "w-43repro-hook.json").read_text())
+        self.assertEqual(proc.returncode, 4)
+        self.assertEqual(after["current_phase"], "errored")
+        self.assertIn("outside DISPATCH_ROOT", after["error_summary"])
 
     def test_nonzero_exit_retains_log_for_diagnosis(self):
         tmp = tempfile.TemporaryDirectory()
