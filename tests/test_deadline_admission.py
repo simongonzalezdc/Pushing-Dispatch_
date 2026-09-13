@@ -15,6 +15,14 @@ the earliest of the applicable inherited and explicit bounds, resolved
 before the first effect (ensure_dirs), with corrupt inherited metadata
 failing closed instead of manufacturing an unbounded resume.
 
+The CS QA of bad52daf (DEADLINE-BAD52DA-SCIENTIFIC-QA) added the lost-
+lineage regression: a checkpoint continuation whose stored status row is
+missing resumed unbounded, consumed the checkpoint, and wrote a null
+deadline. These tests pin the explicit lineage dispositions — missing,
+corrupt, and legacy rows without a deadline key reject before any effect
+(DEADLINE_LINEAGE_UNKNOWN, exit 6); a stored explicit null stays genuinely
+unbounded.
+
 Isolation: every test runs against a temporary DISPATCH_ROOT and
 DISPATCH_CHECKPOINT_ROOT; launches are faked by stubbing
 cli.subprocess.Popen, so no real worker process is ever spawned.
@@ -32,6 +40,7 @@ from unittest import mock
 
 import cli
 from dispatch_lib import checkpoint
+from dispatch_lib.path_conventions import status_path
 
 
 def _iso(hours: float) -> str:
@@ -544,6 +553,112 @@ class InheritedDeadlineBoundaryTests(_IsolatedDispatchRoot):
                                task_file=str(self.brief), executor="fixture")
         with self._patched() as popen, self._env_deadline(VALID_DEADLINE):
             cli.cmd_checkpoint_continue(args)
+        popen.assert_called_once()
+        self.assertNotIn("DISPATCH_DEADLINE", popen.call_args.kwargs["env"])
+        self.assertIsNone(self._last_status().get("deadline"))
+
+
+class LostLineageAdmissionTests(_IsolatedDispatchRoot):
+    """CS red case (missing_lineage_acceptance.py): lost lineage evidence
+    must never authorize an unbounded continuation.
+
+    Explicit dispositions stay distinct — an unknown lineage (no readable
+    status row, corrupt JSON, or a legacy row written before deadline
+    admission that carries no deadline key) rejects before any effect;
+    a stored explicit null stays genuinely unbounded.
+    """
+
+    def _rewrite_status(self, worker_id, mutate):
+        """Apply one mutation to the stored status row on disk."""
+        path = status_path(worker_id)
+        row = json.loads(path.read_text())
+        mutate(row)
+        path.write_text(json.dumps(row, indent=2))
+
+    # -- checkpoint continue: the exact reproduced fault and its family --
+
+    def test_continue_missing_prior_status_rejected(self):
+        # The CS fault: expired checkpoint lineage, only the owned status
+        # row disappears. Continuation must reject, not resume unbounded.
+        checkpoint.write_checkpoint_file(
+            slug="fixture", phase="1", worker_id="w-lost-status",
+            commit_sha="source-revision", directive="pause-for-review")
+        self._continue_rejected("w-lost-status", "DEADLINE_LINEAGE_UNKNOWN")
+
+    def test_continue_corrupt_prior_status_rejected(self):
+        self._make_checkpoint("w-corrupt-row", VALID_DEADLINE)
+        status_path("w-corrupt-row").write_text("{corrupt json")
+        self._continue_rejected("w-corrupt-row", "DEADLINE_LINEAGE_UNKNOWN")
+
+    def test_continue_legacy_row_without_deadline_key_rejected(self):
+        # A row without a "deadline" key predates deadline admission: unknown
+        # metadata, not an explicit unbounded disposition.
+        self._make_checkpoint("w-legacy-row", VALID_DEADLINE)
+        self._rewrite_status("w-legacy-row", lambda row: row.pop("deadline"))
+        self._continue_rejected("w-legacy-row", "DEADLINE_LINEAGE_UNKNOWN")
+
+    # -- answer: same principle across entrypoints --
+
+    def test_answer_legacy_row_without_deadline_key_rejected(self):
+        self._make_prior_status("w-legacy-answer", VALID_DEADLINE,
+                                with_question=True)
+        self._rewrite_status("w-legacy-answer",
+                             lambda row: row.pop("deadline"))
+        self._answer_rejected("w-legacy-answer", "DEADLINE_LINEAGE_UNKNOWN")
+
+    def test_answer_corrupt_prior_status_rejected(self):
+        # read_status conflates corrupt JSON with a missing row, so the
+        # pre-existing "no worker" guard (exit 2) rejects first. Either way
+        # the corrupt lineage fails closed before any side effect.
+        self._make_prior_status("w-corrupt-answer", VALID_DEADLINE,
+                                with_question=True)
+        status_path("w-corrupt-answer").write_text("{corrupt json")
+        with self._patched() as popen, self._stderr() as err:
+            with self.assertRaises(SystemExit) as stopped:
+                cli.cmd_answer(SimpleNamespace(worker_id="w-corrupt-answer",
+                                               answer="the answer",
+                                               answer_file=None))
+        self.assertEqual(stopped.exception.code, 2)
+        self.assertIn("no worker", err.getvalue())
+        popen.assert_not_called()
+        self.assertFalse((self.root / "tasks").exists(), "no task archive write")
+        self.assertFalse((self.root / "questions" / "_resolved").exists(),
+                         "question file not resolved")
+        self.assertFalse((self.root / "session_registry.jsonl").exists(),
+                         "no registry rows")
+
+    def test_answer_missing_worker_rejected(self):
+        # Pre-existing disposition, pinned: no row at all is no worker (exit 2),
+        # and never a launch.
+        with self._patched() as popen, self._stderr() as err:
+            with self.assertRaises(SystemExit) as stopped:
+                cli.cmd_answer(SimpleNamespace(worker_id="w-never-was",
+                                               answer="the answer",
+                                               answer_file=None))
+        self.assertEqual(stopped.exception.code, 2)
+        self.assertIn("no worker", err.getvalue())
+        popen.assert_not_called()
+        self.assertFalse(any((self.root / "status").glob("*.json")),
+                         "no status rows on rejection")
+
+    # -- explicit unbounded stays admitted (the contrast case) --
+
+    def test_continue_explicit_null_deadline_still_launches_unbounded(self):
+        self._make_checkpoint("w-null-ck", None)
+        args = SimpleNamespace(worker_id="w-null-ck", worktree=None,
+                               task_file=str(self.brief), executor="fixture")
+        with self._patched() as popen:
+            cli.cmd_checkpoint_continue(args)
+        popen.assert_called_once()
+        self.assertNotIn("DISPATCH_DEADLINE", popen.call_args.kwargs["env"])
+        self.assertIsNone(self._last_status().get("deadline"))
+
+    def test_answer_explicit_null_deadline_still_launches_unbounded(self):
+        self._make_prior_status("w-null-answer", None)
+        with self._patched() as popen:
+            cli.cmd_answer(SimpleNamespace(worker_id="w-null-answer",
+                                           answer="the answer",
+                                           answer_file=None))
         popen.assert_called_once()
         self.assertNotIn("DISPATCH_DEADLINE", popen.call_args.kwargs["env"])
         self.assertIsNone(self._last_status().get("deadline"))

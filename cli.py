@@ -198,6 +198,44 @@ def _admit_deadline_or_exit(explicit, inherited=None,
     return effective
 
 
+def _admit_lineage_deadline_or_exit(prior_status, worker_id: str):
+    """Admit the stored resume-lineage deadline with explicit dispositions.
+
+    The prior worker's status row is the authoritative durable record of the
+    bound a previous admission applied. Lost evidence never widens permission:
+
+    - no readable row (missing or corrupt JSON): unknown lineage — reject;
+      this is not an unbounded resume (CS red case missing_lineage_acceptance).
+    - row without a "deadline" key: legacy metadata written before deadline
+      admission existed — unknown, not unbounded — reject.
+    - "deadline" null: a prior admission explicitly recorded unbounded — admit.
+    - "deadline" string: validated by the common gate (expired/malformed/
+      degenerate reject, effective = the stored bound verbatim).
+
+    Rejection exits 6 before any intent mutation, archive write, checkpoint
+    consumption, or launch. Returns the effective deadline (None when the
+    lineage is explicitly unbounded).
+    """
+    if prior_status is None or "deadline" not in prior_status:
+        if prior_status is None:
+            reason = (
+                f"DEADLINE_LINEAGE_UNKNOWN: no readable stored status for worker "
+                f"{worker_id!r}; the resume deadline bound cannot be verified "
+                "(missing or corrupt lineage fails closed, it is not unbounded)"
+            )
+        else:
+            reason = (
+                f"DEADLINE_LINEAGE_UNKNOWN: stored status for worker {worker_id!r} "
+                "predates deadline admission and records no deadline disposition "
+                "(unknown legacy metadata is not unlimited permission)"
+            )
+        print(f"Error: {reason}", file=sys.stderr)
+        sys.exit(6)
+    return _admit_deadline_or_exit(
+        None, inherited=prior_status.get("deadline"),
+        source="stored worker deadline")
+
+
 # --- Nested dispatch gates ---
 
 def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int]:
@@ -796,13 +834,12 @@ def cmd_answer(args):
         sys.exit(2)
 
     # Inherited deadline admission: the answer re-dispatch keeps the original
-    # worker's deadline (no silent reset). The applicable inherited bound is
-    # the stored prior status — not the answering controller's environment.
-    # An expired/malformed/degenerate stored deadline rejects before any
-    # task-archive write, question resolution, registry append, or launch.
-    inherited_deadline = status.get("deadline")
-    effective_deadline = _admit_deadline_or_exit(
-        None, inherited=inherited_deadline, source="stored worker deadline")
+    # worker's deadline (no silent reset). The stored status is the lineage's
+    # authoritative bound record — the answering controller's environment is
+    # not applicable. Missing/corrupt lineage and legacy rows without a
+    # deadline disposition reject before any task-archive write, question
+    # resolution, registry append, or launch; explicit null stays unbounded.
+    effective_deadline = _admit_lineage_deadline_or_exit(status, args.worker_id)
 
     if args.answer_file:
         answer_text = Path(args.answer_file).read_text()
@@ -966,12 +1003,12 @@ def cmd_checkpoint_continue(args):
 
     # Inherited deadline admission before intent mutation, checkpoint
     # consumption, or launch: the resume keeps the paused worker's deadline
-    # (no silent reset). The applicable inherited bound is the stored prior
-    # status — expired/malformed/degenerate values fail closed.
+    # (no silent reset). The stored prior status is the lineage's authoritative
+    # bound record: missing/corrupt lineage and legacy rows without a deadline
+    # disposition fail closed instead of resuming unbounded; an explicit null
+    # stays genuinely unbounded.
     prior_status = read_status(ck.worker_id)
-    inherited_deadline = prior_status.get("deadline") if prior_status else None
-    effective_deadline = _admit_deadline_or_exit(
-        None, inherited=inherited_deadline, source="stored worker deadline")
+    effective_deadline = _admit_lineage_deadline_or_exit(prior_status, ck.worker_id)
 
     # Default worktree path follows the breakout convention.
     worktree = Path(args.worktree) if args.worktree else None
