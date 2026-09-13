@@ -17,6 +17,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -898,6 +899,7 @@ def cmd_checkpoint_list(args):
 def cmd_checkpoint_continue(args):
     """Resume a paused worker by re-dispatching in the same worktree."""
     from dispatch_lib import checkpoint as _ck
+    from dispatch_lib import workflow_intent as _intent
 
     ck = _ck.find_checkpoint_by_worker(args.worker_id)
     if ck is None:
@@ -926,11 +928,25 @@ def cmd_checkpoint_continue(args):
     wrapper = executors_map.get(executor, f"{executor}.sh")
     wrapper_path = Path(__file__).parent / "bin" / "wrappers" / wrapper
 
-    _ck.archive_checkpoint(ck)
-
     new_label = f"{ck.slug}-resume"
     worker_id = _generate_worker_id(new_label)
     cwd = str(worktree) if worktree else os.getcwd()
+
+    checkpoint_bytes = ck.path.read_bytes()
+    operation_id = _intent.checkpoint_operation_id(checkpoint_bytes)
+    parameters = {
+        "kind": "checkpoint_continue",
+        "checkpoint_sha256": hashlib.sha256(checkpoint_bytes).hexdigest(),
+        "predecessor_worker_id": ck.worker_id,
+        "executor": executor,
+        "cwd": str(Path(cwd).resolve()),
+        "task_file_sha256": hashlib.sha256(resume_brief_path.read_bytes()).hexdigest(),
+    }
+    try:
+        _intent.record_launch_intent(operation_id, parameters)
+    except _intent.IntentConflict as exc:
+        print(f"Error: checkpoint continuation blocked: {exc}", file=sys.stderr)
+        sys.exit(4)
 
     cmd = [
         str(wrapper_path),
@@ -943,9 +959,21 @@ def cmd_checkpoint_continue(args):
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
 
-    proc = subprocess.Popen(
-        cmd, env=env, start_new_session=True,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    try:
+        proc = subprocess.Popen(
+            cmd, env=env, start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        _intent.transition(
+            operation_id, "launch_requested", "launch_not_started",
+            worker_id=worker_id,
+        )
+        raise
+
+    _intent.transition(
+        operation_id, "launch_requested", "launch_started",
+        worker_id=worker_id, pid=proc.pid,
     )
 
     init_status(
@@ -965,7 +993,12 @@ def cmd_checkpoint_continue(args):
         "executor": executor,
         "pid": proc.pid,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "operation_id": operation_id,
     })
+
+    # A checkpoint remains pending until a durable intent and compatibility
+    # projections exist for the successfully started continuation.
+    _ck.archive_checkpoint(ck)
 
     print(worker_id)
 
