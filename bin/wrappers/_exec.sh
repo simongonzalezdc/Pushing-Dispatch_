@@ -28,6 +28,21 @@ CE_TOOL_NAME="${CE_TOOL_NAME:-dispatch-worker}"
 CE_MAX_TURNS="${CE_MAX_TURNS:-0}"  # 0 = unlimited
 CE_THINKING_TOKENS="${CE_THINKING_TOKENS:-0}"
 
+# --- Heartbeat lifecycle ---
+ce_stop_heartbeat() {
+    # Single cleanup primitive for the background heartbeat. Safe to call
+    # from any terminal path: no-op when no heartbeat was created (dry run)
+    # or when it already died; kills the loop AND its sleeping child via
+    # the loop's own TERM trap, then removes the status file.
+    if [[ -n "${CE_HEARTBEAT_PID:-}" ]]; then
+        if kill -0 "$CE_HEARTBEAT_PID" 2>/dev/null; then
+            kill "$CE_HEARTBEAT_PID" 2>/dev/null || true
+        fi
+        wait "$CE_HEARTBEAT_PID" 2>/dev/null || true
+    fi
+    rm -f "${CE_DISPATCH_ROOT:-}/status/${CE_WORKER_ID:-}.heartbeat" 2>/dev/null || true
+}
+
 # --- Argument parsing ---
 ce_parse_args() {
     CE_CWD=""
@@ -73,13 +88,35 @@ ce_parse_args() {
 
     # Wave-2 FM-01/02: heartbeat so telemetry-blind harnesses (dsh, luna)
     # show liveness. Reaper treats stale-but-young as alive.
-    (
-        while :; do
-            printf '{"ts":%s,"pid":%s,"log_bytes":%s}\n' "$(date +%s)" "$$"                 "$(wc -c < "$CE_DISPATCH_ROOT/logs/${CE_WORKER_ID}.log" 2>/dev/null || echo 0)"                 > "$CE_DISPATCH_ROOT/status/${CE_WORKER_ID}.heartbeat" 2>/dev/null || true
-            sleep 60
-        done
-    ) &
-    CE_HEARTBEAT_PID=$!
+    #
+    # --dry-run must never create it: every dry-run path returns early
+    # WITHOUT reaching a terminal ce_finalize_status, and an orphaned loop
+    # holding the parent's stdout/stderr kept captured pipes open after the
+    # parent exited 0 (CS FULL-SUITE-BLOCKER-DIAGNOSIS: factory dry-run
+    # hang). The loop also keeps its fds off captured pipes (/dev/null) and
+    # sleeps in the background under `wait`, so a TERM to the loop triggers
+    # its trap immediately and kills the sleeping child too — cancellation
+    # is truthful instead of leaving a stray sleep behind.
+    if [[ "$CE_DRY_RUN" -ne 1 ]]; then
+        (
+            trap '[[ -n "${hb_sleep:-}" ]] && kill "$hb_sleep" 2>/dev/null; exit 0' TERM
+            while :; do
+                printf '{"ts":%s,"pid":%s,"log_bytes":%s}\n' \
+                    "$(date +%s)" "$$" \
+                    "$(wc -c < "$CE_DISPATCH_ROOT/logs/${CE_WORKER_ID}.log" 2>/dev/null || echo 0)" \
+                    > "$CE_DISPATCH_ROOT/status/${CE_WORKER_ID}.heartbeat" 2>/dev/null || true
+                hb_sleep=""
+                sleep 60 & hb_sleep=$!
+                wait "$hb_sleep"
+            done
+        ) >/dev/null 2>&1 &
+        CE_HEARTBEAT_PID=$!
+        # Backstop for paths that exit without reaching finalize (e.g. a
+        # brief-assembly failure under set -e): no heartbeat outlives this
+        # shell. Normal terminal paths already cleaned up via
+        # ce_finalize_status; the trap is then a no-op.
+        trap ce_stop_heartbeat EXIT
+    fi
 }
 
 # --- Brief assembly ---
@@ -181,8 +218,7 @@ ce_finalize_status() {
     local error_summary="${3:-}"
 
     # Wave-2: stop the heartbeat; every terminal path lands here.
-    [[ -n "${CE_HEARTBEAT_PID:-}" ]] && kill "$CE_HEARTBEAT_PID" 2>/dev/null || true
-    rm -f "$CE_DISPATCH_ROOT/status/${CE_WORKER_ID}.heartbeat" 2>/dev/null || true
+    ce_stop_heartbeat
 
     PYTHONPATH="$CE_REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 - "$CE_WORKER_ID" "$phase" "$exit_code" "$error_summary" <<'PY'
 import sys
