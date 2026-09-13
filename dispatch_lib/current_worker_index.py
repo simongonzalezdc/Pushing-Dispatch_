@@ -19,6 +19,9 @@ from .path_conventions import dispatch_root, status_dir
 from .status_writer import PHASES, is_terminal
 
 WORKER_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+# Historical slug generation allowed dots. Admit only finalized history with
+# safe basename segments; never publish such IDs to the current-worker API.
+LEGACY_WORKER_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)+")
 ANCILLARY_NAME = re.compile(
     r"^(?P<worker>[A-Za-z0-9][A-Za-z0-9_-]{0,63})\.(?:heartbeat|lock)$"
 )
@@ -117,8 +120,13 @@ def build_index(
                     else:
                         counts["malformed"] += 1
                     continue
-                if not entry.name.endswith(".json") or not WORKER_ID.fullmatch(
-                    entry.name[:-5]
+                worker_id = entry.name[:-5]
+                legacy = (
+                    len(worker_id) <= 64
+                    and LEGACY_WORKER_ID.fullmatch(worker_id) is not None
+                )
+                if not entry.name.endswith(".json") or not (
+                    WORKER_ID.fullmatch(worker_id) or legacy
                 ):
                     counts["malformed"] += 1
                     continue
@@ -165,9 +173,22 @@ def build_index(
                 if not isinstance(value, dict) or value.get("worker_id") != worker_id:
                     counts["malformed"] += 1
                     continue
-                counts["valid"] += 1
                 phase = value.get("current_phase")
                 known_phase = isinstance(phase, str) and phase in PHASES
+                if legacy:
+                    finalized = value.get("finalized_at")
+                    try:
+                        stamp = datetime.fromisoformat(finalized.replace("Z", "+00:00"))
+                        dated = stamp.utcoffset() is not None
+                    except (AttributeError, TypeError, ValueError):
+                        dated = False
+                    if not (
+                        known_phase and is_terminal(phase) and dated
+                        and info.st_uid == os.geteuid()
+                    ):
+                        counts["malformed"] += 1
+                        continue
+                counts["valid"] += 1
                 if known_phase and is_terminal(phase):
                     counts["terminal"] += 1
                     continue
