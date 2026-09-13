@@ -54,6 +54,43 @@ class CurrentWorkerIndexTests(unittest.TestCase):
         self.assertEqual(result["coverage"]["stop_reason"], "PUBLISH_LIMIT")
         self.assertFalse(result["coverage"]["complete"])
 
+    def test_finalized_legacy_history_never_becomes_candidate(self):
+        for phase in ("done", "errored"):
+            self.write(f"w-old.{phase}", phase, finalized_at="2026-07-29T00:51:02Z")
+        self.write("w-current", "reading")
+        result = build_index(self.status)
+        self.assertEqual(result["counts"]["terminal"], 2)
+        self.assertEqual(result["counts"]["malformed"], 0)
+        self.assertEqual(result["candidate_worker_ids"], ["w-current"])
+
+    def test_legacy_live_unknown_and_undated_history_fail_closed(self):
+        for index, (phase, finalized) in enumerate([
+            ("reading", "2026-07-29T00:51:02Z"),
+            ("awaiting_checkpoint", "2026-07-29T00:51:02Z"),
+            ("future_phase", "2026-07-29T00:51:02Z"),
+            ("done", None), ("errored", "not-a-date"),
+            ("done", "2026-07-29T00:51:02"), ("done", {}),
+        ]):
+            self.write(f"w-old.case{index}", phase, finalized_at=finalized)
+        result = build_index(self.status)
+        self.assertEqual(result["counts"]["malformed"], 7)
+        self.assertEqual(result["counts"]["valid"], 0)
+        self.assertEqual(result["candidate_worker_ids"], [])
+
+    def test_legacy_unsafe_names_identity_symlink_and_fifo_remain_invalid(self):
+        for name in ("w-old..bad", "w-old.", ".hidden", "w-" + "a" * 64 + ".x"):
+            self.write(name, "done", finalized_at="2026-07-29T00:51:02Z")
+        self.write("w-mismatch.old", "done", finalized_at="2026-07-29T00:51:02Z")
+        path = self.status / "w-mismatch.old.json"
+        value = json.loads(path.read_text())
+        value["worker_id"] = "w-other"
+        path.write_text(json.dumps(value))
+        os.symlink(path, self.status / "w-link.old.json")
+        os.mkfifo(self.status / "w-pipe.old.json")
+        result = build_index(self.status)
+        self.assertEqual(result["counts"]["malformed"], 7)
+        self.assertEqual(result["candidate_worker_ids"], [])
+
     def test_entry_byte_and_clock_budgets_fail_honestly(self):
         for index in range(4):
             self.write(f"w-{index}")
