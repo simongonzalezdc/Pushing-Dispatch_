@@ -17,20 +17,22 @@ Usage:
 """
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 # Add parent dir so dispatch_lib is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dispatch_lib.path_conventions import (
-    dispatch_root, status_dir, log_dir, registry_path,
+    dispatch_root, status_dir, log_dir, registry_path, registry_lock_path,
     status_path, log_path, question_dir, question_path, ensure_dirs,
 )
 from dispatch_lib.status_writer import (
@@ -146,11 +148,19 @@ def _generate_worker_id(slug: str) -> str:
 # --- Registry ---
 
 def _append_registry(entry: dict):
-    """Append an entry to the session registry."""
+    """Append an entry to the session registry.
+
+    Serialized against compaction rewrites via the registry lock, and fsynced
+    so a committed launch row survives a crash.
+    """
     path = registry_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "a") as f:
-        f.write(json.dumps(entry) + "\n")
+    with open(registry_lock_path(), "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        with open(path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
 
 
 def _read_registry() -> list[dict]:
@@ -234,6 +244,18 @@ def _admit_lineage_deadline_or_exit(prior_status, worker_id: str):
     return _admit_deadline_or_exit(
         None, inherited=prior_status.get("deadline"),
         source="stored worker deadline")
+
+
+def _controller_token() -> str:
+    """Identity of this controller invocation, for launch-intent fencing.
+
+    The session id binds a controller session across processes when present;
+    otherwise the invoking PID names this short-lived controller. Lease
+    arbitration between concurrent controllers is NOT inferred from this
+    token alone — it attributes intent mutations so a stale controller's
+    effect-boundary write is rejected.
+    """
+    return os.environ.get("DISPATCH_SESSION_ID") or f"cli-pid-{os.getpid()}"
 
 
 # --- Nested dispatch gates ---
@@ -1045,8 +1067,15 @@ def cmd_checkpoint_continue(args):
         "cwd": str(Path(cwd).resolve()),
         "task_file_sha256": hashlib.sha256(resume_brief_path.read_bytes()).hexdigest(),
     }
+    # The mandatory CAS acknowledges the current revision of an existing
+    # record (takeover fencing); a fresh operation has nothing to acknowledge.
+    existing_intent = _intent.read_intent(operation_id)
     try:
-        _intent.record_launch_intent(operation_id, parameters)
+        intent_record = _intent.record_launch_intent(
+            operation_id, parameters, controller_token=_controller_token(),
+            expected_revision=(
+                existing_intent.get("revision", 0) if existing_intent else None),
+        )
     except _intent.IntentConflict as exc:
         print(f"Error: checkpoint continuation blocked: {exc}", file=sys.stderr)
         sys.exit(4)
@@ -1074,16 +1103,35 @@ def cmd_checkpoint_continue(args):
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
     except Exception:
-        _intent.transition(
-            operation_id, "launch_requested", "launch_not_started",
-            worker_id=worker_id,
-        )
+        try:
+            _intent.transition(
+                operation_id, "launch_requested", "launch_not_started",
+                worker_id=worker_id, controller_token=_controller_token(),
+                expected_revision=intent_record.get("revision", 0),
+            )
+        except _intent.IntentConflict:
+            pass  # the durable conflict below must win over bookkeeping
         raise
 
-    _intent.transition(
-        operation_id, "launch_requested", "launch_started",
-        worker_id=worker_id, pid=proc.pid,
-    )
+    try:
+        _intent.transition(
+            operation_id, "launch_requested", "launch_started",
+            worker_id=worker_id, pid=proc.pid,
+            controller_token=_controller_token(),
+            expected_revision=intent_record.get("revision", 0),
+        )
+    except _intent.IntentConflict as exc:
+        # The child process may already exist: this is a reconciliation
+        # obligation, never a blind retry. The checkpoint stays pending and
+        # the intent stays unstarted, so no later continue can silently
+        # double-launch; an operator must reconcile the recorded operation.
+        print(
+            f"Error: continuation launched but intent admission conflicted: {exc}. "
+            "The child may be running; reconcile this operation explicitly — "
+            "do not simply retry.",
+            file=sys.stderr,
+        )
+        sys.exit(4)
 
     init_status(
         worker_id=worker_id,
@@ -1151,32 +1199,76 @@ def cmd_utilization(args):
         print(f"Rendered {payload['executors']} executors to {output}")
 
 
+def _registry_entry_removal_eligible(entry: dict, cutoff: float) -> bool:
+    """Old-terminal-only removal eligibility; anything unknown is retained.
+
+    An entry leaves the registry only when its timestamp is parseable and
+    past the cutoff AND the worker's status file proves a terminal lifecycle
+    (finalized, terminal phase). Missing worker_id, unparseable timestamp, and
+    missing/corrupt/nonterminal status all retain the row: unknown or
+    malformed lifecycle metadata is never permission to discard recovery
+    evidence.
+    """
+    try:
+        entry_time = datetime.fromisoformat(
+            str(entry.get("timestamp", "")).replace("Z", "+00:00")).timestamp()
+    except (ValueError, TypeError, OverflowError):
+        return False
+    if entry_time > cutoff:
+        return False
+    worker_id = entry.get("worker_id")
+    if not worker_id:
+        return False
+    status = read_status(worker_id)
+    if not status:
+        return False
+    if status.get("finalized_at") is None:
+        return False
+    return is_terminal(status.get("current_phase", ""))
+
+
 def cmd_compact(args):
-    """Compact the session registry (remove old terminal entries)."""
+    """Compact the session registry (remove old TERMINAL entries only).
+
+    The read-classify-rewrite runs under an exclusive registry lock that
+    ``_append_registry`` also takes, so concurrent appends serialize against
+    the projection rewrite. The rewrite itself is atomic (tmp + fsync +
+    rename + dir fsync): a crash mid-compaction leaves the previous registry
+    intact.
+    """
     path = registry_path()
     if not path.exists():
         print("No registry to compact.")
         return
 
-    entries = _read_registry()
-    # Keep non-terminal and recent (last 7 days)
-    cutoff = (datetime.utcnow().timestamp() - 7 * 86400)
-    kept = []
-    removed = 0
-    for e in entries:
-        ts = e.get("timestamp", "")
+    cutoff = (datetime.now(timezone.utc).timestamp() - 7 * 86400)
+    lock_path = registry_lock_path()
+    with open(lock_path, "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        entries = _read_registry()
+        kept = []
+        removed = 0
+        for e in entries:
+            if _registry_entry_removal_eligible(e, cutoff):
+                removed += 1
+            else:
+                kept.append(e)
+        fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
         try:
-            entry_time = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
-        except (ValueError, TypeError):
-            entry_time = 0
-        if entry_time > cutoff:
-            kept.append(e)
-        else:
-            removed += 1
-
-    with open(path, "w") as f:
-        for e in kept:
-            f.write(json.dumps(e) + "\n")
+            with os.fdopen(fd, "w") as f:
+                for e in kept:
+                    f.write(json.dumps(e) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_name, path)
+            dir_fd = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        finally:
+            if os.path.exists(tmp_name):
+                os.unlink(tmp_name)
 
     print(f"Compacted: removed {removed} entries, kept {len(kept)}")
 
