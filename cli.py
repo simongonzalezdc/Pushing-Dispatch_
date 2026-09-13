@@ -41,7 +41,7 @@ from dispatch_lib.feature_flag import (
     is_nested_dispatch_enabled, get_depth_cap,
 )
 from dispatch_lib.permissions import check_nested_permission
-from dispatch_lib.deadline import evaluate_deadline
+from dispatch_lib.deadline import evaluate_deadline, resolve_effective_deadline
 from dispatch_lib.nested import (
     build_tree, children_of, tree_for, kill_cascade, format_tree,
 )
@@ -171,17 +171,31 @@ def _read_registry() -> list[dict]:
 
 # --- Deadline admission ---
 
-def _admit_deadline_or_exit(value) -> None:
-    """Common deadline gate: reject expired/malformed/naive before side effects.
+DEADLINE_ENV_VAR = "DISPATCH_DEADLINE"
 
-    Missing deadline admits (missing is not expired). Rejection exits 6 —
+
+def _admit_deadline_or_exit(explicit, inherited=None,
+                            source: str = "inherited DISPATCH_DEADLINE"):
+    """Common deadline gate: resolve inherited + explicit, reject bad, return effective.
+
+    Resolves the effective deadline from the applicable inherited bound
+    (launch-lineage env at start; stored prior status at answer/continue)
+    together with the explicit --deadline value, BEFORE any side effect.
+    Missing deadline admits (missing is not expired); malformed or
+    present-but-empty inherited metadata fails closed. An inherited expired
+    bound rejects even when a later --deadline is supplied — a supplied
+    value can never extend it.
+
+    Returns the effective deadline to carry forward (the earliest applicable
+    bound, verbatim), or None when genuinely unbounded. Rejection exits 6 —
     the established deadline exit code — before any archive write, question
     resolution, checkpoint consumption, intent mutation, or launch.
     """
-    ok, reason = evaluate_deadline(value)
+    ok, reason, effective = resolve_effective_deadline(explicit, inherited, source=source)
     if not ok:
         print(f"Error: {reason}", file=sys.stderr)
         sys.exit(6)
+    return effective
 
 
 # --- Nested dispatch gates ---
@@ -242,10 +256,15 @@ def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int
 
 def cmd_start(args, mode: str):
     """Start a new worker (task or breakout)."""
-    # Common deadline admission first: rejects expired/malformed/naive
-    # deadlines for top-level and nested workers alike, before routing,
-    # directory writes, or any launch effect.
-    _admit_deadline_or_exit(getattr(args, "deadline", None))
+    # Common deadline admission first: the applicable inherited bound
+    # (DISPATCH_DEADLINE in this controller's launch environment) and the
+    # explicit --deadline are resolved together BEFORE routing, directory
+    # writes, or any launch effect. An inherited expired bound rejects even
+    # when a later --deadline is supplied; the earliest bound wins.
+    effective_deadline = _admit_deadline_or_exit(
+        getattr(args, "deadline", None),
+        inherited=os.environ.get(DEADLINE_ENV_VAR),
+    )
     ensure_dirs()
     matrix = _load_matrix()
     matrix_path = _find_matrix_path()
@@ -347,10 +366,13 @@ def cmd_start(args, mode: str):
     parent_id = getattr(args, "parent_id", None)
     depth = getattr(args, "depth", 0)
 
-    # The admitted deadline rides the launch environment for top-level and
-    # nested workers alike, so runtime enforcement can see it downstream.
-    if getattr(args, "deadline", None):
-        env["DISPATCH_DEADLINE"] = args.deadline
+    # The resolved (earliest applicable) deadline rides the launch environment
+    # exactly: never a stale unrelated controller variable, never a silent
+    # extension of the inherited bound.
+    if effective_deadline:
+        env[DEADLINE_ENV_VAR] = effective_deadline
+    else:
+        env.pop(DEADLINE_ENV_VAR, None)
 
     if parent_id and is_nested_dispatch_enabled():
         env["DISPATCH_NESTED"] = "1"
@@ -380,7 +402,7 @@ def cmd_start(args, mode: str):
         parent_id=parent_id,
         depth=depth,
         session_id=os.environ.get("DISPATCH_SESSION_ID"),
-        deadline=getattr(args, "deadline", None),
+        deadline=effective_deadline,
     )
 
     # Registry entry
@@ -774,11 +796,13 @@ def cmd_answer(args):
         sys.exit(2)
 
     # Inherited deadline admission: the answer re-dispatch keeps the original
-    # worker's deadline (no silent reset). An expired/malformed/naive stored
-    # deadline rejects before any task-archive write, question resolution,
-    # registry append, or launch.
+    # worker's deadline (no silent reset). The applicable inherited bound is
+    # the stored prior status — not the answering controller's environment.
+    # An expired/malformed/degenerate stored deadline rejects before any
+    # task-archive write, question resolution, registry append, or launch.
     inherited_deadline = status.get("deadline")
-    _admit_deadline_or_exit(inherited_deadline)
+    effective_deadline = _admit_deadline_or_exit(
+        None, inherited=inherited_deadline, source="stored worker deadline")
 
     if args.answer_file:
         answer_text = Path(args.answer_file).read_text()
@@ -853,9 +877,12 @@ def cmd_answer(args):
 
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
-    # Keep the inherited deadline visible to the relaunched worker.
-    if inherited_deadline:
-        env["DISPATCH_DEADLINE"] = inherited_deadline
+    # The resumed child's environment carries exactly the resolved lineage
+    # deadline — a stale controller DISPATCH_DEADLINE must not leak in.
+    if effective_deadline:
+        env[DEADLINE_ENV_VAR] = effective_deadline
+    else:
+        env.pop(DEADLINE_ENV_VAR, None)
 
     proc = subprocess.Popen(
         cmd, env=env, start_new_session=True,
@@ -872,7 +899,7 @@ def cmd_answer(args):
         parent_id=args.worker_id,
         depth=status.get("depth", 0),
         session_id=os.environ.get("DISPATCH_SESSION_ID"),
-        deadline=inherited_deadline,
+        deadline=effective_deadline,
     )
 
     _append_registry({
@@ -939,10 +966,12 @@ def cmd_checkpoint_continue(args):
 
     # Inherited deadline admission before intent mutation, checkpoint
     # consumption, or launch: the resume keeps the paused worker's deadline
-    # (no silent reset); expired/malformed/naive stored values fail closed.
+    # (no silent reset). The applicable inherited bound is the stored prior
+    # status — expired/malformed/degenerate values fail closed.
     prior_status = read_status(ck.worker_id)
     inherited_deadline = prior_status.get("deadline") if prior_status else None
-    _admit_deadline_or_exit(inherited_deadline)
+    effective_deadline = _admit_deadline_or_exit(
+        None, inherited=inherited_deadline, source="stored worker deadline")
 
     # Default worktree path follows the breakout convention.
     worktree = Path(args.worktree) if args.worktree else None
@@ -995,9 +1024,12 @@ def cmd_checkpoint_continue(args):
 
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
-    # Keep the inherited deadline visible to the resumed worker.
-    if inherited_deadline:
-        env["DISPATCH_DEADLINE"] = inherited_deadline
+    # The resumed child's environment carries exactly the resolved lineage
+    # deadline — a stale controller DISPATCH_DEADLINE must not leak in.
+    if effective_deadline:
+        env[DEADLINE_ENV_VAR] = effective_deadline
+    else:
+        env.pop(DEADLINE_ENV_VAR, None)
 
     try:
         proc = subprocess.Popen(
@@ -1023,7 +1055,7 @@ def cmd_checkpoint_continue(args):
         pid=proc.pid,
         brief_path=str(resume_brief_path),
         log_file=str(log_path(worker_id)),
-        deadline=inherited_deadline,
+        deadline=effective_deadline,
     )
 
     _append_registry({
