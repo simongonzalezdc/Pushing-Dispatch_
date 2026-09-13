@@ -82,6 +82,13 @@ def _load_valid_record(path: Path, operation_id: str) -> dict:
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise IntentConflict("malformed intent record") from exc
 
+    _validate_record(record, operation_id)
+    return record
+
+
+def _validate_record(record: object, operation_id: str) -> None:
+    """Validate both record structure and state-dependent effect evidence."""
+
     if not isinstance(record, dict) or set(record) - _RECORD_KEYS:
         raise IntentConflict("invalid intent record schema")
     required = _RECORD_KEYS - {"worker_id", "pid"}
@@ -109,11 +116,20 @@ def _load_valid_record(path: Path, operation_id: str) -> dict:
         or updated < created
     ):
         raise IntentConflict("invalid intent timestamps")
-    if "worker_id" in record and not isinstance(record["worker_id"], str):
+    if "worker_id" in record and (
+        not isinstance(record["worker_id"], str) or not record["worker_id"]
+    ):
         raise IntentConflict("invalid intent worker_id")
     if "pid" in record and (type(record["pid"]) is not int or record["pid"] <= 0):
         raise IntentConflict("invalid intent pid")
-    return record
+    present = set(record) & {"worker_id", "pid"}
+    expected_fields = {
+        "launch_requested": set(),
+        "launch_not_started": {"worker_id"},
+        "launch_started": {"worker_id", "pid"},
+    }[record["state"]]
+    if present != expected_fields:
+        raise IntentConflict("intent fields inconsistent with state")
 
 
 def record_launch_intent(operation_id: str, parameters: dict) -> dict:
@@ -131,8 +147,10 @@ def record_launch_intent(operation_id: str, parameters: dict) -> dict:
                 raise IntentConflict(
                     f"operation requires reconciliation: {record.get('state')}"
                 )
+            record.pop("worker_id")
             record["state"] = "launch_requested"
             record["updated_at_ns"] = time.time_ns()
+            _validate_record(record, operation_id)
             _write(path, record)
             return record
         record = {
@@ -169,5 +187,6 @@ def transition(operation_id: str, expected: str, state: str, **fields) -> dict:
         record.update(fields)
         record["state"] = state
         record["updated_at_ns"] = time.time_ns()
+        _validate_record(record, operation_id)
         _write(path, record)
         return record
