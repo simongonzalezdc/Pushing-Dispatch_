@@ -14,8 +14,8 @@ cat > "$BIN_DIR/pushing-dispatch" <<EOF
 set -euo pipefail
 
 REPO="$REPO_ROOT"
-export DISPATCH_MATRIX="${DISPATCH_MATRIX:-$REPO/dispatch_matrix.toml}"
-export DISPATCH_NESTED="${DISPATCH_NESTED:-1}"   # G3 (CEO 2026-08-20): nested dispatch on, max_depth=2
+export DISPATCH_MATRIX="\${DISPATCH_MATRIX:-\$REPO/dispatch_matrix.toml}"
+export DISPATCH_NESTED="\${DISPATCH_NESTED:-1}"   # G3 (CEO 2026-08-20): nested dispatch on, max_depth=2
 
 if [[ -z "\${Z_AI_API_KEY:-}" ]]; then
   hermes_zai_key="\$("\$REPO/bin/read-hermes-zai-key" 2>/dev/null || true)"
