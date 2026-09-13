@@ -1,13 +1,21 @@
 import json
 import os
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from dispatch_lib.current_worker_index import Limits, build_index, main, publish_index
+from dispatch_lib.current_worker_index import (
+    IndexBusy,
+    Limits,
+    _acquire_lock,
+    build_index,
+    main,
+    publish_index,
+)
 
 
 class CurrentWorkerIndexTests(unittest.TestCase):
@@ -92,9 +100,51 @@ class CurrentWorkerIndexTests(unittest.TestCase):
             ) as build,
             mock.patch.dict(os.environ, {"DISPATCH_ROOT": str(self.root)}),
         ):
-            result = publish_index(root=self.status)
+            result = publish_index(root=self.status, build=build)
         self.assertIs(result, second)
         self.assertEqual(build.call_count, 2)
+
+    def test_concurrent_producer_cannot_overtake_locked_scan(self):
+        target = self.root / "current-workers.json"
+        target.write_text("old\n")
+        self.write("w-live")
+        entered = threading.Event()
+        release = threading.Event()
+        outcome = []
+
+        def paused_build(*args, **kwargs):
+            entered.set()
+            self.assertTrue(release.wait(2))
+            return build_index(*args, **kwargs)
+
+        def older_scan():
+            with mock.patch.dict(os.environ, {"DISPATCH_ROOT": str(self.root)}):
+                outcome.append(publish_index(root=self.status, build=paused_build))
+
+        thread = threading.Thread(target=older_scan)
+        thread.start()
+        self.assertTrue(entered.wait(2))
+        with mock.patch.dict(os.environ, {"DISPATCH_ROOT": str(self.root)}):
+            with self.assertRaises(IndexBusy):
+                publish_index(root=self.status)
+        self.assertEqual(target.read_text(), "old\n")
+        release.set()
+        thread.join(2)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(outcome[0]["candidate_worker_ids"], ["w-live"])
+
+    def test_lock_is_regular_same_owner_nofollow_and_nonblocking(self):
+        with mock.patch.dict(os.environ, {"DISPATCH_ROOT": str(self.root)}):
+            fd = _acquire_lock(self.root)
+            try:
+                with self.assertRaises(IndexBusy):
+                    _acquire_lock(self.root)
+            finally:
+                os.close(fd)
+            (self.root / ".current-workers.lock").unlink()
+            os.symlink(self.status / "w-none.json", self.root / ".current-workers.lock")
+            with self.assertRaises(OSError):
+                _acquire_lock(self.root)
 
     def test_atomic_status_replacement_marks_generation_inconsistent(self):
         self.write("w-race", "reading")

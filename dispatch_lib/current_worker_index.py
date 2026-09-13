@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import errno
+import fcntl
 import json
 import os
 import re
@@ -18,6 +20,32 @@ from .status_writer import PHASES, is_terminal
 
 WORKER_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 INDEX_NAME = "current-workers.json"
+LOCK_NAME = ".current-workers.lock"
+
+
+class IndexBusy(RuntimeError):
+    """Another producer owns the current-worker publication cycle."""
+
+
+def _acquire_lock(owner_root: Path) -> int:
+    """Acquire the fixed same-owner lock without following or deleting it."""
+    owner_root.mkdir(parents=True, exist_ok=True)
+    flags = os.O_RDWR | os.O_CREAT | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(owner_root / LOCK_NAME, flags, 0o600)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid():
+            raise PermissionError("unsafe current-worker lock")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            if error.errno in (errno.EACCES, errno.EAGAIN):
+                raise IndexBusy("current-worker index producer is busy") from None
+            raise
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
 
 
 @dataclass(frozen=True)
@@ -186,6 +214,7 @@ def publish_index(
     now=time.time,
     monotonic=time.monotonic,
     limits: Limits = Limits(),
+    build=build_index,
 ) -> dict:
     """Build, retry one raced scan, then durably replace the fixed index file."""
     owner_root = dispatch_root().resolve()
@@ -193,43 +222,48 @@ def publish_index(
     output = owner_root / INDEX_NAME if output is None else Path(output)
     if output != owner_root / INDEX_NAME:
         raise ValueError("index output must be DISPATCH_ROOT/current-workers.json")
-    result = build_index(root, now=now, monotonic=monotonic, limits=limits)
-    if not result["source_generation"]["consistent"]:
-        result = build_index(root, now=now, monotonic=monotonic, limits=limits)
-    owner_root.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=f".{INDEX_NAME}.", dir=owner_root)
-    backup = f"{temporary}.old"
+    lock_fd = _acquire_lock(owner_root)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(result, handle, sort_keys=True, separators=(",", ":"))
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        had_old_index = output.exists()
-        if had_old_index:
-            os.link(output, backup, follow_symlinks=False)
-        os.replace(temporary, output)
-        directory_fd = os.open(owner_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        result = build(root, now=now, monotonic=monotonic, limits=limits)
+        if not result["source_generation"]["consistent"]:
+            result = build(root, now=now, monotonic=monotonic, limits=limits)
+        fd, temporary = tempfile.mkstemp(prefix=f".{INDEX_NAME}.", dir=owner_root)
+        backup = f"{temporary}.old"
         try:
-            os.fsync(directory_fd)
-        except BaseException:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(result, handle, sort_keys=True, separators=(",", ":"))
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            had_old_index = output.exists()
             if had_old_index:
-                os.replace(backup, output)
-            else:
-                os.unlink(output)
-            raise
-        finally:
-            os.close(directory_fd)
-        if had_old_index:
-            os.unlink(backup)
-    except BaseException:
-        for artifact in (temporary, backup):
+                os.link(output, backup, follow_symlinks=False)
+            os.replace(temporary, output)
+            directory_fd = os.open(
+                owner_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+            )
             try:
-                os.unlink(artifact)
-            except FileNotFoundError:
-                pass
-        raise
-    return result
+                os.fsync(directory_fd)
+            except BaseException:
+                if had_old_index:
+                    os.replace(backup, output)
+                else:
+                    os.unlink(output)
+                raise
+            finally:
+                os.close(directory_fd)
+            if had_old_index:
+                os.unlink(backup)
+        except BaseException:
+            for artifact in (temporary, backup):
+                try:
+                    os.unlink(artifact)
+                except FileNotFoundError:
+                    pass
+            raise
+        return result
+    finally:
+        os.close(lock_fd)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -237,7 +271,11 @@ def main(argv: list[str] | None = None) -> int:
         description="Publish the bounded current-worker index"
     )
     parser.parse_args(argv)
-    result = publish_index()
+    try:
+        result = publish_index()
+    except IndexBusy:
+        print(json.dumps({"status": "busy", "index_unchanged": True}))
+        return 75
     print(
         json.dumps(
             {
