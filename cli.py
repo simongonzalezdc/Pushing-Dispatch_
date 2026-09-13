@@ -41,6 +41,7 @@ from dispatch_lib.feature_flag import (
     is_nested_dispatch_enabled, get_depth_cap,
 )
 from dispatch_lib.permissions import check_nested_permission
+from dispatch_lib.deadline import evaluate_deadline, resolve_effective_deadline
 from dispatch_lib.nested import (
     build_tree, children_of, tree_for, kill_cascade, format_tree,
 )
@@ -168,6 +169,73 @@ def _read_registry() -> list[dict]:
     return entries
 
 
+# --- Deadline admission ---
+
+DEADLINE_ENV_VAR = "DISPATCH_DEADLINE"
+
+
+def _admit_deadline_or_exit(explicit, inherited=None,
+                            source: str = "inherited DISPATCH_DEADLINE"):
+    """Common deadline gate: resolve inherited + explicit, reject bad, return effective.
+
+    Resolves the effective deadline from the applicable inherited bound
+    (launch-lineage env at start; stored prior status at answer/continue)
+    together with the explicit --deadline value, BEFORE any side effect.
+    Missing deadline admits (missing is not expired); malformed or
+    present-but-empty inherited metadata fails closed. An inherited expired
+    bound rejects even when a later --deadline is supplied — a supplied
+    value can never extend it.
+
+    Returns the effective deadline to carry forward (the earliest applicable
+    bound, verbatim), or None when genuinely unbounded. Rejection exits 6 —
+    the established deadline exit code — before any archive write, question
+    resolution, checkpoint consumption, intent mutation, or launch.
+    """
+    ok, reason, effective = resolve_effective_deadline(explicit, inherited, source=source)
+    if not ok:
+        print(f"Error: {reason}", file=sys.stderr)
+        sys.exit(6)
+    return effective
+
+
+def _admit_lineage_deadline_or_exit(prior_status, worker_id: str):
+    """Admit the stored resume-lineage deadline with explicit dispositions.
+
+    The prior worker's status row is the authoritative durable record of the
+    bound a previous admission applied. Lost evidence never widens permission:
+
+    - no readable row (missing or corrupt JSON): unknown lineage — reject;
+      this is not an unbounded resume (CS red case missing_lineage_acceptance).
+    - row without a "deadline" key: legacy metadata written before deadline
+      admission existed — unknown, not unbounded — reject.
+    - "deadline" null: a prior admission explicitly recorded unbounded — admit.
+    - "deadline" string: validated by the common gate (expired/malformed/
+      degenerate reject, effective = the stored bound verbatim).
+
+    Rejection exits 6 before any intent mutation, archive write, checkpoint
+    consumption, or launch. Returns the effective deadline (None when the
+    lineage is explicitly unbounded).
+    """
+    if prior_status is None or "deadline" not in prior_status:
+        if prior_status is None:
+            reason = (
+                f"DEADLINE_LINEAGE_UNKNOWN: no readable stored status for worker "
+                f"{worker_id!r}; the resume deadline bound cannot be verified "
+                "(missing or corrupt lineage fails closed, it is not unbounded)"
+            )
+        else:
+            reason = (
+                f"DEADLINE_LINEAGE_UNKNOWN: stored status for worker {worker_id!r} "
+                "predates deadline admission and records no deadline disposition "
+                "(unknown legacy metadata is not unlimited permission)"
+            )
+        print(f"Error: {reason}", file=sys.stderr)
+        sys.exit(6)
+    return _admit_deadline_or_exit(
+        None, inherited=prior_status.get("deadline"),
+        source="stored worker deadline")
+
+
 # --- Nested dispatch gates ---
 
 def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int]:
@@ -213,16 +281,11 @@ def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int
     if budget_remaining is not None and budget_remaining <= 0:
         return False, f"BUDGET_EXHAUSTED: remaining={budget_remaining}", 3
 
-    # Deadline check
-    deadline_str = getattr(args, "deadline", None)
-    if deadline_str:
-        try:
-            deadline = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
-            now = datetime.now(deadline.tzinfo)
-            if now >= deadline:
-                return False, f"DEADLINE_EXCEEDED: deadline={deadline_str}", 6
-        except (ValueError, TypeError):
-            pass
+    # Deadline check — common admission semantics: expired, malformed, and
+    # timezone-ambiguous supplied deadlines all fail closed (exit 6).
+    ok, reason = evaluate_deadline(getattr(args, "deadline", None))
+    if not ok:
+        return False, reason, 6
 
     return True, "", 0
 
@@ -231,6 +294,15 @@ def _check_nested_dispatch_gates(args, matrix_path: str) -> tuple[bool, str, int
 
 def cmd_start(args, mode: str):
     """Start a new worker (task or breakout)."""
+    # Common deadline admission first: the applicable inherited bound
+    # (DISPATCH_DEADLINE in this controller's launch environment) and the
+    # explicit --deadline are resolved together BEFORE routing, directory
+    # writes, or any launch effect. An inherited expired bound rejects even
+    # when a later --deadline is supplied; the earliest bound wins.
+    effective_deadline = _admit_deadline_or_exit(
+        getattr(args, "deadline", None),
+        inherited=os.environ.get(DEADLINE_ENV_VAR),
+    )
     ensure_dirs()
     matrix = _load_matrix()
     matrix_path = _find_matrix_path()
@@ -332,14 +404,20 @@ def cmd_start(args, mode: str):
     parent_id = getattr(args, "parent_id", None)
     depth = getattr(args, "depth", 0)
 
+    # The resolved (earliest applicable) deadline rides the launch environment
+    # exactly: never a stale unrelated controller variable, never a silent
+    # extension of the inherited bound.
+    if effective_deadline:
+        env[DEADLINE_ENV_VAR] = effective_deadline
+    else:
+        env.pop(DEADLINE_ENV_VAR, None)
+
     if parent_id and is_nested_dispatch_enabled():
         env["DISPATCH_NESTED"] = "1"
         env["DISPATCH_CURRENT_DEPTH"] = str(depth)
         env["DISPATCH_WORKER_ID"] = worker_id
         if getattr(args, "budget_remaining", None) is not None:
             env["DISPATCH_BUDGET_REMAINING"] = str(args.budget_remaining)
-        if getattr(args, "deadline", None):
-            env["DISPATCH_DEADLINE"] = args.deadline
     else:
         env["DISPATCH_WORKER_ID"] = worker_id
 
@@ -362,6 +440,7 @@ def cmd_start(args, mode: str):
         parent_id=parent_id,
         depth=depth,
         session_id=os.environ.get("DISPATCH_SESSION_ID"),
+        deadline=effective_deadline,
     )
 
     # Registry entry
@@ -754,6 +833,14 @@ def cmd_answer(args):
         print(f"Error: no worker '{args.worker_id}'", file=sys.stderr)
         sys.exit(2)
 
+    # Inherited deadline admission: the answer re-dispatch keeps the original
+    # worker's deadline (no silent reset). The stored status is the lineage's
+    # authoritative bound record — the answering controller's environment is
+    # not applicable. Missing/corrupt lineage and legacy rows without a
+    # deadline disposition reject before any task-archive write, question
+    # resolution, registry append, or launch; explicit null stays unbounded.
+    effective_deadline = _admit_lineage_deadline_or_exit(status, args.worker_id)
+
     if args.answer_file:
         answer_text = Path(args.answer_file).read_text()
     elif args.answer:
@@ -827,6 +914,12 @@ def cmd_answer(args):
 
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
+    # The resumed child's environment carries exactly the resolved lineage
+    # deadline — a stale controller DISPATCH_DEADLINE must not leak in.
+    if effective_deadline:
+        env[DEADLINE_ENV_VAR] = effective_deadline
+    else:
+        env.pop(DEADLINE_ENV_VAR, None)
 
     proc = subprocess.Popen(
         cmd, env=env, start_new_session=True,
@@ -843,6 +936,7 @@ def cmd_answer(args):
         parent_id=args.worker_id,
         depth=status.get("depth", 0),
         session_id=os.environ.get("DISPATCH_SESSION_ID"),
+        deadline=effective_deadline,
     )
 
     _append_registry({
@@ -907,6 +1001,15 @@ def cmd_checkpoint_continue(args):
               file=sys.stderr)
         sys.exit(2)
 
+    # Inherited deadline admission before intent mutation, checkpoint
+    # consumption, or launch: the resume keeps the paused worker's deadline
+    # (no silent reset). The stored prior status is the lineage's authoritative
+    # bound record: missing/corrupt lineage and legacy rows without a deadline
+    # disposition fail closed instead of resuming unbounded; an explicit null
+    # stays genuinely unbounded.
+    prior_status = read_status(ck.worker_id)
+    effective_deadline = _admit_lineage_deadline_or_exit(prior_status, ck.worker_id)
+
     # Default worktree path follows the breakout convention.
     worktree = Path(args.worktree) if args.worktree else None
     if worktree and not worktree.is_dir():
@@ -958,6 +1061,12 @@ def cmd_checkpoint_continue(args):
 
     env = os.environ.copy()
     env["DISPATCH_WORKER_ID"] = worker_id
+    # The resumed child's environment carries exactly the resolved lineage
+    # deadline — a stale controller DISPATCH_DEADLINE must not leak in.
+    if effective_deadline:
+        env[DEADLINE_ENV_VAR] = effective_deadline
+    else:
+        env.pop(DEADLINE_ENV_VAR, None)
 
     try:
         proc = subprocess.Popen(
@@ -983,6 +1092,7 @@ def cmd_checkpoint_continue(args):
         pid=proc.pid,
         brief_path=str(resume_brief_path),
         log_file=str(log_path(worker_id)),
+        deadline=effective_deadline,
     )
 
     _append_registry({

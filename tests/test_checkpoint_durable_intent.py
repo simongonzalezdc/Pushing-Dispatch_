@@ -28,6 +28,14 @@ class CheckpointDurableIntentTests(unittest.TestCase):
             commit_sha="source-revision", next_phase="2",
             directive="pause-for-review",
         )
+        # A real paused worker always has a stored status row (write_and_exit
+        # finalizes it). Deadline admission now rejects a checkpoint whose
+        # lineage status is missing, so the fixture records the prior row's
+        # explicit disposition (unbounded) like a live pause would.
+        cli.init_status(
+            worker_id="w-prior-fixture", mode="breakout", executor="fixture",
+            pid=424242, brief_path=str(self.brief), deadline=None,
+        )
         self.args = SimpleNamespace(
             worker_id="w-prior-fixture", worktree=str(self.worktree),
             task_file=str(self.brief), executor="fixture",
