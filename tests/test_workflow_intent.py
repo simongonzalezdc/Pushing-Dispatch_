@@ -24,6 +24,10 @@ class WorkflowIntentTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertNotEqual(first, workflow_intent.checkpoint_operation_id(b"changed"))
 
+    def test_malformed_operation_identity_is_typed_conflict(self):
+        with self.assertRaisesRegex(workflow_intent.IntentConflict, "invalid operation_id"):
+            workflow_intent.record_launch_intent("../bad", {"cwd": "/work"})
+
     def test_started_intent_blocks_blind_retry(self):
         op = workflow_intent.checkpoint_operation_id(b"one")
         workflow_intent.record_launch_intent(op, {"cwd": "/work"})
