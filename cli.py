@@ -12,6 +12,7 @@ Usage:
     python cli.py completions
     python cli.py questions
     python cli.py answer <worker-id> --answer-file <path>
+    python cli.py reconcile [--apply]
     python cli.py compact
     python cli.py validate-matrix <matrix-path>
 """
@@ -34,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dispatch_lib.path_conventions import (
     dispatch_root, status_dir, log_dir, registry_path, registry_lock_path,
     status_path, log_path, question_dir, question_path, ensure_dirs,
+    reconcile_lock_path,
 )
 from dispatch_lib.status_writer import (
     init_status, set_phase, finalize, read_status, is_terminal, PHASES,
@@ -58,6 +60,7 @@ from dispatch_lib.auto_router import (
     missing_capabilities, _tier, _candidates,
 )
 from dispatch_lib import availability, lane_health
+from dispatch_lib.reconcile import orphaned_reason
 from dispatch_lib.scheduler import run_cycle
 from dispatch_lib.telemetry_export import render_html
 
@@ -1273,6 +1276,65 @@ def cmd_compact(args):
     print(f"Compacted: removed {removed} entries, kept {len(kept)}")
 
 
+def cmd_reconcile(args):
+    """Report or terminalize workers whose recorded process is absent.
+
+    The default is a read-only dry run.  ``--apply`` is explicit because it
+    writes a terminal status receipt and releases any cwd lock.  A dedicated
+    lock prevents duplicate reconciliation receipts from concurrent callers.
+    """
+    def collect_candidates():
+        found = []
+        for status in _load_all_statuses():
+            reason = orphaned_reason(status)
+            if reason is None:
+                continue
+            worker_id = status.get("worker_id")
+            if not isinstance(worker_id, str) or not worker_id:
+                continue
+            found.append((worker_id, status.get("current_phase", "?"), reason))
+        return found
+
+    if not args.apply:
+        candidates = collect_candidates()
+        print(f"Would reconcile: {len(candidates)} worker(s).")
+        for worker_id, previous_phase, _reason in candidates:
+            print(f"{worker_id}  {previous_phase}  recorded process absent")
+        return
+
+    ensure_dirs()
+    with open(reconcile_lock_path(), "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        candidates = collect_candidates()
+        applied = []
+        for worker_id, previous_phase, _reason in candidates:
+            # Re-read immediately before the write.  If a status changed,
+            # re-evaluate it and retain any newly ambiguous lifecycle.
+            current = read_status(worker_id)
+            reason = orphaned_reason(current or {})
+            if reason is None:
+                continue
+            finalize(
+                worker_id,
+                "errored",
+                exit_code=70,
+                error_summary=f"Orphan reconciled: {reason}",
+            )
+            _append_registry({
+                "kind": "bg-event",
+                "event": "worker_reconciled",
+                "worker_id": worker_id,
+                "previous_phase": previous_phase,
+                "current_phase": "errored",
+                "exit_code": 70,
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            })
+            applied.append(worker_id)
+        print(f"Reconciled: {len(applied)} worker(s).")
+        for worker_id in applied:
+            print(worker_id)
+
+
 # --- Helpers ---
 
 def _load_all_statuses() -> list[dict]:
@@ -1396,6 +1458,13 @@ def main():
     # compact
     subparsers.add_parser("compact", help="Compact registry")
 
+    # reconcile
+    reconcile_parser = subparsers.add_parser(
+        "reconcile", help="Find stale nonterminal workers (dry-run by default)")
+    reconcile_parser.add_argument(
+        "--apply", action="store_true",
+        help="Write terminal error receipts for provably absent worker processes")
+
     args = parser.parse_args()
 
     if args.command == "task":
@@ -1428,6 +1497,8 @@ def main():
         cmd_utilization(args)
     elif args.command == "compact":
         cmd_compact(args)
+    elif args.command == "reconcile":
+        cmd_reconcile(args)
 
 
 def _add_start_args(parser, executor_names):
