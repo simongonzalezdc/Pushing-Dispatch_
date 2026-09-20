@@ -41,6 +41,11 @@ def reconcile_lock_path() -> Path:
     return dispatch_root() / "reconcile.lock"
 
 
+def reconcile_pending_dir() -> Path:
+    """Durable intents for incomplete orphan reconciliation transactions."""
+    return dispatch_root() / "reconcile-pending"
+
+
 def status_path(worker_id: str) -> Path:
     return status_dir() / f"{worker_id}.json"
 

@@ -7,7 +7,11 @@ from types import SimpleNamespace
 from unittest import mock
 
 import cli
-from dispatch_lib.path_conventions import registry_path, status_path
+from dispatch_lib.path_conventions import (
+    reconcile_pending_dir,
+    registry_path,
+    status_path,
+)
 from dispatch_lib.reconcile import orphaned_reason, process_state
 from dispatch_lib.status_writer import init_status, read_status
 
@@ -95,11 +99,22 @@ class ReconcileCommandTests(unittest.TestCase):
         data["current_phase"] = phase
         status_path(worker_id).write_text(json.dumps(data))
 
+    @staticmethod
+    def _absent(status):
+        return (
+            "recorded process is absent"
+            if status.get("worker_id") == "w-dead"
+            else None
+        )
+
+    def _events(self):
+        if not registry_path().exists():
+            return []
+        return [json.loads(line) for line in registry_path().read_text().splitlines()]
+
     @mock.patch.object(cli, "orphaned_reason")
     def test_dry_run_never_changes_status_or_registry(self, classify):
-        classify.side_effect = lambda status: (
-            "recorded process absent" if status.get("worker_id") == "w-dead" else None
-        )
+        classify.side_effect = self._absent
         self._worker()
         before = status_path("w-dead").read_bytes()
 
@@ -111,9 +126,7 @@ class ReconcileCommandTests(unittest.TestCase):
 
     @mock.patch.object(cli, "orphaned_reason")
     def test_apply_writes_terminal_receipt_event_and_releases_cwd_lock(self, classify):
-        classify.side_effect = lambda status: (
-            "recorded process absent" if status.get("worker_id") == "w-dead" else None
-        )
+        classify.side_effect = self._absent
         self._worker()
         lock_dir = self.root / "cwd-locks"
         lock_dir.mkdir(parents=True)
@@ -130,8 +143,9 @@ class ReconcileCommandTests(unittest.TestCase):
         self.assertEqual(status["exit_code"], 70)
         self.assertIsNotNone(status["finalized_at"])
         self.assertIn("Orphan reconciled", status["error_summary"])
-        rows = [json.loads(line) for line in registry_path().read_text().splitlines()]
+        rows = self._events()
         self.assertEqual(rows[0]["event"], "worker_reconciled")
+        self.assertEqual(len(rows[0]["transaction_id"]), 32)
         self.assertEqual(rows[0]["previous_phase"], "starting")
         self.assertEqual(rows[0]["current_phase"], "errored")
         self.assertTrue(cwd_lock.acquire("w-next", str(self.root / "worktree"))[0])
@@ -139,12 +153,137 @@ class ReconcileCommandTests(unittest.TestCase):
     @mock.patch.object(cli, "orphaned_reason")
     def test_apply_rechecks_status_before_mutating(self, classify):
         self._worker()
-        classify.side_effect = ["recorded process absent", None]
+        classify.side_effect = ["recorded process is absent", None]
 
         cli.cmd_reconcile(SimpleNamespace(apply=True))
 
         self.assertEqual(read_status("w-dead")["current_phase"], "starting")
         self.assertFalse(registry_path().exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_append_failure_is_recovered_once_from_durable_intent(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        from dispatch_lib import cwd_lock
+
+        self.assertTrue(cwd_lock.acquire("w-dead", str(self.root / "worktree"))[0])
+        with mock.patch.object(
+            cli, "_append_registry_once", side_effect=OSError("crash")
+        ):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertEqual(read_status("w-dead")["current_phase"], "errored")
+        self.assertFalse(cwd_lock.held_by("w-dead"))
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+        self.assertEqual(self._events(), [])
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_torn_event_append_is_truncated_and_recovered(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        real_write = os.write
+
+        def torn_write(descriptor, payload):
+            real_write(descriptor, payload[: max(1, len(payload) // 2)])
+            raise OSError("crash during append")
+
+        with mock.patch.object(cli.os, "write", side_effect=torn_write):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+        self.assertFalse(registry_path().read_bytes().endswith(b"\n"))
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_crash_before_finalize_recovers_status_lock_and_event(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        from dispatch_lib import cwd_lock
+
+        self.assertTrue(cwd_lock.acquire("w-dead", str(self.root / "worktree"))[0])
+        with mock.patch.object(cli, "finalize", side_effect=OSError("crash")):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(read_status("w-dead")["current_phase"], "starting")
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(read_status("w-dead")["current_phase"], "errored")
+        self.assertFalse(cwd_lock.held_by("w-dead"))
+        self.assertEqual(len(self._events()), 1)
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_crash_after_event_append_deduplicates_on_recovery(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        with mock.patch.object(cli, "remove_intent", side_effect=OSError("crash")):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_cwd_release_failure_leaves_recoverable_intent(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        from dispatch_lib import cwd_lock
+
+        self.assertTrue(cwd_lock.acquire("w-dead", str(self.root / "worktree"))[0])
+        with mock.patch.object(
+            cwd_lock, "release", side_effect=OSError("release failed")
+        ):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+        self.assertEqual(self._events(), [])
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertFalse(cwd_lock.held_by("w-dead"))
+        self.assertEqual(len(self._events()), 1)
+
+    def test_filename_content_mismatch_and_symlink_are_never_candidates(self):
+        status = self.root / "status"
+        status.mkdir()
+        (status / "w-safe.json").write_text(
+            json.dumps(
+                {
+                    "worker_id": "../../escape",
+                    "current_phase": "starting",
+                    "pid": 424242,
+                    "finalized_at": None,
+                }
+            )
+        )
+        (status / "w-linked.json").symlink_to(status / "w-safe.json")
+
+        cli.cmd_reconcile(SimpleNamespace(apply=False))
+
+        self.assertFalse(registry_path().exists())
+        self.assertFalse((self.root / "reconcile.lock").exists())
+
+    def test_incomplete_bounded_snapshot_refuses_without_writes(self):
+        self._worker()
+        incomplete = {
+            "source_generation": {"consistent": True},
+            "coverage": {"complete": False, "stop_reason": "ENTRY_LIMIT"},
+        }
+        with mock.patch("dispatch_lib.reconcile.build_index", return_value=incomplete):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=False))
+        self.assertFalse(registry_path().exists())
+        self.assertFalse((self.root / "reconcile.lock").exists())
 
 
 if __name__ == "__main__":

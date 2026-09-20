@@ -7,6 +7,7 @@ Lock store: <dispatch_root>/locks/cwd/<sha256(cwd)>.json holding
 {worker_id, cwd, ts}. A lock is stealable when its holder's status is
 terminal (done/errored/blocked/killed/needs_guidance) or missing.
 """
+
 import hashlib
 import json
 import time
@@ -52,3 +53,14 @@ def release(worker_id: str) -> None:
                 p.unlink(missing_ok=True)
         except (json.JSONDecodeError, OSError):
             continue
+
+
+def held_by(worker_id: str) -> bool:
+    """Return whether a readable cwd lock still names ``worker_id``."""
+    for path in _lock_dir().glob("*.json"):
+        try:
+            if json.loads(path.read_text()).get("worker_id") == worker_id:
+                return True
+        except (json.JSONDecodeError, OSError):
+            continue
+    return False

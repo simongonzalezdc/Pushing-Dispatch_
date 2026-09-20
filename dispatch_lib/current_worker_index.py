@@ -63,6 +63,54 @@ class Limits:
     published: int = 128
 
 
+def read_indexed_status(
+    root: Path, worker_id: str, *, file_bytes: int = 64 * 1024
+) -> dict | None:
+    """Read one current status without following links or losing ID binding."""
+    if WORKER_ID.fullmatch(worker_id) is None:
+        return None
+    directory = None
+    child = None
+    try:
+        flags = (
+            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        )
+        directory = os.open(root, flags)
+        child = os.open(
+            f"{worker_id}.json",
+            os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0),
+            dir_fd=directory,
+        )
+        info = os.fstat(child)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or info.st_size > file_bytes
+        ):
+            return None
+        raw = os.read(child, file_bytes + 1)
+        if len(raw) > file_bytes:
+            return None
+        value = json.loads(raw)
+        if not isinstance(value, dict) or value.get("worker_id") != worker_id:
+            return None
+        return value
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        RecursionError,
+        TypeError,
+        ValueError,
+    ):
+        return None
+    finally:
+        if child is not None:
+            os.close(child)
+        if directory is not None:
+            os.close(directory)
+
+
 def _stamp(now: float) -> str:
     return datetime.fromtimestamp(now, timezone.utc).isoformat().replace("+00:00", "Z")
 
