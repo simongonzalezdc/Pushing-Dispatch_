@@ -12,6 +12,7 @@ Usage:
     python cli.py completions
     python cli.py questions
     python cli.py answer <worker-id> --answer-file <path>
+    python cli.py reconcile [--apply]
     python cli.py compact
     python cli.py validate-matrix <matrix-path>
 """
@@ -21,6 +22,7 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -34,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dispatch_lib.path_conventions import (
     dispatch_root, status_dir, log_dir, registry_path, registry_lock_path,
     status_path, log_path, question_dir, question_path, ensure_dirs,
+    reconcile_lock_path,
 )
 from dispatch_lib.status_writer import (
     init_status, set_phase, finalize, read_status, is_terminal, PHASES,
@@ -57,7 +60,20 @@ from dispatch_lib.auto_router import (
     auto_route, detect_mode_from_keywords, required_capabilities, NoExecutorAvailable,
     missing_capabilities, _tier, _candidates,
 )
-from dispatch_lib import availability, lane_health
+from dispatch_lib import availability, cwd_lock, lane_health
+from dispatch_lib.current_worker_index import read_indexed_status
+from dispatch_lib.reconcile import (
+    ReconciliationIncomplete,
+    bounded_status_snapshot,
+    confirm_status_durable,
+    load_intents,
+    make_intent,
+    orphaned_reason,
+    reconciliation_summary,
+    remove_intent,
+    status_matches_reconciliation,
+    store_intent,
+)
 from dispatch_lib.scheduler import run_cycle
 from dispatch_lib.telemetry_export import render_html
 
@@ -161,6 +177,78 @@ def _append_registry(entry: dict):
             f.write(json.dumps(entry) + "\n")
             f.flush()
             os.fsync(f.fileno())
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _append_registry_once(entry: dict) -> bool:
+    """Durably append one transaction-keyed event, or confirm it exists."""
+    transaction_id = entry.get("transaction_id")
+    if not isinstance(transaction_id, str):
+        raise ReconciliationIncomplete("reconciliation event lacks transaction id")
+    path = registry_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(registry_lock_path(), "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        flags = os.O_RDWR | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            descriptor = os.open(path, flags)
+        except FileNotFoundError:
+            descriptor = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            info = os.fstat(descriptor)
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.geteuid()
+                or info.st_size > 64 * 1024 * 1024
+            ):
+                raise ReconciliationIncomplete("unsafe or oversized session registry")
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            raw = os.read(descriptor, info.st_size + 1)
+            if raw and not raw.endswith(b"\n"):
+                # A killed append can leave only the final JSONL row torn.  The
+                # durable reconciliation intent makes truncating that invalid
+                # suffix and retrying the transaction deterministic.
+                complete_bytes = raw.rfind(b"\n") + 1
+                os.ftruncate(descriptor, complete_bytes)
+                os.fsync(descriptor)
+                raw = raw[:complete_bytes]
+            for line in raw.splitlines():
+                try:
+                    existing = json.loads(line)
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+                if not isinstance(existing, dict):
+                    continue
+                if existing.get("transaction_id") != transaction_id:
+                    continue
+                if existing == entry:
+                    # A matching row is not a durable dedupe witness until the
+                    # file and its directory entry have both reached storage.
+                    os.fsync(descriptor)
+                    _fsync_directory(path.parent)
+                    return False
+                raise ReconciliationIncomplete("transaction id is already bound to another event")
+            payload = (json.dumps(entry, sort_keys=True) + "\n").encode()
+            written = 0
+            while written < len(payload):
+                count = os.write(descriptor, payload[written:])
+                if count <= 0:
+                    raise OSError("session registry append made no progress")
+                written += count
+            os.fsync(descriptor)
+            # Sync unconditionally: a previous failed first append may have
+            # created this name without durably recording its directory edge.
+            _fsync_directory(path.parent)
+            return True
+        finally:
+            os.close(descriptor)
 
 
 def _read_registry() -> list[dict]:
@@ -1273,6 +1361,112 @@ def cmd_compact(args):
     print(f"Compacted: removed {removed} entries, kept {len(kept)}")
 
 
+def _reconciliation_candidates() -> list[tuple[str, str, str]]:
+    found = []
+    for status in bounded_status_snapshot():
+        reason = orphaned_reason(status)
+        if reason is not None:
+            found.append((status["worker_id"], status["current_phase"], reason))
+    return found
+
+
+def _complete_reconciliation(intent: dict) -> None:
+    """Finish one durable intent; safe to retry after any interrupted step."""
+    worker_id = intent["worker_id"]
+    current = read_indexed_status(status_dir(), worker_id)
+    if not status_matches_reconciliation(current, intent):
+        if current is None or current.get("current_phase") != intent["expected_phase"]:
+            raise ReconciliationIncomplete(
+                "pending reconciliation status no longer matches its intent"
+            )
+        if orphaned_reason(current) != intent["reason"]:
+            raise ReconciliationIncomplete(
+                "pending reconciliation process state is no longer provably absent"
+            )
+        finalize(
+            worker_id,
+            "errored",
+            exit_code=70,
+            error_summary=reconciliation_summary(intent),
+        )
+        current = read_indexed_status(status_dir(), worker_id)
+        if not status_matches_reconciliation(current, intent):
+            raise ReconciliationIncomplete(
+                "terminal status did not preserve the reconciliation transaction"
+            )
+
+    # A visible atomic replacement is not yet a durable one.  Re-sync the
+    # exact validated terminal row on recovery before releasing any later edge.
+    confirm_status_durable(worker_id, intent)
+
+    # finalize() already attempts this.  Repeat and verify so a failed release
+    # remains recoverable through the durable intent instead of being hidden.
+    cwd_lock.release(worker_id)
+    if cwd_lock.held_by(worker_id):
+        raise ReconciliationIncomplete("reconciled worker still owns a cwd lock")
+
+    _append_registry_once(
+        {
+            "kind": "bg-event",
+            "event": "worker_reconciled",
+            "transaction_id": intent["transaction_id"],
+            "worker_id": worker_id,
+            "previous_phase": intent["expected_phase"],
+            "current_phase": "errored",
+            "exit_code": 70,
+            "timestamp": intent["created_at"],
+        }
+    )
+    remove_intent(worker_id)
+
+
+def _cmd_reconcile(args):
+    """Report or terminalize workers whose recorded process is absent."""
+    if not args.apply:
+        pending = load_intents()
+        candidates = _reconciliation_candidates()
+        print(f"Pending recovery: {len(pending)} transaction(s).")
+        print(f"Would reconcile: {len(candidates)} worker(s).")
+        for worker_id, previous_phase, _reason in candidates:
+            print(f"{worker_id}  {previous_phase}  recorded process absent")
+        return
+
+    ensure_dirs()
+    with open(reconcile_lock_path(), "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        recovered = []
+        for intent in load_intents():
+            _complete_reconciliation(intent)
+            recovered.append(intent["worker_id"])
+
+        candidates = _reconciliation_candidates()
+        applied = []
+        for worker_id, previous_phase, reason in candidates:
+            current = read_indexed_status(status_dir(), worker_id)
+            if orphaned_reason(current or {}) != reason:
+                continue
+            intent = make_intent(worker_id, previous_phase, reason)
+            store_intent(intent)
+            _complete_reconciliation(intent)
+            applied.append(worker_id)
+        print(f"Recovered: {len(recovered)} transaction(s).")
+        print(f"Reconciled: {len(applied)} worker(s).")
+        for worker_id in recovered + applied:
+            print(worker_id)
+
+
+def cmd_reconcile(args):
+    """Run reconciliation with a bounded, sanitized refusal surface."""
+    try:
+        return _cmd_reconcile(args)
+    except ReconciliationIncomplete as error:
+        print(f"Reconciliation refused: {error}", file=sys.stderr)
+        raise SystemExit(75) from None
+    except OSError:
+        print("Reconciliation refused: durable state update failed", file=sys.stderr)
+        raise SystemExit(75) from None
+
+
 # --- Helpers ---
 
 def _load_all_statuses() -> list[dict]:
@@ -1396,6 +1590,13 @@ def main():
     # compact
     subparsers.add_parser("compact", help="Compact registry")
 
+    # reconcile
+    reconcile_parser = subparsers.add_parser(
+        "reconcile", help="Find stale nonterminal workers (dry-run by default)")
+    reconcile_parser.add_argument(
+        "--apply", action="store_true",
+        help="Write terminal error receipts for provably absent worker processes")
+
     args = parser.parse_args()
 
     if args.command == "task":
@@ -1428,6 +1629,8 @@ def main():
         cmd_utilization(args)
     elif args.command == "compact":
         cmd_compact(args)
+    elif args.command == "reconcile":
+        cmd_reconcile(args)
 
 
 def _add_start_args(parser, executor_names):
