@@ -230,3 +230,58 @@ def status_matches_reconciliation(status: dict | None, intent: dict) -> bool:
         and status.get("finalized_at") is not None
         and status.get("error_summary") == reconciliation_summary(intent)
     )
+
+
+def confirm_status_durable(worker_id: str, intent: dict) -> None:
+    """Revalidate and sync the exact terminal status plus its directory entry."""
+    if WORKER_ID.fullmatch(worker_id) is None:
+        raise ReconciliationIncomplete("unsafe reconciliation status name")
+    root_descriptor = None
+    child_descriptor = None
+    try:
+        root_descriptor = os.open(
+            status_dir(),
+            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
+        child_descriptor = os.open(
+            f"{worker_id}.json",
+            os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0),
+            dir_fd=root_descriptor,
+        )
+        info = os.fstat(child_descriptor)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or info.st_size > 64 * 1024
+        ):
+            raise ReconciliationIncomplete("unsafe reconciliation status")
+        raw = os.read(child_descriptor, 64 * 1024 + 1)
+        value = json.loads(raw)
+        if (
+            len(raw) > 64 * 1024
+            or not isinstance(value, dict)
+            or not status_matches_reconciliation(value, intent)
+        ):
+            raise ReconciliationIncomplete(
+                "terminal status no longer matches its reconciliation intent"
+            )
+        os.fsync(child_descriptor)
+        os.fsync(root_descriptor)
+    except ReconciliationIncomplete:
+        raise
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        RecursionError,
+        TypeError,
+        ValueError,
+    ) as error:
+        raise ReconciliationIncomplete(
+            "terminal status durability could not be confirmed"
+        ) from error
+    finally:
+        if child_descriptor is not None:
+            os.close(child_descriptor)
+        if root_descriptor is not None:
+            os.close(root_descriptor)

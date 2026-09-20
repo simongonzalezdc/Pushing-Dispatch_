@@ -110,6 +110,7 @@ def finalize(worker_id: str, phase: str, exit_code: int = 0, error_summary: str 
     # Wave-2 FM-20: every terminal path releases the worker's cwd lock.
     try:
         from . import cwd_lock
+
         cwd_lock.release(worker_id)
     except Exception:
         pass
@@ -131,15 +132,26 @@ def is_terminal(phase: str) -> bool:
     return phase in {"done", "errored", "blocked", "killed", "needs_guidance"}
 
 
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def _write_atomic(worker_id: str, data: dict):
-    """Write status JSON atomically via tmp + rename."""
+    """Write status JSON atomically and durably via tmp + replace."""
     path = status_path(worker_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(data, f, indent=2)
-        os.rename(tmp, str(path))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        _fsync_directory(path.parent)
     except Exception:
         try:
             os.unlink(tmp)

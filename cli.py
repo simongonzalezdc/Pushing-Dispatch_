@@ -65,6 +65,7 @@ from dispatch_lib.current_worker_index import read_indexed_status
 from dispatch_lib.reconcile import (
     ReconciliationIncomplete,
     bounded_status_snapshot,
+    confirm_status_durable,
     load_intents,
     make_intent,
     orphaned_reason,
@@ -178,6 +179,14 @@ def _append_registry(entry: dict):
             os.fsync(f.fileno())
 
 
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def _append_registry_once(entry: dict) -> bool:
     """Durably append one transaction-keyed event, or confirm it exists."""
     transaction_id = entry.get("transaction_id")
@@ -187,8 +196,11 @@ def _append_registry_once(entry: dict) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(registry_lock_path(), "a+b") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        flags = os.O_RDWR | os.O_APPEND | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(path, flags, 0o600)
+        flags = os.O_RDWR | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            descriptor = os.open(path, flags)
+        except FileNotFoundError:
+            descriptor = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             info = os.fstat(descriptor)
             if (
@@ -216,10 +228,11 @@ def _append_registry_once(entry: dict) -> bool:
                     continue
                 if existing.get("transaction_id") != transaction_id:
                     continue
-                if (
-                    existing.get("event") == "worker_reconciled"
-                    and existing.get("worker_id") == entry.get("worker_id")
-                ):
+                if existing == entry:
+                    # A matching row is not a durable dedupe witness until the
+                    # file and its directory entry have both reached storage.
+                    os.fsync(descriptor)
+                    _fsync_directory(path.parent)
                     return False
                 raise ReconciliationIncomplete("transaction id is already bound to another event")
             payload = (json.dumps(entry, sort_keys=True) + "\n").encode()
@@ -230,6 +243,9 @@ def _append_registry_once(entry: dict) -> bool:
                     raise OSError("session registry append made no progress")
                 written += count
             os.fsync(descriptor)
+            # Sync unconditionally: a previous failed first append may have
+            # created this name without durably recording its directory edge.
+            _fsync_directory(path.parent)
             return True
         finally:
             os.close(descriptor)
@@ -1379,6 +1395,10 @@ def _complete_reconciliation(intent: dict) -> None:
                 "terminal status did not preserve the reconciliation transaction"
             )
 
+    # A visible atomic replacement is not yet a durable one.  Re-sync the
+    # exact validated terminal row on recovery before releasing any later edge.
+    confirm_status_durable(worker_id, intent)
+
     # finalize() already attempts this.  Repeat and verify so a failed release
     # remains recoverable through the durable intent instead of being hidden.
     cwd_lock.release(worker_id)
@@ -1439,8 +1459,11 @@ def cmd_reconcile(args):
     """Run reconciliation with a bounded, sanitized refusal surface."""
     try:
         return _cmd_reconcile(args)
-    except (OSError, ReconciliationIncomplete) as error:
+    except ReconciliationIncomplete as error:
         print(f"Reconciliation refused: {error}", file=sys.stderr)
+        raise SystemExit(75) from None
+    except OSError:
+        print("Reconciliation refused: durable state update failed", file=sys.stderr)
         raise SystemExit(75) from None
 
 

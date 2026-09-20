@@ -2,6 +2,8 @@ import json
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -166,9 +168,14 @@ class ReconcileCommandTests(unittest.TestCase):
         self._worker()
         from dispatch_lib import cwd_lock
 
-        self.assertTrue(cwd_lock.acquire("w-dead", str(self.root / "worktree"))[0])
-        with mock.patch.object(
-            cli, "_append_registry_once", side_effect=OSError("crash")
+        worktree = str(self.root / "worktree")
+        self.assertTrue(cwd_lock.acquire("w-dead", worktree)[0])
+        stderr = StringIO()
+        with (
+            mock.patch.object(
+                cli, "_append_registry_once", side_effect=OSError("/private/crash")
+            ),
+            redirect_stderr(stderr),
         ):
             with self.assertRaisesRegex(SystemExit, "75"):
                 cli.cmd_reconcile(SimpleNamespace(apply=True))
@@ -177,6 +184,11 @@ class ReconcileCommandTests(unittest.TestCase):
         self.assertFalse(cwd_lock.held_by("w-dead"))
         self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
         self.assertEqual(self._events(), [])
+        self.assertNotIn("/private", stderr.getvalue())
+        self.assertEqual(
+            stderr.getvalue().strip(),
+            "Reconciliation refused: durable state update failed",
+        )
 
         cli.cmd_reconcile(SimpleNamespace(apply=True))
         self.assertEqual(len(self._events()), 1)
@@ -252,6 +264,173 @@ class ReconcileCommandTests(unittest.TestCase):
         cli.cmd_reconcile(SimpleNamespace(apply=True))
         self.assertFalse(cwd_lock.held_by("w-dead"))
         self.assertEqual(len(self._events()), 1)
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_status_file_fsync_failure_keeps_intent_for_exact_retry(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        from dispatch_lib import status_writer
+
+        real_fsync = os.fsync
+        calls = 0
+
+        def fail_status_file_fsync(descriptor):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                raise OSError("status file fsync")
+            return real_fsync(descriptor)
+
+        with mock.patch.object(
+            status_writer.os, "fsync", side_effect=fail_status_file_fsync
+        ):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertEqual(read_status("w-dead")["current_phase"], "starting")
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+        self.assertEqual(self._events(), [])
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(read_status("w-dead")["current_phase"], "errored")
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_status_directory_fsync_failure_keeps_intent_for_exact_retry(
+        self, classify
+    ):
+        classify.side_effect = self._absent
+        self._worker()
+        from dispatch_lib import status_writer
+
+        with mock.patch.object(
+            status_writer, "_fsync_directory", side_effect=OSError("status dir fsync")
+        ):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertEqual(read_status("w-dead")["current_phase"], "errored")
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+        self.assertEqual(self._events(), [])
+
+        with mock.patch.object(
+            cli, "confirm_status_durable", wraps=cli.confirm_status_durable
+        ) as confirm:
+            cli.cmd_reconcile(SimpleNamespace(apply=True))
+        confirm.assert_called_once()
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_cwd_directory_fsync_failure_retries_absence_before_event(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        from dispatch_lib import cwd_lock
+
+        worktree = str(self.root / "worktree")
+        self.assertTrue(cwd_lock.acquire("w-dead", worktree)[0])
+        with mock.patch.object(
+            cwd_lock, "_fsync_directory", side_effect=OSError("cwd dir fsync")
+        ):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertFalse(cwd_lock.held_by("w-dead"))
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+        self.assertEqual(self._events(), [])
+        self.assertTrue(cwd_lock.acquire("w-next", worktree)[0])
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertFalse(cwd_lock.held_by("w-dead"))
+        self.assertTrue(cwd_lock.held_by("w-next"))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_new_registry_parent_fsync_failure_recovers_without_duplicate(
+        self, classify
+    ):
+        classify.side_effect = self._absent
+        self._worker()
+        with mock.patch.object(
+            cli, "_fsync_directory", side_effect=OSError("registry parent fsync")
+        ):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertEqual(len(self._events()), 1)
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_new_registry_file_fsync_failure_recovers_without_duplicate(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        real_fsync = os.fsync
+        failed = False
+
+        def fail_new_registry_fsync(descriptor):
+            nonlocal failed
+            path = registry_path()
+            if not failed and path.exists():
+                descriptor_info = os.fstat(descriptor)
+                registry_info = path.stat()
+                if (
+                    descriptor_info.st_dev == registry_info.st_dev
+                    and descriptor_info.st_ino == registry_info.st_ino
+                ):
+                    failed = True
+                    raise OSError("registry file fsync")
+            return real_fsync(descriptor)
+
+        with mock.patch.object(cli.os, "fsync", side_effect=fail_new_registry_fsync):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertTrue(failed)
+        self.assertEqual(len(self._events()), 1)
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
+
+    @mock.patch.object(cli, "orphaned_reason")
+    def test_matching_registry_event_must_fsync_before_dedupe(self, classify):
+        classify.side_effect = self._absent
+        self._worker()
+        with mock.patch.object(cli, "remove_intent", side_effect=OSError("crash")):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+
+        real_fsync = os.fsync
+        calls = 0
+
+        def fail_registry_fsync(descriptor):
+            nonlocal calls
+            calls += 1
+            # status file + status directory + cwd-lock directory are synced
+            # before the matching registry row becomes the fourth edge.
+            if calls == 4:
+                raise OSError("matching event fsync")
+            return real_fsync(descriptor)
+
+        with mock.patch.object(cli.os, "fsync", side_effect=fail_registry_fsync):
+            with self.assertRaisesRegex(SystemExit, "75"):
+                cli.cmd_reconcile(SimpleNamespace(apply=True))
+
+        self.assertEqual(len(self._events()), 1)
+        self.assertTrue((reconcile_pending_dir() / "w-dead.json").is_file())
+
+        cli.cmd_reconcile(SimpleNamespace(apply=True))
+        self.assertEqual(len(self._events()), 1)
+        self.assertFalse((reconcile_pending_dir() / "w-dead.json").exists())
 
     def test_filename_content_mismatch_and_symlink_are_never_candidates(self):
         status = self.root / "status"
